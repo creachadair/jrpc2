@@ -68,11 +68,10 @@ func (thingy) Unrealated() string { return "this is not a method" }
 
 func Test(t *testing.T) {
 	ass := MapAssigner(NewMethods(thingy{}))
-	s := NewServer(ass, LogTo(os.Stderr), AllowV1(true), Concurrency(16))
-	log.Printf("Starting server on stdin/stdout...")
-	s.Start(pipe{
-		out: os.Stdout,
-		in:  os.Stdin,
-	})
+	s := NewServer(ass, ServerLog(os.Stderr), AllowV1(true), Concurrency(16))
+	if _, err := s.Start(pipe{out: os.Stdout, in: os.Stdin}); err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+	log.Printf("Running server on stdin/stdout...")
 	log.Printf("Wait err=%v", s.Wait())
 }

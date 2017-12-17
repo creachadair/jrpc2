@@ -183,10 +183,12 @@ func (s *Server) nextRequest() (func() error, error) {
 // value into JSON if there is one.
 func (s *Server) dispatch(m Method, req *Request) (json.RawMessage, error) {
 	v, err := m.Call(s.reqctx(req), req)
-	if req.id == nil {
-		return nil, nil // this is a notification
-	} else if err != nil {
-		return nil, err // this is a call reporting an error
+	if err != nil {
+		if req.id == nil {
+			s.log("Discarding error from notification to %q: %v", req.Method(), err)
+			return nil, nil // a notification
+		}
+		return nil, err // a call reporting an error
 	}
 	return json.Marshal(v)
 }
@@ -208,7 +210,7 @@ func (s *Server) Wait() error {
 }
 
 // stop shuts down the connection and records err as its final state.  The
-// caller must hold t.mu. If multiple callers invoke stop, only the first will
+// caller must hold s.mu. If multiple callers invoke stop, only the first will
 // successfully record its error status.
 func (s *Server) stop(err error) {
 	if s.closer == nil {
@@ -267,7 +269,7 @@ func (s *Server) pushError(id json.RawMessage, err *jerror) {
 	}
 }
 
-// send enqueues a request or a response for delivery. The caller must hold t.mu.
+// send enqueues a request or a response for delivery. The caller must hold s.mu.
 func (s *Server) send(msg jresponses) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -280,10 +282,6 @@ func (s *Server) versionOK(v string) bool {
 	}
 	return v == Version // ... otherwise it must match the spec
 }
-
-type nullLogger struct{}
-
-func (nullLogger) Printf(string, ...interface{}) {}
 
 func (s *Server) log(msg string, args ...interface{}) { s.lw.Printf(msg, args...) }
 

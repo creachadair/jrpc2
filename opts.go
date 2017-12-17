@@ -8,12 +8,14 @@ import (
 	"golang.org/x/sync/semaphore"
 )
 
+const logFlags = log.LstdFlags | log.Lshortfile
+
 // An ServerOption controls an optional behaviour of a Server.
 type ServerOption func(*Server)
 
-// LogTo enables debug logging to the specified writer.
-func LogTo(w io.Writer) ServerOption {
-	return func(s *Server) { s.lw = log.New(w, "[jrpc2] ", log.LstdFlags|log.Lshortfile) }
+// ServerLog enables debug logging to the specified writer.
+func ServerLog(w io.Writer) ServerOption {
+	return func(s *Server) { s.lw = log.New(w, "[jrpc2.Server] ", logFlags) }
 }
 
 // AllowV1 instructs the server whether to tolerate requests that do not
@@ -34,4 +36,12 @@ func Concurrency(n int) ServerOption {
 // context.
 func ReqContext(f func(*Request) context.Context) ServerOption {
 	return func(s *Server) { s.reqctx = f }
+}
+
+// A ClientOption controls an optional behaviour of a Client.
+type ClientOption func(*Client)
+
+// ClientLog enables debug logging to the specified writer.
+func ClientLog(w io.Writer) ClientOption {
+	return func(c *Client) { c.lw = log.New(w, "[jrpc2.Client] ", logFlags) }
 }

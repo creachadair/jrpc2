@@ -17,6 +17,9 @@ type Request struct {
 // not require a value response.
 func (r *Request) IsNotification() bool { return r.id == nil }
 
+// ID returns the request identifier for r, or "" if r is a notification.
+func (r *Request) ID() string { return string(r.id) }
+
 // Method reports the method name for the request.
 func (r *Request) Method() string { return r.method }
 
@@ -52,6 +55,13 @@ func (r *Response) UnmarshalResult(v interface{}) error {
 // the decoding of batch requests in JSON-RPC 2.0.
 type jrequests []*jrequest
 
+func (j jrequests) MarshalJSON() ([]byte, error) {
+	if len(j) == 1 {
+		return json.Marshal(j[0])
+	}
+	return json.Marshal([]*jrequest(j))
+}
+
 func (j *jrequests) UnmarshalJSON(data []byte) error {
 	if len(data) == 0 {
 		return errors.New("empty request message")
@@ -74,6 +84,8 @@ type jrequest struct {
 // either an array or an object.
 type jparams json.RawMessage
 
+func (j jparams) MarshalJSON() ([]byte, error) { return []byte(j), nil }
+
 func (j *jparams) UnmarshalJSON(data []byte) error {
 	if len(data) == 0 || (data[0] != '[' && data[0] != '{') {
 		return errors.New("parameters must be list or object")
@@ -93,6 +105,16 @@ func (j jresponses) MarshalJSON() ([]byte, error) {
 	return json.Marshal([]*jresponse(j))
 }
 
+func (j *jresponses) UnmarshalJSON(data []byte) error {
+	if len(data) == 0 {
+		return errors.New("empty request message")
+	} else if data[0] != '[' {
+		*j = jresponses{new(jresponse)}
+		return json.Unmarshal(data, (*j)[0])
+	}
+	return json.Unmarshal(data, (*[]*jresponse)(j))
+}
+
 // jresponse is the transmission format of a response message.
 type jresponse struct {
 	V  string          `json:"jsonrpc"`          // must be Version
@@ -110,6 +132,9 @@ type jerror struct {
 
 // toError converts a wire-format error object into an *Error.
 func (e *jerror) toError() *Error {
+	if e == nil {
+		return nil
+	}
 	return &Error{
 		Code:    Code(e.Code),
 		Message: e.Msg,
@@ -123,3 +148,28 @@ func jerrorf(code Code, msg string, args ...interface{}) *jerror {
 		Msg:  fmt.Sprintf(msg, args...),
 	}
 }
+
+// marshalParams validates and marshals params to JSON for a request.  It's
+// okay for the parameters to be empty, but if they are not they must be valid
+// JSON. We check for the required structural properties also.
+func marshalParams(params interface{}) (json.RawMessage, error) {
+	if params == nil {
+		return nil, nil // no parameters, that is OK
+	}
+	bits, err := json.Marshal(params)
+	if err != nil {
+		return nil, err
+	}
+	if len(bits) != 0 && bits[0] != '[' && bits[0] != '{' {
+		// JSON-RPC requires that if parameters are provided at all, they are
+		// an array or an object
+		return nil, Errorf(E_InvalidRequest, "invalid parameters: array or object required")
+	}
+	return bits, err
+}
+
+// nullLogger satisfies the logging interfaces used by the Client and Server
+// types, but does not render any output.
+type nullLogger struct{}
+
+func (nullLogger) Printf(string, ...interface{}) {}

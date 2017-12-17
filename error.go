@@ -40,6 +40,10 @@ var ErrNoData = errors.New("no data to unmarshal")
 // an explicit call to its Stop method.
 var ErrServerStopped = errors.New("the server has been stopped")
 
+// ErrClientStopped is the error reported when a client is shut down by an
+// explicit call to its Close method.
+var ErrClientStopped = errors.New("the client has been stopped")
+
 // Errorf returns an error value of concrete type *Error having the specified
 // code and formatted message string.
 func Errorf(code Code, msg string, args ...interface{}) error {
