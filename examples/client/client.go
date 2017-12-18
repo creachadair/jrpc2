@@ -17,6 +17,30 @@ import (
 
 var serverAddr = flag.String("server", "", "Server address")
 
+func add(cli *jrpc2.Client, vs ...int) (int, error) {
+	rsp, err := cli.Call("Math.Add", vs)
+	if err != nil {
+		return 0, err
+	}
+	var sum int
+	if err := rsp.UnmarshalResult(&sum); err != nil {
+		return 0, err
+	}
+	return sum, nil
+}
+
+func div(cli *jrpc2.Client, x, y int) (float64, error) {
+	rsp, err := cli.Call("Math.Div", struct{ X, Y int }{x, y})
+	if err != nil {
+		return 0, err
+	}
+	var quotient float64
+	if err := rsp.UnmarshalResult(&quotient); err != nil {
+		return 0, err
+	}
+	return quotient, nil
+}
+
 func main() {
 	flag.Parse()
 	if *serverAddr == "" {
@@ -34,21 +58,17 @@ func main() {
 	defer cli.Close()
 
 	// Add some numbers...
-	if rsp, err := cli.Call("Math.Add", []int{1, 3, 5, 7}); err != nil {
+	if sum, err := add(cli, 1, 3, 5, 7); err != nil {
 		log.Fatal("Math.Add:", err)
 	} else {
-		var result int
-		if err := rsp.UnmarshalResult(&result); err != nil {
-			log.Fatal("UnmarshalResult:", err)
-		}
-		log.Printf("Math.Add result=%d", result)
+		log.Printf("Math.Add result=%d", sum)
 	}
 
 	// Divide by zero...
-	if rsp, err := cli.Call("Math.Div", struct{ X, Y int }{15, 0}); err != nil {
-		log.Printf("Math.Div result=%v", err)
+	if quot, err := div(cli, 15, 0); err != nil {
+		log.Printf("Math.Div err=%v", err)
 	} else {
-		log.Fatalf("Math.Div succeeded somehow, producing %v", rsp)
+		log.Fatalf("Math.Div succeeded unexpectedly: result=%v", quot)
 	}
 
 	// Send a batch of concurrent work...
