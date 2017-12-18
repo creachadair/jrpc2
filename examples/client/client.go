@@ -1,8 +1,10 @@
 // Program client demonstrates how to set up a JSON-RPC 2.0 client using the
 // bitbucket.org/creachadair/jrpc2 package.
 //
-// Usage:
-//   go run exmamples/client/client.go -server localhost:8080
+// Usage (communicates with the server example):
+//
+//   go build bitbucket.org/creachadair/jrpc2/examples/client
+//   ./client -server :8080
 //
 package main
 
