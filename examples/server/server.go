@@ -50,6 +50,15 @@ func (math) Div(ctx context.Context, arg binop) (float64, error) {
 	return float64(arg.X) / float64(arg.Y), nil
 }
 
+type alert struct {
+	Msg string
+}
+
+func Alert(ctx context.Context, a alert) (bool, error) {
+	log.Printf("[ALERT]: %s", a.Msg)
+	return false, nil // return values are ignored for notifications
+}
+
 var port = flag.Int("port", 0, "Service port")
 
 func main() {
@@ -61,6 +70,7 @@ func main() {
 	// Bind the methods of the math type to an assigner.
 	mux := jrpc2.ServiceMapper{
 		"Math": jrpc2.MapAssigner(jrpc2.NewMethods(math{})),
+		"Post": jrpc2.MapAssigner{"Alert": jrpc2.NewMethod(Alert)},
 	}
 
 	lst, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", *port))
