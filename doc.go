@@ -2,9 +2,12 @@
 Package jrpc2 implements a server and a client for the JSON-RPC 2.0 protocol
 defined by http://www.jsonrpc.org/specification.
 
+Servers
+
 The *Server type implements a JSON-RPC server. A server communicates with a
 client over a Conn, and dispatches client requests to user-defined handlers
-dispatched by an Assigner. For example, suppose we have defined Add:
+dispatched by an Assigner. For example, suppose we have defined the following
+Add function:
 
    // Add returns the sum of a slice of integers.
    func Add(ctx context.Context, values []int) (int, error) {
@@ -15,18 +18,23 @@ dispatched by an Assigner. For example, suppose we have defined Add:
       return sum, nil
    }
 
-To associate this with the method name "Math.Add", construct a MapAssigner.  A
-MapAssigner finds methods by looking them up in a simple map:
+The server uses an Assigner to locate the implementation of its methods.  For
+this example, let's advertise this function under the name "Math.Add".  For
+static assignments, we can use a jrpc2.MapAssigner, which finds methods by
+looking them up in a Go map:
 
    import "bitbucket.org/creachadair/jrpc2"
 
-   var assigner = jrpc2.MapAssigner{"Math.Add": jrpc2.NewMethod(Add)}
+   var assigner = jrpc2.MapAssigner{
+      "Math.Add": jrpc2.NewMethod(Add),
+   }
 
-With this we can construct a Server:
+Equipped with an Assigner we can construct a Server:
 
    srv := jrpc2.NewServer(assigner)
 
-Now we need a connection to serve requests on:
+Now we need a connection to serve requests on. A net.Conn will do, so let's say
+for example:
 
    import "net"
 
@@ -43,9 +51,11 @@ until it is stopped (by calling srv.Stop()). To wait for the server to finish,
 
 This will report the error that led to the server exiting.
 
+Clients
+
 The *Client type implements a JSON-RPC client. A client communicates with a
 server over a Conn. The client is safe for concurrent use by multiple
-goroutines. It supports batched requests may have arbitrarily many pending
+goroutines. It supports batched requests and may have arbitrarily many pending
 requests in flight simultaneously.
 
 To establish a client we need a Conn:
@@ -71,8 +81,9 @@ Third, wait for the pending call to complete to receive its results:
    rsp, err := p[0].Wait()
 
 This is a fairly complicated flow, allowing in-flight requests to be batched
-and to run concurrently. Fortunately, for the common case of a single,
-synchronous request, there is a simpler solution that combines all three:
+and to run concurrently. Fortunately for the more common case of a single,
+synchronous request, there is a simpler solution that combines all three steps
+in a single method:
 
    rsp, err := cli.Call1("Math.Add", []int{1, 3, 5, 7})
 
@@ -84,6 +95,8 @@ To decode the response from the server, write:
    }
 
 To shut down a client and discard all its pending work, call cli.Close().
+
+
 */
 package jrpc2
 
