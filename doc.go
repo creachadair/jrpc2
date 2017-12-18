@@ -74,7 +74,7 @@ the method name to call and the arguments to the method:
 Second, send the request to the server, and obtain a pending call you can use
 to wait for it to complete and receive its results:
 
-   p, err := cli.StartCall(req)
+   p, err := cli.Send(req)
 
 Third, wait for the pending call to complete to receive its results:
 
@@ -106,7 +106,7 @@ A Client also supports sending notifications, as follows:
 
    req, err := cli.Note("Alert", struct{Msg string}{"a fire is burning"})
    ...
-   _, err := cli.StartCall(req)
+   _, err := cli.Send(req)
 
 Unlike ordinary requests, there are no pending calls for notifications.  As
 with ordinary requests, however, notifications can be posted in concurrent

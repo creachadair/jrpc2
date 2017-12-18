@@ -82,7 +82,7 @@ func main() {
 			reqs = append(reqs, req)
 		}
 	}
-	ps, err := cli.StartCall(reqs...)
+	ps, err := cli.Send(reqs...)
 	if err != nil {
 		log.Fatal("Call:", err)
 	}
