@@ -32,12 +32,9 @@ type MapAssigner map[string]Method
 func (m MapAssigner) Assign(method string) Method { return m[method] }
 
 // NewMethod adapts a function to a Method. The concrete value of fn must be a
-// function with a type signature:
+// function with one of the following type signatures:
 //
 //    func(context.Context, X) (Y, error)
-//
-// or
-//
 //    func(context.Context, *jrpc2.Request) (Y, error)
 //
 // for JSON-marshalable types X and Y. NewMethod will panic if the type of its
