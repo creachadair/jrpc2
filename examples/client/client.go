@@ -34,28 +34,28 @@ func main() {
 	defer cli.Close()
 
 	// Add some numbers...
-	if rsp, err := cli.Call1("Add", []int{1, 3, 5, 7}); err != nil {
-		log.Fatal("Add:", err)
+	if rsp, err := cli.Call1("Math.Add", []int{1, 3, 5, 7}); err != nil {
+		log.Fatal("Math.Add:", err)
 	} else {
 		var result int
 		if err := rsp.UnmarshalResult(&result); err != nil {
 			log.Fatal("UnmarshalResult:", err)
 		}
-		log.Printf("Add result=%d", result)
+		log.Printf("Math.Add result=%d", result)
 	}
 
 	// Divide by zero...
-	if rsp, err := cli.Call1("Div", struct{ X, Y int }{15, 0}); err != nil {
-		log.Printf("Div result=%v", err)
+	if rsp, err := cli.Call1("Math.Div", struct{ X, Y int }{15, 0}); err != nil {
+		log.Printf("Math.Div result=%v", err)
 	} else {
-		log.Fatalf("Div succeeded somehow, producing %v", rsp)
+		log.Fatalf("Math.Div succeeded somehow, producing %v", rsp)
 	}
 
 	// Send a batch of concurrent work...
 	var reqs []*jrpc2.Request
 	for i := 1; i <= 5; i++ {
 		for j := 1; j <= 5; j++ {
-			req, err := cli.Req("Mul", struct{ X, Y int }{i, j})
+			req, err := cli.Req("Math.Mul", struct{ X, Y int }{i, j})
 			if err != nil {
 				log.Fatalf("Req (%d*%d): %v", i, j, err)
 			}

@@ -59,7 +59,9 @@ func main() {
 	}
 
 	// Bind the methods of the math type to an assigner.
-	mux := jrpc2.MapAssigner(jrpc2.NewMethods(math{}))
+	mux := jrpc2.ServiceMapper{
+		"Math": jrpc2.MapAssigner(jrpc2.NewMethods(math{})),
+	}
 
 	lst, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", *port))
 	if err != nil {
