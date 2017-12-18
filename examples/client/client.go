@@ -99,4 +99,9 @@ func main() {
 		}
 		log.Printf("Req %d: result=%d", i+1, result)
 	}
+
+	// Send a notification...
+	if err := cli.Notify("Post.Alert", struct{ Msg string }{"There is a fire!"}); err != nil {
+		log.Fatal("Notify:", err)
+	}
 }
