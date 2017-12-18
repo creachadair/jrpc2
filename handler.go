@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"reflect"
+	"strings"
 )
 
 // An Assigner assigns a Method to handle the specified method name, or nil if
@@ -30,6 +31,24 @@ func (m MethodFunc) Call(ctx context.Context, req *Request) (interface{}, error)
 type MapAssigner map[string]Method
 
 func (m MapAssigner) Assign(method string) Method { return m[method] }
+
+// A ServiceMapper combines multiple assigners into one, permitting a server to
+// export multiple services under different names.
+type ServiceMapper map[string]Assigner
+
+// Assign splits the inbound method name as Service.Method, and passes the
+// Method portion to the corresponding Service assigner. If method does not
+// have the form Service.Method, or if Service is not set in m, the lookup
+// fails and returns nil.
+func (m ServiceMapper) Assign(method string) Method {
+	parts := strings.SplitN(method, ".", 2)
+	if len(parts) == 1 {
+		return nil
+	} else if ass, ok := m[parts[0]]; ok {
+		return ass.Assign(parts[1])
+	}
+	return nil
+}
 
 // NewMethod adapts a function to a Method. The concrete value of fn must be a
 // function with one of the following type signatures:
