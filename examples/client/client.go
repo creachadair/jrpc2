@@ -9,8 +9,9 @@ package main
 import (
 	"flag"
 	"log"
+	"math/rand"
 	"net"
-	"os"
+	"sync"
 
 	"bitbucket.org/creachadair/jrpc2"
 )
@@ -41,6 +42,14 @@ func div(cli *jrpc2.Client, x, y int) (float64, error) {
 	return quotient, nil
 }
 
+func intResult(rsp *jrpc2.Response) int {
+	var v int
+	if err := rsp.UnmarshalResult(&v); err != nil {
+		log.Fatal("UnmarshalResult:", err)
+	}
+	return v
+}
+
 func main() {
 	flag.Parse()
 	if *serverAddr == "" {
@@ -54,30 +63,32 @@ func main() {
 	log.Printf("Connected to %v", conn.RemoteAddr())
 
 	// Start up the client, and enable logging to stderr.
-	cli := jrpc2.NewClient(conn, jrpc2.ClientLog(os.Stderr))
+	cli := jrpc2.NewClient(conn)
 	defer cli.Close()
 
-	// Add some numbers...
+	log.Print("\n-- Sending some individual requests...")
 	if sum, err := add(cli, 1, 3, 5, 7); err != nil {
 		log.Fatal("Math.Add:", err)
 	} else {
 		log.Printf("Math.Add result=%d", sum)
 	}
 
-	// Divide by zero...
+	// An error condition (division by zero)
 	if quot, err := div(cli, 15, 0); err != nil {
 		log.Printf("Math.Div err=%v", err)
 	} else {
 		log.Fatalf("Math.Div succeeded unexpectedly: result=%v", quot)
 	}
 
-	// Send a batch of concurrent work...
+	log.Print("\n-- Sending a batch of requests...")
 	var reqs []*jrpc2.Request
 	for i := 1; i <= 5; i++ {
+		x := rand.Intn(100)
 		for j := 1; j <= 5; j++ {
-			req, err := cli.Req("Math.Mul", struct{ X, Y int }{i, j})
+			y := rand.Intn(100)
+			req, err := cli.Req("Math.Mul", struct{ X, Y int }{x, y})
 			if err != nil {
-				log.Fatalf("Req (%d*%d): %v", i, j, err)
+				log.Fatalf("Req (%d*%d): %v", x, y, err)
 			}
 			reqs = append(reqs, req)
 		}
@@ -89,16 +100,31 @@ func main() {
 	for i, p := range ps {
 		rsp, err := p.Wait()
 		if err != nil {
-			log.Printf("Req %d failed: %v", i+1, err)
+			log.Printf("Req %q %s failed: %v", reqs[i].Method(), rsp.ID(), err)
 			continue
 		}
-		var result int
-		if err := rsp.UnmarshalResult(&result); err != nil {
-			log.Printf("Req %d bad result: %v", i+1, err)
-			continue
-		}
-		log.Printf("Req %d: result=%d", i+1, result)
+		log.Printf("Req %q %s: result=%d", reqs[i].Method(), rsp.ID(), intResult(rsp))
 	}
+
+	log.Print("\n-- Sending individual concurrent requests...")
+	var wg sync.WaitGroup
+	for i := 1; i <= 5; i++ {
+		x := rand.Intn(100)
+		for j := 1; j <= 5; j++ {
+			y := rand.Intn(100)
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				rsp, err := cli.Call("Math.Sub", struct{ X, Y int }{x, y})
+				if err != nil {
+					log.Printf("Req (%d-%d) failed: %v", x, y, err)
+					return
+				}
+				log.Printf("Req (%d-%d): result=%d", x, y, intResult(rsp))
+			}()
+		}
+	}
+	wg.Wait()
 
 	// Send a notification...
 	if err := cli.Notify("Post.Alert", struct{ Msg string }{"There is a fire!"}); err != nil {
