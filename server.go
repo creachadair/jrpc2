@@ -138,6 +138,9 @@ func (s *Server) nextRequest() (func() error, error) {
 		} else {
 			t.m = m
 		}
+		if t.err != nil {
+			s.log("Task error: %v", t.err)
+		}
 		tasks = append(tasks, t)
 	}
 
@@ -289,8 +292,13 @@ type tasks []*task
 func (ts tasks) responses() jresponses {
 	var rsps jresponses
 	for _, task := range ts {
-		if task.req.ID == nil && task.err == nil {
-			continue // non-error-causing notifications do not get responses
+		if task.req.ID == nil {
+			// Spec: "The Server MUST NOT reply to a Notification, including
+			// those that are within a batch request.  Notifications are not
+			// confirmable by definition, since they do not have a Response
+			// object to be returned. As such, the Client would not be aware of
+			// any errors."
+			continue
 		}
 		rsp := &jresponse{V: Version, ID: task.req.ID}
 		if task.err == nil {
