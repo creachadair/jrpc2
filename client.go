@@ -13,9 +13,8 @@ import (
 // responses on a Conn provided by the caller.
 type Client struct {
 	wg sync.WaitGroup // ready when the reader is done at shutdown time
-	lw interface {    // write debug logs here
-		Printf(string, ...interface{})
-	}
+
+	log func(string, ...interface{}) // write debug logs here
 
 	mu      sync.Mutex          // protects the fields below
 	closer  io.Closer           // close to shut down the connection
@@ -29,7 +28,7 @@ type Client struct {
 // NewClient returns a new client that communicates with the server via conn.
 func NewClient(conn Conn, opts ...ClientOption) *Client {
 	c := &Client{
-		lw:      nullLogger{},
+		log:     func(string, ...interface{}) {},
 		closer:  conn,
 		enc:     json.NewEncoder(conn),
 		pending: make(map[string]*Pending),
@@ -209,8 +208,6 @@ func (c *Client) stop(err error) {
 	c.err = err
 	c.closer = nil
 }
-
-func (c *Client) log(msg string, args ...interface{}) { c.lw.Printf(msg, args...) }
 
 // A Pending tracks a single pending request whose response is awaited.
 // Calling Wait blocks until the response is received. It is safe to call Wait

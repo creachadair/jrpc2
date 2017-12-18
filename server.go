@@ -24,13 +24,11 @@ type Conn interface {
 // responses on a Conn provided by the caller, and dispatches requests to
 // user-defined Method handlers.
 type Server struct {
-	wg     sync.WaitGroup      // ready when workers are done at shutdown time
-	mux    Assigner            // associates method names with handlers
-	sem    *semaphore.Weighted // bounds concurrent execution (default 1)
-	allow1 bool                // allow v1 requests with no version marker
-	lw     interface {         // write debug logs here
-		Printf(string, ...interface{})
-	}
+	wg     sync.WaitGroup               // ready when workers are done at shutdown time
+	mux    Assigner                     // associates method names with handlers
+	sem    *semaphore.Weighted          // bounds concurrent execution (default 1)
+	allow1 bool                         // allow v1 requests with no version marker
+	log    func(string, ...interface{}) // write debug logs here
 
 	reqctx func(req *Request) context.Context // obtain a context for req
 
@@ -57,7 +55,7 @@ func NewServer(mux Assigner, opts ...ServerOption) *Server {
 	s := &Server{
 		mux:    mux,
 		sem:    semaphore.NewWeighted(1),
-		lw:     nullLogger{},
+		log:    func(string, ...interface{}) {},
 		reqctx: func(*Request) context.Context { return context.Background() },
 		mu:     new(sync.Mutex),
 	}
@@ -278,8 +276,6 @@ func (s *Server) versionOK(v string) bool {
 	}
 	return v == Version // ... otherwise it must match the spec
 }
-
-func (s *Server) log(msg string, args ...interface{}) { s.lw.Printf(msg, args...) }
 
 type task struct {
 	m   Method

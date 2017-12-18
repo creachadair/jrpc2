@@ -167,9 +167,3 @@ func marshalParams(params interface{}) (json.RawMessage, error) {
 	}
 	return bits, err
 }
-
-// nullLogger satisfies the logging interfaces used by the Client and Server
-// types, but does not render any output.
-type nullLogger struct{}
-
-func (nullLogger) Printf(string, ...interface{}) {}

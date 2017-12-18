@@ -2,6 +2,7 @@ package jrpc2
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log"
 
@@ -15,7 +16,10 @@ type ServerOption func(*Server)
 
 // ServerLog enables debug logging to the specified writer.
 func ServerLog(w io.Writer) ServerOption {
-	return func(s *Server) { s.lw = log.New(w, "[jrpc2.Server] ", logFlags) }
+	logger := log.New(w, "[jrpc2.Server] ", logFlags)
+	return func(s *Server) {
+		s.log = func(msg string, args ...interface{}) { logger.Output(2, fmt.Sprintf(msg, args...)) }
+	}
 }
 
 // AllowV1 instructs the server whether to tolerate requests that do not
@@ -44,5 +48,8 @@ type ClientOption func(*Client)
 
 // ClientLog enables debug logging to the specified writer.
 func ClientLog(w io.Writer) ClientOption {
-	return func(c *Client) { c.lw = log.New(w, "[jrpc2.Client] ", logFlags) }
+	logger := log.New(w, "[jrpc2.Client] ", logFlags)
+	return func(c *Client) {
+		c.log = func(msg string, args ...interface{}) { logger.Output(2, fmt.Sprintf(msg, args...)) }
+	}
 }
