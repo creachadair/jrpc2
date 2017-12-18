@@ -23,7 +23,8 @@ func ServerLog(w io.Writer) ServerOption {
 func AllowV1(ok bool) ServerOption { return func(s *Server) { s.allow1 = ok } }
 
 // Concurrency allows up to the specified number of concurrent goroutines to
-// execute when processing requests. A value less than 1 is treated as 1.
+// execute when processing requests. A value less than 1 is treated as 1, which
+// is also the default if this option is not provided.
 func Concurrency(n int) ServerOption {
 	if n < 1 {
 		n = 1
