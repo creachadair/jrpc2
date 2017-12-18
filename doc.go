@@ -96,7 +96,27 @@ To decode the response from the server, write:
 
 To shut down a client and discard all its pending work, call cli.Close().
 
+Notifications
 
+The JSON-RPC protocol also supports a kind of request called a "notification".
+Notifications differ from ordinary requests in that they are one-way: The
+client sends them to the server, but the server does not reply.
+
+A Client also supports sending notifications, as follows:
+
+   req, err := cli.Note("Alert", struct{Msg string}{"a fire is burning"})
+   ...
+   _, err := cli.StartCall(req)
+
+Unlike ordinary requests, there are no pending calls for notifications.  As
+with ordinary requests, however, notifications can be posted in concurrent
+batches. Indeed, you can even mix notifications with ordinary requests in the
+same batch.  To simplify the common case of posting a single notification,
+however, the client provides:
+
+   err := cli.Notify("Alert", struct{Msg string}{"a fire is burning"})
+
+This is equivalent to the above, for the case of a single notification.
 */
 package jrpc2
 
