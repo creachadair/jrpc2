@@ -3,53 +3,35 @@ package jrpc2
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
-	"log"
 	"os"
-	"os/exec"
 	"testing"
-	"time"
 )
 
-type pipe struct {
-	out io.WriteCloser
-	in  io.Reader
+type pipeConn struct {
+	*io.PipeReader
+	*io.PipeWriter
 }
 
-func (p pipe) Write(data []byte) (int, error) { return p.out.Write(data) }
-func (p pipe) Read(data []byte) (int, error)  { return p.in.Read(data) }
-func (p pipe) Close() error                   { return p.out.Close() }
-
-type thingy struct{}
-
-func (thingy) Sleep(_ context.Context, param struct {
-	For string `json:"for"`
-}) (string, error) {
-	dur, err := time.ParseDuration(param.For)
-	if err != nil {
-		return "", err
+func (p pipeConn) Close() error {
+	rerr := p.PipeReader.Close()
+	werr := p.PipeWriter.Close()
+	if werr != nil {
+		return werr
 	}
-	log.Printf("Sleeping for %v", dur)
-	time.Sleep(dur)
-	return fmt.Sprint(dur), nil
+	return rerr
 }
 
-func (thingy) Exec(_ context.Context, args []string) ([]byte, error) {
-	if len(args) == 0 {
-		return nil, Errorf(E_InvalidParams, "missing command name")
-	}
-	return exec.Command(args[0], args[1:]...).Output()
+func pipePair() (client, server pipeConn) {
+	cr, sw := io.Pipe()
+	sr, cw := io.Pipe()
+	return pipeConn{PipeReader: cr, PipeWriter: cw}, pipeConn{PipeReader: sr, PipeWriter: sw}
 }
 
-func (thingy) Mul(_ context.Context, req struct{ X, Y int }) (int, error) {
-	if req.X == 0 || req.Y == 0 {
-		return 0, errors.New("you blew it")
-	}
-	return req.X * req.Y, nil
-}
+type dummy struct{}
 
-func (thingy) Add(_ context.Context, req *Request) (interface{}, error) {
+// Add is a request-based method.
+func (dummy) Add(_ context.Context, req *Request) (interface{}, error) {
 	if req.IsNotification() {
 		return nil, errors.New("ignoring notification")
 	}
@@ -64,14 +46,59 @@ func (thingy) Add(_ context.Context, req *Request) (interface{}, error) {
 	return sum, nil
 }
 
-func (thingy) Unrealated() string { return "this is not a method" }
+// Mul uses its own explicit parameter type.
+func (dummy) Mul(_ context.Context, req struct{ X, Y int }) (int, error) {
+	return req.X * req.Y, nil
+}
 
-func Test(t *testing.T) {
-	ass := MapAssigner(NewMethods(thingy{}))
-	s := NewServer(ass, ServerLog(os.Stderr), AllowV1(true), Concurrency(16))
-	if _, err := s.Start(pipe{out: os.Stdout, in: os.Stdin}); err != nil {
+// Unrelated should not be picked up by the server.
+func (dummy) Unrelated() string { return "ceci n'est pas une méthode" }
+
+func TestClientServer(t *testing.T) {
+	cpipe, spipe := pipePair()
+
+	ass := MapAssigner(NewMethods(dummy{}))
+	s, err := NewServer(ass, ServerLog(os.Stderr), AllowV1(true), Concurrency(16)).Start(spipe)
+	if err != nil {
 		t.Fatalf("Start failed: %v", err)
 	}
-	log.Printf("Running server on stdin/stdout...")
-	log.Printf("Wait err=%v", s.Wait())
+	t.Logf("Server running on pipe %v", spipe)
+	c := NewClient(cpipe, ClientLog(os.Stderr))
+	t.Logf("Client running on pipe %v", cpipe)
+
+	tests := []struct {
+		method string
+		params interface{}
+		want   int
+	}{
+		{"Add", []int{}, 0},
+		{"Add", []int{1, 2, 3}, 6},
+		{"Mul", struct{ X, Y int }{7, 9}, 63},
+		{"Mul", struct{ X, Y int }{}, 0},
+	}
+
+	for _, test := range tests {
+		rsp, err := c.Call1(test.method, test.params)
+		if err != nil {
+			t.Errorf("Call1 %q %v: unexpected error: %v", test.method, test.params, err)
+			continue
+		}
+		var got int
+		if err := rsp.UnmarshalResult(&got); err != nil {
+			t.Errorf("Unmarshaling result: %v", err)
+			continue
+		}
+		t.Logf("Call1 %q %v returned %d", test.method, test.params, got)
+		if got != test.want {
+			t.Errorf("Call1 %q: got %v, want %v", test.method, got, test.want)
+		}
+
+		if err := c.Notify(test.method, test.params); err != nil {
+			t.Errorf("Notify %q %v: unexpected error: %v", test.method, test.params, err)
+		}
+	}
+
+	t.Logf("Client close: err=%v", c.Close())
+	s.Stop()
+	t.Logf("Server wait: err=%v", s.Wait())
 }
