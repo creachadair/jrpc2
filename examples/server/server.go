@@ -67,18 +67,19 @@ func main() {
 	}
 	log.Printf("Listening at %v...", lst.Addr())
 
-	conn, err := lst.Accept()
-	if err != nil {
-		log.Fatal("Accept:", err)
-	}
-	lst.Close()
-	log.Printf("New connection from %v", conn.RemoteAddr())
+	srv := jrpc2.NewServer(mux, jrpc2.ServerLog(os.Stderr))
+	for {
+		conn, err := lst.Accept()
+		if err != nil {
+			log.Fatal("Accept:", err)
+		}
+		log.Printf("New connection from %v", conn.RemoteAddr())
 
-	// Start up the server, and enable logging to stderr.
-	srv, err := jrpc2.NewServer(mux, jrpc2.ServerLog(os.Stderr)).Start(conn)
-	if err != nil {
-		log.Fatal("Start:", err)
+		// Start up the server, and enable logging to stderr.
+		if _, err := srv.Start(conn); err != nil {
+			log.Fatal("Start:", err)
+		}
+		log.Print("<serving requests>")
+		log.Printf("Server finished (err=%v)", srv.Wait())
 	}
-	log.Print("<serving requests>")
-	log.Printf("Server finished (err=%v)", srv.Wait())
 }
