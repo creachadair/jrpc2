@@ -99,11 +99,7 @@ func (s *Server) Start(conn Conn) (*Server, error) {
 				s.log("Reading next request: %v", err)
 				return
 			}
-			g.Go(func() error {
-				s.sem.Acquire(context.Background(), 1)
-				defer s.sem.Release(1)
-				return next()
-			})
+			g.Go(next)
 		}
 	}()
 	return s, nil
