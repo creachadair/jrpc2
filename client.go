@@ -76,7 +76,7 @@ func NewClient(conn Conn, opts ...ClientOption) *Client {
 }
 
 // Req constructs a fresh request for the specified method and parameters.
-// This does not transmit the request to the server; use c.Call to do so.
+// This does not transmit the request to the server; use c.Send to do so.
 func (c *Client) Req(method string, params interface{}) (*Request, error) {
 	bits, err := marshalParams(params)
 	if err != nil {
@@ -96,7 +96,7 @@ func (c *Client) Req(method string, params interface{}) (*Request, error) {
 }
 
 // Note constructs a notification request for the specified method and parameters.
-// This does not transmit the request to the server; use c.Call to do so.
+// This does not transmit the request to the server; use c.Send to do so.
 func (c *Client) Note(method string, params interface{}) (*Request, error) {
 	bits, err := marshalParams(params)
 	if err != nil {
