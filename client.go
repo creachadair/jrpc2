@@ -140,7 +140,7 @@ func (c *Client) Send(reqs ...*Request) ([]*Pending, error) {
 	if err != nil {
 		c.log("Marshal failed: %v", err)
 	} else {
-		c.log("Batch result: %s", string(b))
+		c.log("Outgoing batch: %s", string(b))
 	}
 	if err := c.enc.Encode(batch); err != nil {
 		return nil, err
