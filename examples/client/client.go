@@ -50,4 +50,33 @@ func main() {
 	} else {
 		log.Fatalf("Div succeeded somehow, producing %v", rsp)
 	}
+
+	// Send a batch of concurrent work...
+	var reqs []*jrpc2.Request
+	for i := 1; i <= 5; i++ {
+		for j := 1; j <= 5; j++ {
+			req, err := cli.Req("Mul", struct{ X, Y int }{i, j})
+			if err != nil {
+				log.Fatalf("Req (%d*%d): %v", i, j, err)
+			}
+			reqs = append(reqs, req)
+		}
+	}
+	ps, err := cli.Call(reqs...)
+	if err != nil {
+		log.Fatal("Call:", err)
+	}
+	for i, p := range ps {
+		rsp, err := p.Wait()
+		if err != nil {
+			log.Printf("Req %d failed: %v", i+1, err)
+			continue
+		}
+		var result int
+		if err := rsp.UnmarshalResult(&result); err != nil {
+			log.Printf("Req %d bad result: %v", i+1, err)
+			continue
+		}
+		log.Printf("Req %d: result=%d", i+1, result)
+	}
 }
