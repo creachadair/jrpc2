@@ -174,7 +174,7 @@ func (c *Client) Call(method string, params interface{}) (*Response, error) {
 	return ps[0].Wait()
 }
 
-// Notify is shorthand for Note + Call for a single request. It blocks until
+// Notify is shorthand for Note + Send for a single request. It blocks until
 // the notification has been sent.
 func (c *Client) Notify(method string, params interface{}) error {
 	req, err := c.Note(method, params)
