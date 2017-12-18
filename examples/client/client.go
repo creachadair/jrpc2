@@ -34,7 +34,7 @@ func main() {
 	defer cli.Close()
 
 	// Add some numbers...
-	if rsp, err := cli.Call1("Math.Add", []int{1, 3, 5, 7}); err != nil {
+	if rsp, err := cli.Call("Math.Add", []int{1, 3, 5, 7}); err != nil {
 		log.Fatal("Math.Add:", err)
 	} else {
 		var result int
@@ -45,7 +45,7 @@ func main() {
 	}
 
 	// Divide by zero...
-	if rsp, err := cli.Call1("Math.Div", struct{ X, Y int }{15, 0}); err != nil {
+	if rsp, err := cli.Call("Math.Div", struct{ X, Y int }{15, 0}); err != nil {
 		log.Printf("Math.Div result=%v", err)
 	} else {
 		log.Fatalf("Math.Div succeeded somehow, producing %v", rsp)
@@ -62,7 +62,7 @@ func main() {
 			reqs = append(reqs, req)
 		}
 	}
-	ps, err := cli.Call(reqs...)
+	ps, err := cli.StartCall(reqs...)
 	if err != nil {
 		log.Fatal("Call:", err)
 	}

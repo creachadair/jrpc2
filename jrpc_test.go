@@ -78,9 +78,9 @@ func TestClientServer(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		rsp, err := c.Call1(test.method, test.params)
+		rsp, err := c.Call(test.method, test.params)
 		if err != nil {
-			t.Errorf("Call1 %q %v: unexpected error: %v", test.method, test.params, err)
+			t.Errorf("Call %q %v: unexpected error: %v", test.method, test.params, err)
 			continue
 		}
 		var got int
@@ -88,9 +88,9 @@ func TestClientServer(t *testing.T) {
 			t.Errorf("Unmarshaling result: %v", err)
 			continue
 		}
-		t.Logf("Call1 %q %v returned %d", test.method, test.params, got)
+		t.Logf("Call %q %v returned %d", test.method, test.params, got)
 		if got != test.want {
-			t.Errorf("Call1 %q: got %v, want %v", test.method, got, test.want)
+			t.Errorf("Call %q: got %v, want %v", test.method, got, test.want)
 		}
 
 		if err := c.Notify(test.method, test.params); err != nil {

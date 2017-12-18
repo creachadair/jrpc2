@@ -109,14 +109,14 @@ func (c *Client) Note(method string, params interface{}) (*Request, error) {
 	}, nil
 }
 
-// Call transmits the specified requests to the server and returns a slice of
-// Pending stubs that can be used to wait for their responses.
+// StartCall transmits the specified requests to the server and returns a slice
+// of Pending stubs that can be used to wait for their responses.
 //
 // The resulting slice will only contain entries for requests that expect
 // responses -- if all the requests are notifications, the slice will be empty.
 //
-// Call blocks until the entire batch of requests has been transmitted.
-func (c *Client) Call(reqs ...*Request) ([]*Pending, error) {
+// StartCall blocks until the entire batch of requests has been transmitted.
+func (c *Client) StartCall(reqs ...*Request) ([]*Pending, error) {
 	if len(reqs) == 0 {
 		return nil, errors.New("empty request batch")
 	}
@@ -160,14 +160,14 @@ func (c *Client) Call(reqs ...*Request) ([]*Pending, error) {
 	return pends, nil
 }
 
-// Call1 is shorthand for Req + Call + Wait for a single request.  It blocks
-// until the request is complete.
-func (c *Client) Call1(method string, params interface{}) (*Response, error) {
+// Call is shorthand for Req + StartCall + Wait for a single request.  It
+// blocks until the request is complete.
+func (c *Client) Call(method string, params interface{}) (*Response, error) {
 	req, err := c.Req(method, params)
 	if err != nil {
 		return nil, err
 	}
-	ps, err := c.Call(req)
+	ps, err := c.StartCall(req)
 	if err != nil {
 		return nil, err
 	}
@@ -181,7 +181,7 @@ func (c *Client) Notify(method string, params interface{}) error {
 	if err != nil {
 		return err
 	}
-	_, err = c.Call(req)
+	_, err = c.StartCall(req)
 	return err
 }
 

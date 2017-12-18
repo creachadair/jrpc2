@@ -74,7 +74,7 @@ the method name to call and the arguments to the method:
 Second, send the request to the server, and obtain a pending call you can use
 to wait for it to complete and receive its results:
 
-   p, err := cli.Call(req)
+   p, err := cli.StartCall(req)
 
 Third, wait for the pending call to complete to receive its results:
 
@@ -85,7 +85,7 @@ and to run concurrently. Fortunately for the more common case of a single,
 synchronous request, there is a simpler solution that combines all three steps
 in a single method:
 
-   rsp, err := cli.Call1("Math.Add", []int{1, 3, 5, 7})
+   rsp, err := cli.Call("Math.Add", []int{1, 3, 5, 7})
 
 To decode the response from the server, write:
 
