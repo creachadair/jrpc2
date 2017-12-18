@@ -4,7 +4,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 )
+
+// A Conn represents the ability to transmit and receive JSON-RPC messages.
+type Conn interface {
+	io.Reader
+	io.Writer
+	io.Closer
+}
 
 // A Request is a request message from a client to a server.
 type Request struct {

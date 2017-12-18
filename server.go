@@ -13,13 +13,6 @@ import (
 	"golang.org/x/sync/semaphore"
 )
 
-// A Conn represents the ability to transmit JSON-RPC messages.
-type Conn interface {
-	io.Reader
-	io.Writer
-	io.Closer
-}
-
 // A Server is a JSON-RPC 2.0 server. The server receives requests and sends
 // responses on a Conn provided by the caller, and dispatches requests to
 // user-defined Method handlers.
