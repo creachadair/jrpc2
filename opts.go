@@ -25,7 +25,7 @@ func AllowV1(ok bool) ServerOption { return func(s *Server) { s.allow1 = ok } }
 // Concurrency allows up to the specified number of concurrent goroutines to
 // execute when processing requests. A value less than 1 is treated as 1.
 func Concurrency(n int) ServerOption {
-	if n <= 0 {
+	if n < 1 {
 		n = 1
 	}
 	return func(s *Server) { s.sem = semaphore.NewWeighted(int64(n)) }
