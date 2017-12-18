@@ -57,7 +57,9 @@ func (dummy) Unrelated() string { return "ceci n'est pas une méthode" }
 func TestClientServer(t *testing.T) {
 	cpipe, spipe := pipePair()
 
-	ass := MapAssigner(NewMethods(dummy{}))
+	ass := ServiceMapper{
+		"Test": MapAssigner(NewMethods(dummy{})),
+	}
 	s, err := NewServer(ass, ServerLog(os.Stderr), AllowV1(true), Concurrency(16)).Start(spipe)
 	if err != nil {
 		t.Fatalf("Start failed: %v", err)
@@ -71,12 +73,13 @@ func TestClientServer(t *testing.T) {
 		params interface{}
 		want   int
 	}{
-		{"Add", []int{}, 0},
-		{"Add", []int{1, 2, 3}, 6},
-		{"Mul", struct{ X, Y int }{7, 9}, 63},
-		{"Mul", struct{ X, Y int }{}, 0},
+		{"Test.Add", []int{}, 0},
+		{"Test.Add", []int{1, 2, 3}, 6},
+		{"Test.Mul", struct{ X, Y int }{7, 9}, 63},
+		{"Test.Mul", struct{ X, Y int }{}, 0},
 	}
 
+	// Verify that individual sequential requests work.
 	for _, test := range tests {
 		rsp, err := c.Call(test.method, test.params)
 		if err != nil {
@@ -95,6 +98,38 @@ func TestClientServer(t *testing.T) {
 
 		if err := c.Notify(test.method, test.params); err != nil {
 			t.Errorf("Notify %q %v: unexpected error: %v", test.method, test.params, err)
+		}
+	}
+
+	// Verify that a batch request works.
+	var reqs []*Request
+	for _, test := range tests {
+		req, err := c.Req(test.method, test.params)
+		if err != nil {
+			t.Fatalf("Req %q %v: unexpected error: %v", test.method, test.params, err)
+		}
+		reqs = append(reqs, req)
+	}
+	ps, err := c.Send(reqs...)
+	if err != nil {
+		t.Fatalf("Send failed: %v", err)
+	} else if len(ps) != len(tests) {
+		t.Errorf("Wrong number of penders: got %d, want %d", len(ps), len(tests))
+	}
+	for i, p := range ps {
+		rsp, err := p.Wait()
+		if err != nil {
+			t.Errorf("Response %d failed: %v", i+1, err)
+			continue
+		}
+		var got int
+		if err := rsp.UnmarshalResult(&got); err != nil {
+			t.Errorf("Umarshaling result %d: %v", i+1, err)
+			continue
+		}
+		t.Logf("Response %d (%q) contains %d", i+1, rsp.ID(), got)
+		if got != tests[i].want {
+			t.Errorf("Response %d (%q): got %v, want %v", i+1, rsp.ID(), got, tests[i].want)
 		}
 	}
 
