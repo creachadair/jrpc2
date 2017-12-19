@@ -61,7 +61,10 @@ func Alert(ctx context.Context, a alert) (bool, error) {
 	return false, nil // return values are ignored for notifications
 }
 
-var port = flag.Int("port", 0, "Service port")
+var (
+	port     = flag.Int("port", 0, "Service port")
+	maxTasks = flag.Int("max", 1, "Maximum concurrent tasks")
+)
 
 func main() {
 	flag.Parse()
@@ -81,7 +84,7 @@ func main() {
 	}
 	log.Printf("Listening at %v...", lst.Addr())
 
-	srv := jrpc2.NewServer(mux, jrpc2.ServerLog(os.Stderr))
+	srv := jrpc2.NewServer(mux, jrpc2.ServerLog(os.Stderr), jrpc2.Concurrency(*maxTasks))
 	for {
 		conn, err := lst.Accept()
 		if err != nil {
