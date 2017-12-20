@@ -19,10 +19,10 @@ type Method interface {
 	Call(context.Context, *Request) (interface{}, error)
 }
 
-// A MethodFunc adapts a function having the correct signature to a Method.
-type MethodFunc func(context.Context, *Request) (interface{}, error)
+// A methodFunc adapts a function having the correct signature to a Method.
+type methodFunc func(context.Context, *Request) (interface{}, error)
 
-func (m MethodFunc) Call(ctx context.Context, req *Request) (interface{}, error) {
+func (m methodFunc) Call(ctx context.Context, req *Request) (interface{}, error) {
 	return m(ctx, req)
 }
 
@@ -89,6 +89,13 @@ func NewMethods(obj interface{}) map[string]Method {
 }
 
 func newMethod(fn interface{}) (Method, error) {
+	// Special case: If fn has the exact signature of the Call method, don't do
+	// any (additional) reflection at all.
+	if f, ok := fn.(func(context.Context, *Request) (interface{}, error)); ok {
+		return methodFunc(f), nil
+	}
+
+	// Check that fn is a function of one of the correct forms.
 	typ := reflect.TypeOf(fn)
 	if typ.Kind() != reflect.Func {
 		return nil, errors.New("not a function")
@@ -130,7 +137,7 @@ func newMethod(fn interface{}) (Method, error) {
 	}
 	f := reflect.ValueOf(fn)
 
-	return MethodFunc(func(ctx context.Context, req *Request) (interface{}, error) {
+	return methodFunc(func(ctx context.Context, req *Request) (interface{}, error) {
 		arg, ierr := newinput(req)
 		if ierr != nil {
 			return nil, ierr
