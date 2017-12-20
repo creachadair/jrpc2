@@ -3,6 +3,7 @@ package jrpc2
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"testing"
@@ -51,6 +52,14 @@ func (dummy) Mul(_ context.Context, req struct{ X, Y int }) (int, error) {
 	return req.X * req.Y, nil
 }
 
+// Ctx validates that its context includes the request.
+func (dummy) Ctx(ctx context.Context, req *Request) (int, error) {
+	if creq := InboundRequest(ctx); creq != req {
+		return 0, fmt.Errorf("wrong req in context %p ≠ %p", creq, req)
+	}
+	return 1, nil
+}
+
 // Unrelated should not be picked up by the server.
 func (dummy) Unrelated() string { return "ceci n'est pas une méthode" }
 
@@ -83,6 +92,7 @@ func TestClientServer(t *testing.T) {
 		{"Test.Add", []int{1, 2, 3}, 6},
 		{"Test.Mul", struct{ X, Y int }{7, 9}, 63},
 		{"Test.Mul", struct{ X, Y int }{}, 0},
+		{"Test.Ctx", nil, 1},
 	}
 
 	// Verify that individual sequential requests work.
@@ -113,6 +123,7 @@ func TestClientServer(t *testing.T) {
 		{"Test.Add", []int{1, 2, 3}},
 		{"Test.Mul", struct{ X, Y int }{7, 9}},
 		{"Test.Mul", struct{ X, Y int }{}},
+		{"Test.Ctx", nil},
 	})
 	if err != nil {
 		t.Fatalf("Reqs: unexpected error: %v", err)

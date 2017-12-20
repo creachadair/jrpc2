@@ -169,7 +169,8 @@ func (s *Server) nextRequest() (func() error, error) {
 // dispatch invokes m for the specified request type, and marshals the return
 // value into JSON if there is one.
 func (s *Server) dispatch(m Method, req *Request) (json.RawMessage, error) {
-	v, err := m.Call(s.reqctx(req), req)
+	ctx := context.WithValue(s.reqctx(req), inboundRequestKey, req)
+	v, err := m.Call(ctx, req)
 	if err != nil {
 		if req.id == nil {
 			s.log("Discarding error from notification to %q: %v", req.Method(), err)
@@ -304,3 +305,23 @@ func (ts tasks) responses() jresponses {
 	}
 	return rsps
 }
+
+// InboundRequest returns the inbound request associated with the given
+// context, or nil if ctx does not have an inbound request.
+//
+// This is mainly of interest to wrapped methods that do not have the request
+// as an explicit parameter; for direct implementations of Method.Call the
+// request value returned by InboundRequest will be the same value as was
+// passed explicitly.
+func InboundRequest(ctx context.Context) *Request {
+	if v := ctx.Value(inboundRequestKey); v != nil {
+		return v.(*Request)
+	}
+	return nil
+}
+
+// requestContextKey is the concrete type of the context key used to dispatch
+// the request context in to handlers.
+type requestContextKey string
+
+const inboundRequestKey = requestContextKey("inbound-request")
