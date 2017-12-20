@@ -173,7 +173,7 @@ func (c *Client) Send(reqs ...*Request) ([]*Pending, error) {
 	var pends []*Pending
 	for _, req := range reqs {
 		if id := req.ID(); id != "" {
-			p := newPending()
+			p := newPending(id)
 			c.pending[id] = p
 			pends = append(pends, p)
 		}
@@ -238,12 +238,13 @@ type Pending struct {
 	// synchronization between the client and the caller. Once a value is
 	// received, the pending call is complete.
 	ch  chan *jresponse
+	id  string // the ID from the request
 	rsp *Response
 	err error
 }
 
-func newPending() *Pending {
-	return &Pending{ch: make(chan *jresponse, 1), err: errIncomplete}
+func newPending(id string) *Pending {
+	return &Pending{ch: make(chan *jresponse, 1), id: id, err: errIncomplete}
 }
 
 var errIncomplete = errors.New("request incomplete")
@@ -253,6 +254,9 @@ func (p *Pending) complete(rsp *jresponse) { p.ch <- rsp }
 
 // abandon closes p's channel signaling that it will never complete.
 func (p *Pending) abandon() { close(p.ch) }
+
+// ID reports the request identifier of the request p is waiting for.
+func (p *Pending) ID() string { return p.id }
 
 // Wait blocks until p is complete, then returns the response and any error
 // that occurred.  A non-nil response is returned whether or not there is an
