@@ -80,7 +80,7 @@ func main() {
 
 	lst, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", *port))
 	if err != nil {
-		log.Fatal("Listen:", err)
+		log.Fatalln("Listen:", err)
 	}
 	log.Printf("Listening at %v...", lst.Addr())
 
@@ -88,13 +88,13 @@ func main() {
 	for {
 		conn, err := lst.Accept()
 		if err != nil {
-			log.Fatal("Accept:", err)
+			log.Fatalln("Accept:", err)
 		}
 		log.Printf("New connection from %v", conn.RemoteAddr())
 
 		// Start up the server, and enable logging to stderr.
 		if _, err := srv.Start(conn); err != nil {
-			log.Fatal("Start:", err)
+			log.Fatalln("Start:", err)
 		}
 		log.Print("<serving requests>")
 		log.Printf("Server finished (err=%v)", srv.Wait())
