@@ -67,7 +67,7 @@ func TestClientServer(t *testing.T) {
 	cpipe, spipe := pipePair()
 
 	ass := ServiceMapper{
-		"Test": MapAssigner(NewMethods(dummy{})),
+		"Test": NewService(dummy{}),
 	}
 	s, err := NewServer(ass, &ServerOptions{
 		LogWriter:   os.Stderr,

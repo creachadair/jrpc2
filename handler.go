@@ -74,11 +74,11 @@ func NewMethod(fn interface{}) Method {
 	return m
 }
 
-// NewMethods adapts the methods of a value to a map from method names to
+// NewService adapts the methods of a value to a map from method names to
 // Method implementations as constructed by NewMethod. It will panic if obj has
 // no exported methods with a suitable signature.
-func NewMethods(obj interface{}) map[string]Method {
-	out := make(map[string]Method)
+func NewService(obj interface{}) MapAssigner {
+	out := make(MapAssigner)
 	val := reflect.ValueOf(obj)
 	typ := val.Type()
 

@@ -21,7 +21,7 @@ import (
 
 // The math type defines several arithmetic methods we can expose via the
 // service. The exported methods having appropriate types can be automatically
-// exported by jrpc2.NewMethods.
+// exported by jrpc2.NewService.
 type math struct{}
 
 // A binop is carries a pair of integers for use as parameters.
@@ -74,7 +74,7 @@ func main() {
 
 	// Bind the methods of the math type to an assigner.
 	mux := jrpc2.ServiceMapper{
-		"Math": jrpc2.MapAssigner(jrpc2.NewMethods(math{})),
+		"Math": jrpc2.NewService(math{}),
 		"Post": jrpc2.MapAssigner{"Alert": jrpc2.NewMethod(Alert)},
 	}
 
