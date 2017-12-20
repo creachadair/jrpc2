@@ -14,7 +14,8 @@ import (
 type Client struct {
 	wg sync.WaitGroup // ready when the reader is done at shutdown time
 
-	log func(string, ...interface{}) // write debug logs here
+	log    func(string, ...interface{}) // write debug logs here
+	allow1 bool                         // tolerate v1 replies with no version marker
 
 	mu      sync.Mutex          // protects the fields below
 	closer  io.Closer           // close to shut down the connection
@@ -29,6 +30,7 @@ type Client struct {
 func NewClient(conn Conn, opts *ClientOptions) *Client {
 	c := &Client{
 		log:     opts.logger(),
+		allow1:  opts.allowV1(),
 		closer:  conn,
 		enc:     json.NewEncoder(conn),
 		pending: make(map[string]*Pending),
@@ -58,6 +60,13 @@ func NewClient(conn Conn, opts *ClientOptions) *Client {
 					c.log("Discarding response without ID: %v", rsp)
 				} else if p := c.pending[id]; p == nil {
 					c.log("Discarding response for unknown ID %q", id)
+				} else if !c.versionOK(rsp.V) {
+					delete(c.pending, id)
+					p.complete(&jresponse{
+						ID: rsp.ID,
+						E:  jerrorf(E_InvalidRequest, "incorrect version marker %q", rsp.V),
+					})
+					c.log("Invalid response for ID %q", id)
 				} else {
 					// Remove the pending request from the set and deliver its response.
 					// Determining whether it's an error is the caller's responsibility.
@@ -225,6 +234,13 @@ func (c *Client) stop(err error) {
 	}
 	c.err = err
 	c.closer = nil
+}
+
+func (c *Client) versionOK(v string) bool {
+	if v == "" {
+		return c.allow1
+	}
+	return v == Version
 }
 
 // A Pending tracks a single pending request whose response is awaited.
