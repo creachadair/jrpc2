@@ -274,3 +274,22 @@ func (p *Pending) Wait() (*Response, error) {
 	}
 	return p.rsp, p.err
 }
+
+// marshalParams validates and marshals params to JSON for a request.  It's
+// okay for the parameters to be empty, but if they are not they must be valid
+// JSON. We check for the required structural properties also.
+func marshalParams(params interface{}) (json.RawMessage, error) {
+	if params == nil {
+		return nil, nil // no parameters, that is OK
+	}
+	bits, err := json.Marshal(params)
+	if err != nil {
+		return nil, err
+	}
+	if len(bits) != 0 && bits[0] != '[' && bits[0] != '{' {
+		// JSON-RPC requires that if parameters are provided at all, they are
+		// an array or an object
+		return nil, Errorf(E_InvalidRequest, "invalid parameters: array or object required")
+	}
+	return bits, err
+}
