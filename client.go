@@ -112,8 +112,9 @@ func (c *Client) Note(method string, params interface{}) (*Request, error) {
 // Send transmits the specified requests to the server and returns a slice of
 // Pending stubs that can be used to wait for their responses.
 //
-// The resulting slice will only contain entries for requests that expect
-// responses -- if all the requests are notifications, the slice will be empty.
+// The resulting slice will contain one entry for each input request that
+// expects a response (that is, all those that are not notifications). If all
+// the requests are notifications, the slice will be empty.
 //
 // Send blocks until the entire batch of requests has been transmitted.
 func (c *Client) Send(reqs ...*Request) ([]*Pending, error) {
