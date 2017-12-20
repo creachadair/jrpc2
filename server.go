@@ -36,9 +36,10 @@ type Server struct {
 }
 
 // NewServer returns a new unstarted server that will dispatch incoming
-// JSON-RPC requests according to mux. To start serving, call Start.  It is
-// safe to modify mux after the server has been started if mux itself is safe
-// for concurrent use by multiple goroutines.
+// JSON-RPC requests according to mux. To start serving, call Start.
+//
+// N.B. It is only safe to modify mux after the server has been started if mux
+// itself is safe for concurrent use by multiple goroutines.
 //
 // This function will panic if mux == nil.
 func NewServer(mux Assigner, opts *ServerOptions) *Server {
