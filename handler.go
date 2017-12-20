@@ -34,6 +34,13 @@ func (m MapAssigner) Assign(method string) Method { return m[method] }
 
 // A ServiceMapper combines multiple assigners into one, permitting a server to
 // export multiple services under different names.
+//
+// Example:
+//    m := jrpc2.ServiceMapper{
+//      "Foo": jrpc2.NewService(fooService),  // methods Foo.A, Foo.B, etc.
+//      "Bar": jrpc2.NewService(barService),  // methods Bar.A, Bar.B, etc.
+//    }
+//
 type ServiceMapper map[string]Assigner
 
 // Assign splits the inbound method name as Service.Method, and passes the
