@@ -102,13 +102,14 @@ func TestClientServer(t *testing.T) {
 	}
 
 	// Verify that a batch request works.
-	var reqs []*Request
-	for _, test := range tests {
-		req, err := c.Req(test.method, test.params)
-		if err != nil {
-			t.Fatalf("Req %q %v: unexpected error: %v", test.method, test.params, err)
-		}
-		reqs = append(reqs, req)
+	reqs, err := c.Reqs([]Spec{
+		{"Test.Add", []int{}},
+		{"Test.Add", []int{1, 2, 3}},
+		{"Test.Mul", struct{ X, Y int }{7, 9}},
+		{"Test.Mul", struct{ X, Y int }{}},
+	})
+	if err != nil {
+		t.Fatalf("Reqs: unexpected error: %v", err)
 	}
 	ps, err := c.Send(reqs...)
 	if err != nil {

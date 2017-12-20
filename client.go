@@ -95,6 +95,26 @@ func (c *Client) Req(method string, params interface{}) (*Request, error) {
 	}, nil
 }
 
+// A Spec combines a method name and parameter value.
+type Spec struct {
+	Method string
+	Params interface{}
+}
+
+// Reqs constructs a collection of requests from the given specs, succeeding
+// only if all are successfully constructed.
+func (c *Client) Reqs(specs []Spec) ([]*Request, error) {
+	reqs := make([]*Request, len(specs))
+	for i, spec := range specs {
+		req, err := c.Req(spec.Method, spec.Params)
+		if err != nil {
+			return nil, err
+		}
+		reqs[i] = req
+	}
+	return reqs, nil
+}
+
 // Note constructs a notification request for the specified method and parameters.
 // This does not transmit the request to the server; use c.Send to do so.
 func (c *Client) Note(method string, params interface{}) (*Request, error) {
