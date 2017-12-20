@@ -88,7 +88,7 @@ type jrequest struct {
 	V  string          `json:"jsonrpc"`      // must be Version
 	ID json.RawMessage `json:"id,omitempty"` // rendered by the constructor, may be nil
 	M  string          `json:"method"`
-	P  jparams         `json:"params"` // rendered by the constructor
+	P  jparams         `json:"params,omitempty"` // rendered by the constructor
 }
 
 // jparams is a raw parameters message, including a check that the value is
@@ -159,5 +159,3 @@ func jerrorf(code Code, msg string, args ...interface{}) *jerror {
 		Msg:  fmt.Sprintf(msg, args...),
 	}
 }
-
-
