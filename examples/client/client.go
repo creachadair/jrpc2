@@ -47,7 +47,7 @@ func div(cli *jrpc2.Client, x, y int) (float64, error) {
 func intResult(rsp *jrpc2.Response) int {
 	var v int
 	if err := rsp.UnmarshalResult(&v); err != nil {
-		log.Fatal("UnmarshalResult:", err)
+		log.Fatalln("UnmarshalResult:", err)
 	}
 	return v
 }
@@ -70,7 +70,7 @@ func main() {
 
 	log.Print("\n-- Sending some individual requests...")
 	if sum, err := add(cli, 1, 3, 5, 7); err != nil {
-		log.Fatal("Math.Add:", err)
+		log.Fatalln("Math.Add:", err)
 	} else {
 		log.Printf("Math.Add result=%d", sum)
 	}
@@ -97,12 +97,12 @@ func main() {
 	}
 	ps, err := cli.Send(reqs...)
 	if err != nil {
-		log.Fatal("Call:", err)
+		log.Fatalln("Call:", err)
 	}
 	for i, p := range ps {
 		rsp, err := p.Wait()
 		if err != nil {
-			log.Printf("Req %q %s failed: %v", reqs[i].Method(), rsp.ID(), err)
+			log.Printf("Req %q %s failed: %v", reqs[i].Method(), p.ID(), err)
 			continue
 		}
 		log.Printf("Req %q %s: result=%d", reqs[i].Method(), rsp.ID(), intResult(rsp))
@@ -130,6 +130,6 @@ func main() {
 
 	log.Print("\n-- Sending a notification...")
 	if err := cli.Notify("Post.Alert", struct{ Msg string }{"There is a fire!"}); err != nil {
-		log.Fatal("Notify:", err)
+		log.Fatalln("Notify:", err)
 	}
 }
