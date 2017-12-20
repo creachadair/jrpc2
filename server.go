@@ -41,19 +41,16 @@ type Server struct {
 // for concurrent use by multiple goroutines.
 //
 // This function will panic if mux == nil.
-func NewServer(mux Assigner, opts ...ServerOption) *Server {
+func NewServer(mux Assigner, opts *ServerOptions) *Server {
 	if mux == nil {
 		panic("nil assigner")
 	}
 	s := &Server{
 		mux:    mux,
-		sem:    semaphore.NewWeighted(1),
-		log:    func(string, ...interface{}) {},
-		reqctx: func(*Request) context.Context { return context.Background() },
+		sem:    semaphore.NewWeighted(opts.concurrency()),
+		log:    opts.logger(),
+		reqctx: opts.reqContext(),
 		mu:     new(sync.Mutex),
-	}
-	for _, opt := range opts {
-		opt(s)
 	}
 	return s
 }

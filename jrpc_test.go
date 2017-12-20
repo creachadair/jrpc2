@@ -60,12 +60,18 @@ func TestClientServer(t *testing.T) {
 	ass := ServiceMapper{
 		"Test": MapAssigner(NewMethods(dummy{})),
 	}
-	s, err := NewServer(ass, ServerLog(os.Stderr), AllowV1(true), Concurrency(16)).Start(spipe)
+	s, err := NewServer(ass, &ServerOptions{
+		LogWriter:   os.Stderr,
+		AllowV1:     true,
+		Concurrency: 16,
+	}).Start(spipe)
 	if err != nil {
 		t.Fatalf("Start failed: %v", err)
 	}
 	t.Logf("Server running on pipe %v", spipe)
-	c := NewClient(cpipe, ClientLog(os.Stderr))
+	c := NewClient(cpipe, &ClientOptions{
+		LogWriter: os.Stderr,
+	})
 	t.Logf("Client running on pipe %v", cpipe)
 
 	tests := []struct {

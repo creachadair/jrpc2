@@ -26,15 +26,12 @@ type Client struct {
 }
 
 // NewClient returns a new client that communicates with the server via conn.
-func NewClient(conn Conn, opts ...ClientOption) *Client {
+func NewClient(conn Conn, opts *ClientOptions) *Client {
 	c := &Client{
-		log:     func(string, ...interface{}) {},
+		log:     opts.logger(),
 		closer:  conn,
 		enc:     json.NewEncoder(conn),
 		pending: make(map[string]*Pending),
-	}
-	for _, opt := range opts {
-		opt(c)
 	}
 
 	dec := json.NewDecoder(conn)

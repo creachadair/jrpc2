@@ -5,51 +5,65 @@ import (
 	"fmt"
 	"io"
 	"log"
-
-	"golang.org/x/sync/semaphore"
 )
 
 const logFlags = log.LstdFlags | log.Lshortfile
 
-// An ServerOption controls an optional behaviour of a Server.
-type ServerOption func(*Server)
+// ServerOptions control the behaviour of a server created by NewServer.
+// A nil *ServerOptions provides sensible defaults.
+type ServerOptions struct {
+	// If not nil, send debug logs to this writer.
+	LogWriter io.Writer
 
-// ServerLog enables debug logging to the specified writer.
-func ServerLog(w io.Writer) ServerOption {
-	logger := log.New(w, "[jrpc2.Server] ", logFlags)
-	return func(s *Server) {
-		s.log = func(msg string, args ...interface{}) { logger.Output(2, fmt.Sprintf(msg, args...)) }
+	// Instructs the server to tolerate requests that do not include the
+	// required "jsonrpc" version marker.
+	AllowV1 bool
+
+	// Allows up to the specified number of concurrent goroutines to execute
+	// when processing requests. A value less than 1 is treated as 1.
+	Concurrency int
+
+	// If not nil, this function is called to obtain a context value to use for
+	// each inbound request. By default, a server uses the background context.
+	RequestContext func(*Request) context.Context
+}
+
+func (s *ServerOptions) logger() func(string, ...interface{}) {
+	if s == nil || s.LogWriter == nil {
+		return func(string, ...interface{}) {}
 	}
+	logger := log.New(s.LogWriter, "[jrpc2.Server] ", logFlags)
+	return func(msg string, args ...interface{}) { logger.Output(2, fmt.Sprintf(msg, args...)) }
 }
 
-// AllowV1 instructs the server whether to tolerate requests that do not
-// include the required "jsonrpc" version marker.
-func AllowV1(ok bool) ServerOption { return func(s *Server) { s.allow1 = ok } }
+func (s *ServerOptions) allowV1() bool { return s != nil && s.AllowV1 }
 
-// Concurrency allows up to the specified number of concurrent goroutines to
-// execute when processing requests. A value less than 1 is treated as 1, which
-// is also the default if this option is not provided.
-func Concurrency(n int) ServerOption {
-	if n < 1 {
-		n = 1
+func (s *ServerOptions) concurrency() int64 {
+	if s == nil || s.Concurrency < 1 {
+		return 1
 	}
-	return func(s *Server) { s.sem = semaphore.NewWeighted(int64(n)) }
+	return int64(s.Concurrency)
 }
 
-// ReqContext provides a function that the server will call to obtain a context
-// value to use for each inbound request. By default the server uses background
-// context.
-func ReqContext(f func(*Request) context.Context) ServerOption {
-	return func(s *Server) { s.reqctx = f }
+func (s *ServerOptions) reqContext() func(*Request) context.Context {
+	if s == nil || s.RequestContext == nil {
+		return func(*Request) context.Context { return context.Background() }
+	}
+	return s.RequestContext
 }
 
-// A ClientOption controls an optional behaviour of a Client.
-type ClientOption func(*Client)
+// ClientOptions control the behaviour of a client created by NewClient.
+// A nil *ClientOptions provides sensible defaults.
+type ClientOptions struct {
+	// If not nil, send debug logs to this writer.
+	LogWriter io.Writer
+}
 
 // ClientLog enables debug logging to the specified writer.
-func ClientLog(w io.Writer) ClientOption {
-	logger := log.New(w, "[jrpc2.Client] ", logFlags)
-	return func(c *Client) {
-		c.log = func(msg string, args ...interface{}) { logger.Output(2, fmt.Sprintf(msg, args...)) }
+func (c *ClientOptions) logger() func(string, ...interface{}) {
+	if c == nil || c.LogWriter == nil {
+		return func(string, ...interface{}) {}
 	}
+	logger := log.New(c.LogWriter, "[jrpc2.Client] ", logFlags)
+	return func(msg string, args ...interface{}) { logger.Output(2, fmt.Sprintf(msg, args...)) }
 }
