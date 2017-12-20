@@ -84,7 +84,10 @@ func main() {
 	}
 	log.Printf("Listening at %v...", lst.Addr())
 
-	srv := jrpc2.NewServer(mux, jrpc2.ServerLog(os.Stderr), jrpc2.Concurrency(*maxTasks))
+	srv := jrpc2.NewServer(mux, &jrpc2.ServerOptions{
+		LogWriter:   os.Stderr,
+		Concurrency: *maxTasks,
+	})
 	for {
 		conn, err := lst.Accept()
 		if err != nil {
