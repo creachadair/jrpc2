@@ -57,6 +57,10 @@ func (s *ServerOptions) reqContext() func(*Request) context.Context {
 type ClientOptions struct {
 	// If not nil, send debug logs to this writer.
 	LogWriter io.Writer
+
+	// Instructs the client to tolerate responses that do not include the
+	// required "jsonrpc" version marker.
+	AllowV1 bool
 }
 
 // ClientLog enables debug logging to the specified writer.
@@ -67,3 +71,5 @@ func (c *ClientOptions) logger() func(string, ...interface{}) {
 	logger := log.New(c.LogWriter, "[jrpc2.Client] ", logFlags)
 	return func(msg string, args ...interface{}) { logger.Output(2, fmt.Sprintf(msg, args...)) }
 }
+
+func (c *ClientOptions) allowV1() bool { return c != nil && c.AllowV1 }
