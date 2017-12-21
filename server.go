@@ -49,6 +49,7 @@ func NewServer(mux Assigner, opts *ServerOptions) *Server {
 	s := &Server{
 		mux:    mux,
 		sem:    semaphore.NewWeighted(opts.concurrency()),
+		allow1: opts.allowV1(),
 		log:    opts.logger(),
 		reqctx: opts.reqContext(),
 		mu:     new(sync.Mutex),
