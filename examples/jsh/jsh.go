@@ -1,4 +1,10 @@
 // Program jsh exposes a trivial command-shell functionality via JSON-RPC.
+//
+// Usage:
+//    go build bitbucket.org/creachadair/jrpc2/examples/jsh
+//    ./jsh -port 8080
+//
+// See also examples/jcl/jcl.go.
 package main
 
 import (

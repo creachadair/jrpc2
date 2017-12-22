@@ -11,6 +11,13 @@
 // If the last token on the command line is "<<" the reader accumulates all
 // subsequent lines until a "." on a line by itself as input for the command.
 // Escape a plain "." by doubling it "..".
+//
+// Use the command ":stderr" to toggle reporting of stderr from commands.
+//
+// Usage:
+//    go build bitbucket.org/creachadair/jrpc2/examples/jcl
+//    ./jcl -service :8080
+//
 package main
 
 import (
