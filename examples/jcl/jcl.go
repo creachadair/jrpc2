@@ -27,7 +27,10 @@ import (
 	"bitbucket.org/creachadair/shell"
 )
 
-var serverAddr = flag.String("service", "", "Sevice address")
+var (
+	serverAddr = flag.String("service", "", "Sevice address")
+	wantStderr = flag.Bool("stderr", false, "Capture stderr from commands")
+)
 
 func main() {
 	flag.Parse()
@@ -68,8 +71,9 @@ func main() {
 
 // RunReq is a request to invoke a program.
 type RunReq struct {
-	Args  []string `json:"args"`  // The command line to execute
-	Input []byte   `json:"input"` // If nonempty, becomes the standard input of the subprocess
+	Args   []string `json:"args"`   // The command line to execute
+	Input  []byte   `json:"input"`  // If nonempty, becomes the standard input of the subprocess
+	Stderr bool     `json:"stderr"` // Whether to capture stderr from the subprocess
 }
 
 // RunResult is the result of executing a program.
@@ -106,6 +110,11 @@ func readCommand(in *bufio.Scanner) (*RunReq, error) {
 		} else if len(args) == 0 {
 			continue
 		}
+		if len(args) == 1 && args[0] == ":stderr" {
+			*wantStderr = !*wantStderr
+			fmt.Fprintf(os.Stderr, "Request stderr: %v\n", *wantStderr)
+			continue
+		}
 
 		// Check for an input marker...
 		var input []string
@@ -130,8 +139,9 @@ func readCommand(in *bufio.Scanner) (*RunReq, error) {
 			}
 		}
 		return &RunReq{
-			Args:  args,
-			Input: []byte(strings.Join(input, "\n")),
+			Args:   args,
+			Input:  []byte(strings.Join(input, "\n")),
+			Stderr: *wantStderr,
 		}, nil
 	}
 }
