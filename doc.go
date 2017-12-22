@@ -118,6 +118,14 @@ however, the client provides:
 
 This is equivalent to the above, for the case of a single notification.
 
+On the server side, notifications are identical to ordinary requests, save that
+their return value is discarded once the handler returns. If a handler does not
+want to do anything for a notification, it can query the request:
+
+   if req.IsNotification() {
+      return 0, nil  // ignore notifications
+   }
+
 Services with Multiple Methods
 
 The examples above show a server with only one method using NewMethod; you will
