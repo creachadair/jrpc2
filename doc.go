@@ -6,8 +6,8 @@ Servers
 
 The *Server type implements a JSON-RPC server. A server communicates with a
 client over a Conn, and dispatches client requests to user-defined handlers
-dispatched by an Assigner. For example, suppose we have defined the following
-Add function:
+through an Assigner. For example, suppose we have defined the following Add
+function:
 
    // Add returns the sum of a slice of integers.
    func Add(ctx context.Context, values []int) (int, error) {
