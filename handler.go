@@ -60,6 +60,7 @@ func (m ServiceMapper) Assign(method string) Method {
 // NewMethod adapts a function to a Method. The concrete value of fn must be a
 // function with one of the following type signatures:
 //
+//    func(context.Context) (Y, error)
 //    func(context.Context, X) (Y, error)
 //    func(context.Context, *jrpc2.Request) (Y, error)
 //
@@ -106,7 +107,7 @@ func newMethod(fn interface{}) (Method, error) {
 	typ := reflect.TypeOf(fn)
 	if typ.Kind() != reflect.Func {
 		return nil, errors.New("not a function")
-	} else if typ.NumIn() != 2 {
+	} else if np := typ.NumIn(); np == 0 || np > 2 {
 		return nil, errors.New("wrong number of parameters")
 	} else if typ.NumOut() != 2 {
 		return nil, errors.New("wrong number of results")
@@ -119,8 +120,12 @@ func newMethod(fn interface{}) (Method, error) {
 	// Case 1: The function wants the plain request.
 	newinput := func(req *Request) (reflect.Value, error) { return reflect.ValueOf(req), nil }
 
-	// Case 2: The function wants us to unpack the request.
-	if a, b := typ.In(1), reflect.TypeOf((*Request)(nil)); a != b {
+	if typ.NumIn() == 1 {
+		// Case 2: The function does not want any request parameters.
+		newinput = func(req *Request) (reflect.Value, error) { return reflect.Value{}, nil }
+	} else if a, b := typ.In(1), reflect.TypeOf((*Request)(nil)); a != b {
+		// Case 3: The function wants us to unpack the request parameters.
+
 		// Keep track of whether the function wants a pointer to its argument or
 		// not.  We need to create one either way to support unmarshaling, but we
 		// need to indirect it back off if the callee didn't express it.
@@ -145,11 +150,13 @@ func newMethod(fn interface{}) (Method, error) {
 	f := reflect.ValueOf(fn)
 
 	return methodFunc(func(ctx context.Context, req *Request) (interface{}, error) {
-		arg, ierr := newinput(req)
-		if ierr != nil {
+		args := []reflect.Value{reflect.ValueOf(ctx)}
+		if arg, ierr := newinput(req); ierr != nil {
 			return nil, ierr
+		} else if arg.IsValid() {
+			args = append(args, arg)
 		}
-		vals := f.Call([]reflect.Value{reflect.ValueOf(ctx), arg})
+		vals := f.Call(args)
 		out, oerr := vals[0].Interface(), vals[1].Interface()
 		if oerr != nil {
 			return nil, oerr.(error)

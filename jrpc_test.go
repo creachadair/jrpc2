@@ -52,6 +52,9 @@ func (dummy) Mul(_ context.Context, req struct{ X, Y int }) (int, error) {
 	return req.X * req.Y, nil
 }
 
+// Nil does not require any parameters.
+func (dummy) Nil(_ context.Context) (int, error) { return 42, nil }
+
 // Ctx validates that its context includes the request.
 func (dummy) Ctx(ctx context.Context, req *Request) (int, error) {
 	if creq := InboundRequest(ctx); creq != req {
@@ -93,6 +96,7 @@ func TestClientServer(t *testing.T) {
 		{"Test.Mul", struct{ X, Y int }{7, 9}, 63},
 		{"Test.Mul", struct{ X, Y int }{}, 0},
 		{"Test.Ctx", nil, 1},
+		{"Test.Nil", nil, 42},
 	}
 
 	// Verify that individual sequential requests work.
@@ -118,13 +122,11 @@ func TestClientServer(t *testing.T) {
 	}
 
 	// Verify that a batch request works.
-	reqs, err := c.Reqs([]Spec{
-		{"Test.Add", []int{}},
-		{"Test.Add", []int{1, 2, 3}},
-		{"Test.Mul", struct{ X, Y int }{7, 9}},
-		{"Test.Mul", struct{ X, Y int }{}},
-		{"Test.Ctx", nil},
-	})
+	specs := make([]Spec, len(tests))
+	for i, test := range tests {
+		specs[i] = Spec{test.method, test.params}
+	}
+	reqs, err := c.Reqs(specs)
 	if err != nil {
 		t.Fatalf("Reqs: unexpected error: %v", err)
 	}
