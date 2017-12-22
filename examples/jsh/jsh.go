@@ -16,8 +16,9 @@ import (
 
 // RunReq is a request to invoke a program.
 type RunReq struct {
-	Args  []string `json:"args"`  // The command line to execute
-	Input []byte   `json:"input"` // If nonempty, becomes the standard input of the subprocess
+	Args   []string `json:"args"`   // The command line to execute
+	Input  []byte   `json:"input"`  // If nonempty, becomes the standard input of the subprocess
+	Stderr bool     `json:"stderr"` // Whether to capture stderr from the subprocess
 }
 
 // RunResult is the result of executing a program.
@@ -39,7 +40,11 @@ func Run(ctx context.Context, req *RunReq) (*RunResult, error) {
 	if len(req.Input) != 0 {
 		cmd.Stdin = bytes.NewReader(req.Input)
 	}
-	out, err := cmd.Output()
+	run := cmd.Output
+	if req.Stderr {
+		run = cmd.CombinedOutput
+	}
+	out, err := run()
 	ex, ok := err.(*exec.ExitError)
 	if err != nil && !ok {
 		return nil, err
