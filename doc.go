@@ -117,6 +117,43 @@ however, the client provides:
    err := cli.Notify("Alert", struct{Msg string}{"a fire is burning"})
 
 This is equivalent to the above, for the case of a single notification.
+
+Services with Multiple Methods
+
+The examples above show a server with only one method using NewMethod; you will
+often want to expose more than one. The NewService function supports this by
+applying NewMethod to all the exported methods of a concrete value to produce a
+MapAssigner for those methods:
+
+   type math struct{}
+
+   func (math) Add(ctx context.Context, vals []int) (int, error) { ... }
+   func (math) Mul(ctx context.Context, vals []int) (int, error) { ... }
+
+   assigner := jrpc2.NewService(math{})
+
+This assigner maps the name "Add" to the Add method, and the name "Mul" to the
+Mul method, of the math value.
+
+This may be further combined with the ServiceMapper type to allow different
+services to work together:
+
+   type status struct{}
+
+   func (status) Get(_ context.Context, _ *jrpc2.Request) (string, error) {
+      return "all is well", nil
+   }
+
+   assigner := jrpc2.ServiceMapper{
+      "Math":   jrpc2.NewService(math{}),
+      "Status": jrpc2.NewService(status{}),
+   }
+
+This assigner dispatches "Math.Add" and "Math.Mul" to the math value's methods,
+and "Status.Get" to the status value's method. A ServiceMapper splits the
+method name on the first period ("."), and you may nest ServiceMappers more
+deeply if you require a deeper hierarchy.
+
 */
 package jrpc2
 
