@@ -8,10 +8,10 @@ import (
 //
 //     func(*Client, X) (Y, error)
 //
-// that invokes method via the given client, encoding the provided request and
-// decoding the response automatically. This supports construction of client
-// wrappers that have a more natural function signature. The caller should
-// assert the expected type on the return value.
+// that invokes the designated method via the client given, encoding the
+// provided request and decoding the response automatically. This supports
+// construction of client wrappers that have a more natural function
+// signature. The caller should assert the expected type on the return value.
 //
 // Example:
 //    cli := jrpc2.NewClient(conn, nil)
