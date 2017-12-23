@@ -143,7 +143,6 @@ func readCommand(in *bufio.Scanner) (*RunReq, error) {
 				for in.Scan() {
 					switch in.Text() {
 					case ".":
-						buf.WriteString("\n")
 						break moreInput
 					case "..":
 						buf.WriteString(".\n")
