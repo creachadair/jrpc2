@@ -12,6 +12,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"os"
@@ -69,12 +70,19 @@ func Run(ctx context.Context, req *RunReq) (*RunResult, error) {
 	}, nil
 }
 
-var port = flag.Int("port", 0, "Service port")
+var (
+	port    = flag.Int("port", 0, "Service port")
+	logging = flag.Bool("log", false, "Enable verbose logging")
+
+	lw io.Writer
+)
 
 func main() {
 	flag.Parse()
 	if *port <= 0 {
 		log.Fatal("You must specify a positive --port value")
+	} else if *logging {
+		lw = os.Stdout
 	}
 
 	lst, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
@@ -94,7 +102,7 @@ func main() {
 			defer conn.Close()
 			srv, err := jrpc2.NewServer(m, &jrpc2.ServerOptions{
 				AllowV1:   true,
-				LogWriter: os.Stderr,
+				LogWriter: lw,
 			}).Start(conn)
 			if err != nil {
 				log.Fatalln("Start:", err)
