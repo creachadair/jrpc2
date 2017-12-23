@@ -7,6 +7,7 @@ import (
 	"errors"
 	"io"
 	"sync"
+	"time"
 
 	"bitbucket.org/creachadair/stringset"
 	"bitbucket.org/creachadair/taskgroup"
@@ -138,6 +139,7 @@ func (s *Server) nextRequest() (func() error, error) {
 
 	// Invoke the handlers outside the lock.
 	return func() error {
+		start := time.Now()
 		g := taskgroup.New(nil)
 		for _, t := range tasks {
 			if t.err != nil {
@@ -157,7 +159,7 @@ func (s *Server) nextRequest() (func() error, error) {
 		}
 		g.Wait()
 		rsps := tasks.responses()
-		s.log("Completed %d responses", len(rsps))
+		s.log("Completed %d responses [%v elapsed]", len(rsps), time.Since(start))
 
 		// Deliver any responses (or errors) we owe.
 		if len(rsps) != 0 {
