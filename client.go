@@ -20,7 +20,6 @@ type Client struct {
 	mu      sync.Mutex          // protects the fields below
 	closer  io.Closer           // close to shut down the connection
 	enc     *json.Encoder       // encode requests to the server
-	dec     *json.Decoder       // decode responses from the server
 	err     error               // error from a previous operation
 	pending map[string]*Pending // requests pending completion, by ID
 	nextID  int64               // next unused request ID
@@ -29,12 +28,18 @@ type Client struct {
 // NewClient returns a new client that communicates with the server via conn.
 func NewClient(conn Conn, opts *ClientOptions) *Client {
 	c := &Client{
-		log:     opts.logger(),
-		allow1:  opts.allowV1(),
+		log:    opts.logger(),
+		allow1: opts.allowV1(),
+
+		// Lock-protected fields
 		closer:  conn,
 		enc:     json.NewEncoder(conn),
 		pending: make(map[string]*Pending),
 	}
+
+	// The main client loop reads responses from the server and delivers them
+	// back to pending requests by their ID. Outbound requests do not queue;
+	// they are sent synchronously in the Send method.
 
 	dec := json.NewDecoder(conn)
 	dec.UseNumber()
@@ -42,6 +47,9 @@ func NewClient(conn Conn, opts *ClientOptions) *Client {
 	go func() {
 		defer c.wg.Done()
 		for {
+			// Accept the next batch of responses from the server.  This may
+			// either be a list or a single object, the decoder for jresponses
+			// knows how to handle both.
 			var in jresponses
 			err := dec.Decode(&in)
 			c.mu.Lock()
@@ -53,6 +61,12 @@ func NewClient(conn Conn, opts *ClientOptions) *Client {
 				c.mu.Unlock()
 				return
 			}
+
+			// For each response, find the request pending on its ID and
+			// deliver it.  Unknown response IDs are logged and discarded.  As
+			// we are under the lock, we do not wait for the pending receiver
+			// to pick up the response; we just drop it in their channel.  The
+			// channel is buffered so we don't need to rendezvous.
 			c.log("Received %d responses", len(in))
 			for _, rsp := range in {
 				id := string(rsp.ID)
@@ -257,6 +271,8 @@ type Pending struct {
 }
 
 func newPending(id string) *Pending {
+	// Buffer the channel so the response reader does not need to rendezvous
+	// with the recipient.
 	return &Pending{ch: make(chan *jresponse, 1), id: id, err: errIncomplete}
 }
 
@@ -277,6 +293,12 @@ func (p *Pending) ID() string { return p.id }
 func (p *Pending) Wait() (*Response, error) {
 	raw, ok := <-p.ch
 	if ok {
+		// N.B. We intentionally did not have the sender close the channel, to
+		// avoid a race between callers of Wait. The channel is closed by the
+		// first waiter to get a real value, after ensuring the response values
+		// are updated -- that way subsequent waiters will get a zero from the
+		// closed channel and correctly fall through to the stored responses.
+
 		p.err = nil // clear incomplete status
 		p.rsp = &Response{
 			id:     raw.ID,
