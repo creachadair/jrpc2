@@ -20,29 +20,13 @@ import (
 
 var serverAddr = flag.String("server", "", "Server address")
 
-func add(cli *jrpc2.Client, vs ...int) (int, error) {
-	rsp, err := cli.Call("Math.Add", vs)
-	if err != nil {
-		return 0, err
-	}
-	var sum int
-	if err := rsp.UnmarshalResult(&sum); err != nil {
-		return 0, err
-	}
-	return sum, nil
-}
+var (
+	// Reflective call wrappers for the remote methods.
+	add = jrpc2.NewCaller("Math.Add", []int(nil), int(0)).(func(*jrpc2.Client, []int) (int, error))
+	div = jrpc2.NewCaller("Math.Div", binarg{}, float64(0)).(func(*jrpc2.Client, binarg) (float64, error))
+)
 
-func div(cli *jrpc2.Client, x, y int) (float64, error) {
-	rsp, err := cli.Call("Math.Div", struct{ X, Y int }{x, y})
-	if err != nil {
-		return 0, err
-	}
-	var quotient float64
-	if err := rsp.UnmarshalResult(&quotient); err != nil {
-		return 0, err
-	}
-	return quotient, nil
-}
+type binarg struct{ X, Y int }
 
 func intResult(rsp *jrpc2.Response) int {
 	var v int
@@ -69,14 +53,19 @@ func main() {
 	defer cli.Close()
 
 	log.Print("\n-- Sending some individual requests...")
-	if sum, err := add(cli, 1, 3, 5, 7); err != nil {
+	if sum, err := add(cli, []int{1, 3, 5, 7}); err != nil {
 		log.Fatalln("Math.Add:", err)
 	} else {
 		log.Printf("Math.Add result=%d", sum)
 	}
+	if quot, err := div(cli, binarg{82, 19}); err != nil {
+		log.Fatalln("Math.Div:", err)
+	} else {
+		log.Printf("Math.Div result=%.3f", quot)
+	}
 
 	// An error condition (division by zero)
-	if quot, err := div(cli, 15, 0); err != nil {
+	if quot, err := div(cli, binarg{15, 0}); err != nil {
 		log.Printf("Math.Div err=%v", err)
 	} else {
 		log.Fatalf("Math.Div succeeded unexpectedly: result=%v", quot)
