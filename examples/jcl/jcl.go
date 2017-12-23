@@ -16,7 +16,7 @@
 //
 // Usage:
 //    go build bitbucket.org/creachadair/jrpc2/examples/jcl
-//    ./jcl -service :8080
+//    ./jcl -server :8080
 //
 package main
 
@@ -37,14 +37,14 @@ import (
 )
 
 var (
-	serverAddr = flag.String("service", "", "Sevice address")
+	serverAddr = flag.String("server", "", "Server address")
 	wantStderr = flag.Bool("stderr", false, "Capture stderr from commands")
 )
 
 func main() {
 	flag.Parse()
 	if *serverAddr == "" {
-		log.Fatal("You must provide a non-empty --service address")
+		log.Fatal("You must provide a non-empty --server address")
 	}
 
 	conn, err := net.Dial("tcp", *serverAddr)
