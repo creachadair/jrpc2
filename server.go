@@ -79,9 +79,17 @@ func (s *Server) Start(conn Conn) (*Server, error) {
 	dec.UseNumber()
 	// TODO(fromberger): Disallow extra fields once 1.10 lands.
 
+	// The task group carries goroutines dispatched to handle individual
+	// request messages; the waitgroup maintains the persistent goroutines for
+	// receiving input and processing the request queue.
 	g := taskgroup.New(nil)
 	s.wg.Add(2)
+
+	// Accept requests from the client and enqueue them for processing.
 	go func() { defer s.wg.Done(); s.read(dec) }()
+
+	// Remove requests from the queue and dispatch them to handlers.  The
+	// responses are written back by the handler goroutines.
 	go func() {
 		defer s.wg.Done()
 		for {
