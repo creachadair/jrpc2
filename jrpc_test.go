@@ -163,15 +163,17 @@ func TestNewCaller(t *testing.T) {
 	cpipe, spipe := pipePair()
 
 	// A dummy method that returns the length of its argument slice.
-	ass := MapAssigner{"F": NewMethod(func(_ context.Context, req []string) (int, error) {
-		t.Logf("Call to F with arguments %#v", req)
+	ass := MapAssigner{
+		"F": NewMethod(func(_ context.Context, req []string) (int, error) {
+			t.Logf("Call to F with arguments %#v", req)
 
-		// Check for this special form, and generate an error if it matches.
-		if len(req) > 0 && req[0] == "fail" {
-			return 0, errors.New(strings.Join(req[1:], " "))
-		}
-		return len(req), nil
-	})}
+			// Check for this special form, and generate an error if it matches.
+			if len(req) > 0 && req[0] == "fail" {
+				return 0, errors.New(strings.Join(req[1:], " "))
+			}
+			return len(req), nil
+		}),
+	}
 
 	s, err := NewServer(ass, &ServerOptions{LogWriter: os.Stderr}).Start(spipe)
 	if err != nil {
@@ -187,7 +189,12 @@ func TestNewCaller(t *testing.T) {
 	caller := NewCaller("F", []string(nil), int(0))
 	F, ok := caller.(func(*Client, []string) (int, error))
 	if !ok {
-		t.Fatalf("newCaller produced the wrong type: %T", caller)
+		t.Fatalf("NewCaller (plain): wrong type: %T", caller)
+	}
+	vcaller := NewCaller("F", string(""), int(0), Variadic())
+	V, ok := vcaller.(func(*Client, ...string) (int, error))
+	if !ok {
+		t.Fatalf("NewCaller (variadic): wrong type: %T", vcaller)
 	}
 
 	// Verify that various success cases do indeed.
@@ -202,19 +209,27 @@ func TestNewCaller(t *testing.T) {
 		{[]string{"", "", "q"}, 3},
 	}
 	for _, test := range tests {
-		got, err := F(c, test.in)
-		if err != nil {
+		if got, err := F(c, test.in); err != nil {
 			t.Errorf("F(c, %q): unexpected error: %v", test.in, err)
 		} else if got != test.want {
 			t.Errorf("F(c, %q): got %d, want %d", test.in, got, test.want)
 		}
+		if got, err := V(c, test.in...); err != nil {
+			t.Errorf("V(c, %q): unexpected error: %v", test.in, err)
+		} else if got != test.want {
+			t.Errorf("V(c, %q): got %d, want %d", test.in, got, test.want)
+		}
 	}
 
 	// Verify that errors get propagated sensibly.
-	got, err := F(c, []string{"fail", "propagate error"})
-	if err == nil {
+	if got, err := F(c, []string{"fail", "propagate error"}); err == nil {
 		t.Errorf("F(c, _): should have failed, returned %d", got)
 	} else {
 		t.Logf("F(c, _): correctly failed: %v", err)
+	}
+	if got, err := V(c, "fail", "propagate error"); err == nil {
+		t.Errorf("V(c, _): should have failed, returned %d", got)
+	} else {
+		t.Logf("V(c, _): correctly failed: %v", err)
 	}
 }
