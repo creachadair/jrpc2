@@ -22,9 +22,11 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -123,31 +125,42 @@ func readCommand(in *bufio.Scanner) (*RunReq, error) {
 			continue
 		}
 
-		// Check for an input marker...
-		var input []string
-		if n := len(args) - 1; args[n] == "<<" {
+		// Check for an input marker, e.g., "<<" or "<<filename".
+		var input []byte
+		n := len(args) - 1
+		if trim := strings.TrimPrefix(args[n], "<<"); trim != args[n] {
 			args = args[:n]
-			fmt.Fprint(os.Stderr, "* ")
-		moreInput:
-			for in.Scan() {
-				switch in.Text() {
-				case ".":
-					input = append(input, "")
-					break moreInput
-				case "..":
-					input = append(input, ".")
-				default:
-					input = append(input, in.Text())
+			if trim != "" {
+				data, err := ioutil.ReadFile(trim)
+				if err != nil {
+					log.Fatalf("Error reading: %v", err)
 				}
+				input = data
+			} else {
+				var buf bytes.Buffer
 				fmt.Fprint(os.Stderr, "* ")
-			}
-			if err := in.Err(); err != nil {
-				log.Fatalf("Error reading: %v", err)
+			moreInput:
+				for in.Scan() {
+					switch in.Text() {
+					case ".":
+						buf.WriteString("\n")
+						break moreInput
+					case "..":
+						buf.WriteString(".\n")
+					default:
+						fmt.Fprintln(&buf, in.Text())
+					}
+					fmt.Fprint(os.Stderr, "* ")
+				}
+				if err := in.Err(); err != nil {
+					log.Fatalf("Error reading: %v", err)
+				}
+				input = buf.Bytes()
 			}
 		}
 		return &RunReq{
 			Args:   args,
-			Input:  []byte(strings.Join(input, "\n")),
+			Input:  input,
 			Stderr: *wantStderr,
 		}, nil
 	}
