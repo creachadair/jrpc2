@@ -27,17 +27,29 @@ import (
 //    }
 //    fmt.Println(n)
 //
-func NewCaller(method string, X, Y interface{}) interface{} {
+func NewCaller(method string, X, Y interface{}, opts ...CallerOption) interface{} {
+	var wantVariadic bool
+	for _, opt := range opts {
+		switch opt.(type) {
+		case variadic:
+			wantVariadic = true
+		}
+	}
+
 	cliType := reflect.TypeOf((*Client)(nil))
 	reqType := reflect.TypeOf(X)
 	rspType := reflect.TypeOf(Y)
 	errType := reflect.TypeOf((*error)(nil)).Elem()
 
+	if wantVariadic {
+		reqType = reflect.SliceOf(reqType)
+	}
+
 	// func(*Client, X) (Y, error)
 	funType := reflect.FuncOf(
 		[]reflect.Type{cliType, reqType},
 		[]reflect.Type{rspType, errType},
-		false, // not variadic
+		wantVariadic,
 	)
 
 	// We need to construct a pointer to the base type for unmarshaling, but
@@ -89,3 +101,23 @@ func NewCaller(method string, X, Y interface{}) interface{} {
 		return []reflect.Value{rsp.Elem(), rerr}
 	}).Interface()
 }
+
+// A CallerOption controls an optional behaviour of the NewCaller function.
+type CallerOption interface {
+	callOption()
+}
+
+type variadic struct{}
+
+func (variadic) callOption() {}
+
+// Variadic returns a CallerOption that makes the generated function wrapper
+// variadic in its request parameter type, i.e.,
+//
+//    func(*jrpc2.Client, ...X) (Y, error)
+//
+// instead of
+//
+//    func(*jrpc2.Client, X) (Y, error)
+//
+func Variadic() CallerOption { return variadic{} }
