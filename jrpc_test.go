@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -156,4 +157,64 @@ func TestClientServer(t *testing.T) {
 	t.Logf("Client close: err=%v", c.Close())
 	s.Stop()
 	t.Logf("Server wait: err=%v", s.Wait())
+}
+
+func TestNewCaller(t *testing.T) {
+	cpipe, spipe := pipePair()
+
+	// A dummy method that returns the length of its argument slice.
+	ass := MapAssigner{"F": NewMethod(func(_ context.Context, req []string) (int, error) {
+		t.Logf("Call to F with arguments %#v", req)
+
+		// Check for this special form, and generate an error if it matches.
+		if len(req) > 0 && req[0] == "fail" {
+			return 0, errors.New(strings.Join(req[1:], " "))
+		}
+		return len(req), nil
+	})}
+
+	s, err := NewServer(ass, &ServerOptions{LogWriter: os.Stderr}).Start(spipe)
+	if err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+	c := NewClient(cpipe, &ClientOptions{LogWriter: os.Stderr})
+	defer func() {
+		t.Logf("Client close: err=%v", c.Close())
+		s.Stop()
+		t.Logf("Server wait: err=%v", s.Wait())
+	}()
+
+	caller := NewCaller("F", []string(nil), int(0))
+	F, ok := caller.(func(*Client, []string) (int, error))
+	if !ok {
+		t.Fatalf("newCaller produced the wrong type: %T", caller)
+	}
+
+	// Verify that various success cases do indeed.
+	tests := []struct {
+		in   []string
+		want int
+	}{
+		{nil, 0}, // nil should behave like an empty slice
+		{[]string{}, 0},
+		{[]string{"a"}, 1},
+		{[]string{"a", "b", "c"}, 3},
+		{[]string{"", "", "q"}, 3},
+	}
+	for _, test := range tests {
+		got, err := F(c, test.in)
+		if err != nil {
+			t.Errorf("F(c, %q): unexpected error: %v", test.in, err)
+		} else if got != test.want {
+			t.Errorf("F(c, %q): got %d, want %d", test.in, got, test.want)
+		}
+	}
+
+	// Verify that errors get propagated sensibly.
+	got, err := F(c, []string{"fail", "propagate error"})
+	if err == nil {
+		t.Errorf("F(c, _): should have failed, returned %d", got)
+	} else {
+		t.Logf("F(c, _): correctly failed: %v", err)
+	}
 }
