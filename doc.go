@@ -109,11 +109,11 @@ To shut down a client and discard all its pending work, call cli.Close().
 
 Notifications
 
-The JSON-RPC protocol also supports a kind of request called a "notification".
+The JSON-RPC protocol also supports a kind of request called a notification.
 Notifications differ from ordinary requests in that they are one-way: The
 client sends them to the server, but the server does not reply.
 
-A Client also supports sending notifications, as follows:
+A Client supports sending notifications as follows:
 
    err := cli.Notify("Alert", struct{Msg string}{"a fire is burning"})
 
