@@ -192,7 +192,7 @@ NewCaller can also optionally generate a variadic function:
    prod, err := Mul(cli, 1, 2, 3, 4, 5)
    ...
 
-It can also generate a function with no request parameter:
+It can also generate a function with no request parameter (with X == nil):
 
    Status := jrpc.NewCaller("Status", nil, string("")).(func(*jrpc2.Client) (string, error))
 
