@@ -30,7 +30,7 @@ looking them up in a Go map:
 
 Equipped with an Assigner we can construct a Server:
 
-   srv := jrpc2.NewServer(assigner)
+   srv := jrpc2.NewServer(assigner, nil)
 
 Now we need a connection to serve requests on. A net.Conn will do, so let's say
 for example:
@@ -63,7 +63,7 @@ To establish a client we need a Conn:
 
    conn, err := net.Dial("tcp", "localhost:8080")
    ...
-   cli := jrpc2.NewClient(conn)
+   cli := jrpc2.NewClient(conn, nil)
 
 There are two parts to sending an RPC: First, we construct a request given the
 method name and parameters, and send it to the server. This returns a pending
