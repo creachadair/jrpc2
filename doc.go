@@ -5,9 +5,8 @@ defined by http://www.jsonrpc.org/specification.
 Servers
 
 The *Server type implements a JSON-RPC server. A server communicates with a
-client over a Conn, and dispatches client requests to user-defined handlers
-through an Assigner. For example, suppose we have defined the following Add
-function:
+client over a Conn, and dispatches client requests to user-defined handlers.
+For example, suppose we have defined the following Add function:
 
    // Add returns the sum of a slice of integers.
    func Add(ctx context.Context, values []int) (int, error) {
@@ -18,8 +17,8 @@ function:
       return sum, nil
    }
 
-The server uses an Assigner to locate the implementation of its methods.  For
-this example, let's advertise this function under the name "Math.Add".  For
+The server uses an Assigner to locate the implementation of methods by name.
+For this example, let's advertise this function under the name "Math.Add".  For
 static assignments, we can use a jrpc2.MapAssigner, which finds methods by
 looking them up in a Go map:
 
