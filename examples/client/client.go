@@ -22,7 +22,7 @@ var serverAddr = flag.String("server", "", "Server address")
 
 var (
 	// Reflective call wrappers for the remote methods.
-	add = jrpc2.NewCaller("Math.Add", []int(nil), int(0)).(func(*jrpc2.Client, []int) (int, error))
+	add = jrpc2.NewCaller("Math.Add", int(0), int(0), jrpc2.Variadic()).(func(*jrpc2.Client, ...int) (int, error))
 	div = jrpc2.NewCaller("Math.Div", binarg{}, float64(0)).(func(*jrpc2.Client, binarg) (float64, error))
 )
 
@@ -53,7 +53,7 @@ func main() {
 	defer cli.Close()
 
 	log.Print("\n-- Sending some individual requests...")
-	if sum, err := add(cli, []int{1, 3, 5, 7}); err != nil {
+	if sum, err := add(cli, 1, 3, 5, 7); err != nil {
 		log.Fatalln("Math.Add:", err)
 	} else {
 		log.Printf("Math.Add result=%d", sum)
