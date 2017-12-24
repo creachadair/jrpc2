@@ -25,7 +25,7 @@ type ServerOptions struct {
 
 	// If not nil, this function is called to obtain a context value to use for
 	// each inbound request. By default, a server uses the background context.
-	RequestContext func(*Request) context.Context
+	RequestContext func(*Request) (context.Context, error)
 }
 
 func (s *ServerOptions) logger() func(string, ...interface{}) {
@@ -45,9 +45,9 @@ func (s *ServerOptions) concurrency() int64 {
 	return int64(s.Concurrency)
 }
 
-func (s *ServerOptions) reqContext() func(*Request) context.Context {
+func (s *ServerOptions) reqContext() func(*Request) (context.Context, error) {
 	if s == nil || s.RequestContext == nil {
-		return func(*Request) context.Context { return context.Background() }
+		return func(*Request) (context.Context, error) { return context.Background(), nil }
 	}
 	return s.RequestContext
 }

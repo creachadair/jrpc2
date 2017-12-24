@@ -24,7 +24,7 @@ type Server struct {
 	allow1 bool                         // allow v1 requests with no version marker
 	log    func(string, ...interface{}) // write debug logs here
 
-	reqctx func(req *Request) context.Context // obtain a context for req
+	reqctx func(req *Request) (context.Context, error) // obtain a context for req
 
 	mu     *sync.Mutex   // protects the fields below
 	closer io.Closer     // close to terminate the connection
@@ -181,8 +181,11 @@ func (s *Server) nextRequest() (func() error, error) {
 // dispatch invokes m for the specified request type, and marshals the return
 // value into JSON if there is one.
 func (s *Server) dispatch(m Method, req *Request) (json.RawMessage, error) {
-	ctx := context.WithValue(s.reqctx(req), inboundRequestKey, req)
-	v, err := m.Call(ctx, req)
+	ctx, err := s.reqctx(req)
+	if err != nil {
+		return nil, err
+	}
+	v, err := m.Call(context.WithValue(ctx, inboundRequestKey, req), req)
 	if err != nil {
 		if req.id == nil {
 			s.log("Discarding error from notification to %q: %v", req.Method(), err)
