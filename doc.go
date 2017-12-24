@@ -162,7 +162,7 @@ services to work together:
 This assigner dispatches "Math.Add" and "Math.Mul" to the math value's methods,
 and "Status.Get" to the status value's method. A ServiceMapper splits the
 method name on the first period ("."), and you may nest ServiceMappers more
-deeply if you require a deeper hierarchy.
+deeply if you require a more complex hierarchy.
 
 Client Call Wrappers
 
