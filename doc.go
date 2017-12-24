@@ -135,7 +135,7 @@ MapAssigner for those methods:
 
    type math struct{}
 
-   func (math) Add(ctx context.Context, vals []int) (int, error) { ... }
+   func (math) Add(ctx context.Context, vals ...int) (int, error) { ... }
    func (math) Mul(ctx context.Context, vals []int) (int, error) { ... }
 
    assigner := jrpc2.NewService(math{})

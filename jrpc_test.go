@@ -53,6 +53,20 @@ func (dummy) Mul(_ context.Context, req struct{ X, Y int }) (int, error) {
 	return req.X * req.Y, nil
 }
 
+// Max has a variadic signature.
+func (dummy) Max(_ context.Context, vs ...int) (int, error) {
+	if len(vs) == 0 {
+		return 0, Errorf(E_InvalidParams, "cannot compute max of no elements")
+	}
+	max := vs[0]
+	for _, v := range vs[1:] {
+		if v > max {
+			max = v
+		}
+	}
+	return max, nil
+}
+
 // Nil does not require any parameters.
 func (dummy) Nil(_ context.Context) (int, error) { return 42, nil }
 
@@ -96,6 +110,7 @@ func TestClientServer(t *testing.T) {
 		{"Test.Add", []int{1, 2, 3}, 6},
 		{"Test.Mul", struct{ X, Y int }{7, 9}, 63},
 		{"Test.Mul", struct{ X, Y int }{}, 0},
+		{"Test.Max", []int{3, 1, 8, 4, 2, 0, -5}, 8},
 		{"Test.Ctx", nil, 1},
 		{"Test.Nil", nil, 42},
 	}

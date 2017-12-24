@@ -62,6 +62,7 @@ func (m ServiceMapper) Assign(method string) Method {
 //
 //    func(context.Context) (Y, error)
 //    func(context.Context, X) (Y, error)
+//    func(context.Context, ...X) (Y, error)
 //    func(context.Context, *jrpc2.Request) (Y, error)
 //
 // for JSON-marshalable types X and Y. NewMethod will panic if the type of its
@@ -118,32 +119,56 @@ func newMethod(fn interface{}) (Method, error) {
 	}
 
 	// Case 1: The function wants the plain request.
-	newinput := func(req *Request) (reflect.Value, error) { return reflect.ValueOf(req), nil }
+	newinput := func(req *Request) ([]reflect.Value, error) {
+		return []reflect.Value{reflect.ValueOf(req)}, nil
+	}
 
 	if typ.NumIn() == 1 {
 		// Case 2: The function does not want any request parameters.
-		newinput = func(req *Request) (reflect.Value, error) { return reflect.Value{}, nil }
+		newinput = func(req *Request) ([]reflect.Value, error) { return nil, nil }
 	} else if a, b := typ.In(1), reflect.TypeOf((*Request)(nil)); a != b {
 		// Case 3: The function wants us to unpack the request parameters.
-
-		// Keep track of whether the function wants a pointer to its argument or
-		// not.  We need to create one either way to support unmarshaling, but we
-		// need to indirect it back off if the callee didn't express it.
 		argType := typ.In(1)
-		hasPtr := argType.Kind() == reflect.Ptr
-		if hasPtr {
-			argType = argType.Elem()
-		}
-		newinput = func(req *Request) (reflect.Value, error) {
-			in := reflect.New(argType).Interface()
-			if err := req.UnmarshalParams(in); err != nil {
-				return reflect.Value{}, Errorf(E_InvalidParams, "wrong argument type: %v", err)
+		if typ.IsVariadic() {
+			// Case 3a: If the function is variadic in its argument, unpack the
+			// arguments before calling. Note that in this case argType is
+			// already of slice type (see reflect.IsVariadic).
+			newinput = func(req *Request) ([]reflect.Value, error) {
+				in := reflect.New(argType).Interface()
+				if err := req.UnmarshalParams(in); err != nil {
+					return nil, Errorf(E_InvalidParams, "wrong argument type: %v", err)
+				}
+				args := reflect.ValueOf(in).Elem()
+				vals := make([]reflect.Value, args.Len())
+				for i := 0; i < args.Len(); i++ {
+					vals[i] = args.Index(i)
+				}
+				return vals, nil
 			}
-			arg := reflect.ValueOf(in)
-			if hasPtr {
-				return arg, nil
-			} else {
-				return arg.Elem(), nil
+		} else if argType.Kind() == reflect.Ptr {
+			// Check whether the function wants a pointer to its argument.  We
+			// need to create one either way to support unmarshaling, but we
+			// need to indirect it back off if the callee didn't want it.
+
+			// Case 3b: The function wants a pointer.
+			argType = argType.Elem()
+			newinput = func(req *Request) ([]reflect.Value, error) {
+				in := reflect.New(argType).Interface()
+				if err := req.UnmarshalParams(in); err != nil {
+					return nil, Errorf(E_InvalidParams, "wrong argument type: %v", err)
+				}
+				arg := reflect.ValueOf(in)
+				return []reflect.Value{arg}, nil
+			}
+		} else {
+			// Case 3c: The function wants a bare value, not a pointer.
+			newinput = func(req *Request) ([]reflect.Value, error) {
+				in := reflect.New(argType).Interface()
+				if err := req.UnmarshalParams(in); err != nil {
+					return nil, Errorf(E_InvalidParams, "wrong argument type: %v", err)
+				}
+				arg := reflect.ValueOf(in)
+				return []reflect.Value{arg.Elem()}, nil
 			}
 		}
 	}
@@ -151,10 +176,10 @@ func newMethod(fn interface{}) (Method, error) {
 
 	return methodFunc(func(ctx context.Context, req *Request) (interface{}, error) {
 		args := []reflect.Value{reflect.ValueOf(ctx)}
-		if arg, ierr := newinput(req); ierr != nil {
+		if rest, ierr := newinput(req); ierr != nil {
 			return nil, ierr
-		} else if arg.IsValid() {
-			args = append(args, arg)
+		} else {
+			args = append(args, rest...)
 		}
 		vals := f.Call(args)
 		out, oerr := vals[0].Interface(), vals[1].Interface()
