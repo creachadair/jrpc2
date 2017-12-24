@@ -115,26 +115,6 @@ func (c *Client) Req(method string, params interface{}) (*Request, error) {
 	}, nil
 }
 
-// A Spec combines a method name and parameter value.
-type Spec struct {
-	Method string
-	Params interface{}
-}
-
-// Reqs constructs a collection of requests from the given specs, succeeding
-// only if all are successfully constructed.
-func (c *Client) Reqs(specs []Spec) ([]*Request, error) {
-	reqs := make([]*Request, len(specs))
-	for i, spec := range specs {
-		req, err := c.Req(spec.Method, spec.Params)
-		if err != nil {
-			return nil, err
-		}
-		reqs[i] = req
-	}
-	return reqs, nil
-}
-
 // Note constructs a notification request for the specified method and parameters.
 // This does not transmit the request to the server; use c.Send to do so.
 func (c *Client) Note(method string, params interface{}) (*Request, error) {
@@ -213,6 +193,40 @@ func (c *Client) Call(method string, params interface{}) (*Response, error) {
 		return nil, err
 	}
 	return ps[0].Wait()
+}
+
+// Batch is shorthand for Req + Send for a batch of requests described by the
+// given specs.
+func (c *Client) Batch(specs []Spec) (Batch, error) {
+	reqs := make([]*Request, len(specs))
+	for i, spec := range specs {
+		req, err := c.Req(spec.Method, spec.Params)
+		if err != nil {
+			return nil, err
+		}
+		reqs[i] = req
+	}
+	return c.Send(reqs...)
+}
+
+// A Spec combines a method name and parameter value.
+type Spec struct {
+	Method string
+	Params interface{}
+}
+
+// A Batch is a group of pending requests awaiting responses.
+type Batch []*Pending
+
+// Wait blocks until all the requests in b have completed, and returns the
+// corresponding responses. The caller is responsible for checking for errors
+// in each of the responses.
+func (b Batch) Wait() []*Response {
+	rsps := make([]*Response, len(b))
+	for i, p := range b {
+		rsps[i], _ = p.Wait()
+	}
+	return rsps
 }
 
 // Notify is shorthand for Note + Send for a single request. It blocks until

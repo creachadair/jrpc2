@@ -100,6 +100,11 @@ func TestClientServer(t *testing.T) {
 		LogWriter: os.Stderr,
 	})
 	t.Logf("Client running on pipe %v", cpipe)
+	defer func() {
+		t.Logf("Client close: err=%v", c.Close())
+		s.Stop()
+		t.Logf("Server wait: err=%v", s.Wait())
+	}()
 
 	tests := []struct {
 		method string
@@ -142,19 +147,12 @@ func TestClientServer(t *testing.T) {
 	for i, test := range tests {
 		specs[i] = Spec{test.method, test.params}
 	}
-	reqs, err := c.Reqs(specs)
+	batch, err := c.Batch(specs)
 	if err != nil {
-		t.Fatalf("Reqs: unexpected error: %v", err)
+		t.Fatalf("Batch failed: %v", err)
 	}
-	ps, err := c.Send(reqs...)
-	if err != nil {
-		t.Fatalf("Send failed: %v", err)
-	} else if len(ps) != len(tests) {
-		t.Errorf("Wrong number of penders: got %d, want %d", len(ps), len(tests))
-	}
-	for i, p := range ps {
-		rsp, err := p.Wait()
-		if err != nil {
+	for i, rsp := range batch.Wait() {
+		if err := rsp.Error(); err != nil {
 			t.Errorf("Response %d failed: %v", i+1, err)
 			continue
 		}
@@ -168,10 +166,6 @@ func TestClientServer(t *testing.T) {
 			t.Errorf("Response %d (%q): got %v, want %v", i+1, rsp.ID(), got, tests[i].want)
 		}
 	}
-
-	t.Logf("Client close: err=%v", c.Close())
-	s.Stop()
-	t.Logf("Server wait: err=%v", s.Wait())
 }
 
 func TestNewCaller(t *testing.T) {
