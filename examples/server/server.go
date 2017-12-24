@@ -52,6 +52,8 @@ func (math) Div(ctx context.Context, arg binop) (float64, error) {
 	return float64(arg.X) / float64(arg.Y), nil
 }
 
+func (math) Status(context.Context) (string, error) { return "OK", nil }
+
 type alert struct {
 	Msg string
 }

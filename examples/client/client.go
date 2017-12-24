@@ -22,8 +22,9 @@ var serverAddr = flag.String("server", "", "Server address")
 
 var (
 	// Reflective call wrappers for the remote methods.
-	add = jrpc2.NewCaller("Math.Add", int(0), int(0), jrpc2.Variadic()).(func(*jrpc2.Client, ...int) (int, error))
-	div = jrpc2.NewCaller("Math.Div", binarg{}, float64(0)).(func(*jrpc2.Client, binarg) (float64, error))
+	add  = jrpc2.NewCaller("Math.Add", int(0), int(0), jrpc2.Variadic()).(func(*jrpc2.Client, ...int) (int, error))
+	div  = jrpc2.NewCaller("Math.Div", binarg{}, float64(0)).(func(*jrpc2.Client, binarg) (float64, error))
+	stat = jrpc2.NewCaller("Math.Status", nil, "").(func(*jrpc2.Client) (string, error))
 )
 
 type binarg struct{ X, Y int }
@@ -62,6 +63,11 @@ func main() {
 		log.Fatalln("Math.Div:", err)
 	} else {
 		log.Printf("Math.Div result=%.3f", quot)
+	}
+	if s, err := stat(cli); err != nil {
+		log.Fatalln("Math.Status:", err)
+	} else {
+		log.Printf("Math.Status result=%q", s)
 	}
 
 	// An error condition (division by zero)
