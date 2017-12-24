@@ -148,7 +148,7 @@ services to work together:
 
    type status struct{}
 
-   func (status) Get(_ context.Context, _ *jrpc2.Request) (string, error) {
+   func (status) Get(context.Context) (string, error) {
       return "all is well", nil
    }
 

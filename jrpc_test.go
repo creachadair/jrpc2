@@ -188,6 +188,10 @@ func TestNewCaller(t *testing.T) {
 			}
 			return len(req), nil
 		}),
+		"OK": NewMethod(func(context.Context) (string, error) {
+			t.Log("Call to OK")
+			return "OK, hello", nil
+		}),
 	}
 
 	s, err := NewServer(ass, &ServerOptions{LogWriter: os.Stderr}).Start(spipe)
@@ -210,6 +214,11 @@ func TestNewCaller(t *testing.T) {
 	V, ok := vcaller.(func(*Client, ...string) (int, error))
 	if !ok {
 		t.Fatalf("NewCaller (variadic): wrong type: %T", vcaller)
+	}
+	okcaller := NewCaller("OK", nil, "")
+	OK, ok := okcaller.(func(*Client) (string, error))
+	if !ok {
+		t.Fatalf("NewCaller (niladic): wrong type: %T", okcaller)
 	}
 
 	// Verify that various success cases do indeed.
@@ -246,5 +255,12 @@ func TestNewCaller(t *testing.T) {
 		t.Errorf("V(c, _): should have failed, returned %d", got)
 	} else {
 		t.Logf("V(c, _): correctly failed: %v", err)
+	}
+
+	// Verify that we can call through a stub without request parameters.
+	if m, err := OK(c); err != nil {
+		t.Errorf("OK(c): unexpected error: %v", err)
+	} else {
+		t.Logf("OK(c): returned message %q", m)
 	}
 }
