@@ -180,6 +180,16 @@ func (c *Client) Call(method string, params interface{}) (*Pending, error) {
 	return ps[0], nil
 }
 
+// CallWait initiates a single request and blocks until the response returns.
+// It is shorthand for Call + Wait.
+func (c *Client) CallWait(method string, params interface{}) (*Response, error) {
+	p, err := c.Call(method, params)
+	if err == nil {
+		return p.Wait()
+	}
+	return nil, err
+}
+
 // Batch initiates a batch of concurrent requests.  It blocks until the entire
 // batch is sent.
 func (c *Client) Batch(specs []Spec) (Batch, error) {

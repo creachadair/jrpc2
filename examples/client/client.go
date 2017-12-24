@@ -78,29 +78,27 @@ func main() {
 	}
 
 	log.Print("\n-- Sending a batch of requests...")
-	var reqs []*jrpc2.Request
+	var specs []jrpc2.Spec
 	for i := 1; i <= 5; i++ {
 		x := rand.Intn(100)
 		for j := 1; j <= 5; j++ {
 			y := rand.Intn(100)
-			req, err := cli.Req("Math.Mul", struct{ X, Y int }{x, y})
-			if err != nil {
-				log.Fatalf("Req (%d*%d): %v", x, y, err)
-			}
-			reqs = append(reqs, req)
+			specs = append(specs, jrpc2.Spec{
+				Method: "Math.Mul",
+				Params: struct{ X, Y int }{x, y},
+			})
 		}
 	}
-	ps, err := cli.Send(reqs...)
+	batch, err := cli.Batch(specs)
 	if err != nil {
-		log.Fatalln("Call:", err)
+		log.Fatalln("Batch:", err)
 	}
-	for i, p := range ps {
-		rsp, err := p.Wait()
-		if err != nil {
-			log.Printf("Req %q %s failed: %v", reqs[i].Method(), p.ID(), err)
+	for i, rsp := range batch.Wait() {
+		if err := rsp.Error(); err != nil {
+			log.Printf("Req %q %s failed: %v", specs[i].Method, rsp.ID(), err)
 			continue
 		}
-		log.Printf("Req %q %s: result=%d", reqs[i].Method(), rsp.ID(), intResult(rsp))
+		log.Printf("Req %q %s: result=%d", specs[i].Method, rsp.ID(), intResult(rsp))
 	}
 
 	log.Print("\n-- Sending individual concurrent requests...")
@@ -112,12 +110,12 @@ func main() {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				rsp, err := cli.Call("Math.Sub", struct{ X, Y int }{x, y})
+				rsp, err := cli.CallWait("Math.Sub", struct{ X, Y int }{x, y})
 				if err != nil {
 					log.Printf("Req (%d-%d) failed: %v", x, y, err)
 					return
 				}
-				log.Printf("Req (%d-%d): result=%d", x, y, intResult(rsp))
+				log.Printf("Req (%d - %d): result=%d", x, y, intResult(rsp))
 			}()
 		}
 	}

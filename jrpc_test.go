@@ -122,7 +122,7 @@ func TestClientServer(t *testing.T) {
 
 	// Verify that individual sequential requests work.
 	for _, test := range tests {
-		rsp, err := c.Call(test.method, test.params)
+		rsp, err := c.CallWait(test.method, test.params)
 		if err != nil {
 			t.Errorf("Call %q %v: unexpected error: %v", test.method, test.params, err)
 			continue

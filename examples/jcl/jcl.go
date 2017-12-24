@@ -65,7 +65,7 @@ func main() {
 		}
 
 		var result RunResult
-		rsp, err := cli.Call("Run", req)
+		rsp, err := cli.CallWait("Run", req)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "# Error: %v\n", err)
 		} else if err := rsp.UnmarshalResult(&result); err != nil {
