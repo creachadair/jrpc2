@@ -89,10 +89,10 @@ func NewCaller(method string, X, Y interface{}, opts ...CallerOption) interface{
 
 		// N.B. the same err is threaded all the way through, so that there is
 		// only one point of exit where all the remaining reflection occurs.
-		req, err := cli.Req(method, param(args))
+		req, err := cli.req(method, param(args))
 		if err == nil {
 			var ps []*Pending
-			ps, err = cli.Send(req)
+			ps, err = cli.send(req)
 			if err == nil {
 				var raw *Response
 				raw, err = ps[0].Wait()

@@ -95,9 +95,9 @@ func NewClient(conn Conn, opts *ClientOptions) *Client {
 	return c
 }
 
-// Req constructs a fresh request for the specified method and parameters.
-// This does not transmit the request to the server; use c.Send to do so.
-func (c *Client) Req(method string, params interface{}) (*Request, error) {
+// req constructs a fresh request for the specified method and parameters.
+// This does not transmit the request to the server; use c.send to do so.
+func (c *Client) req(method string, params interface{}) (*Request, error) {
 	bits, err := marshalParams(params)
 	if err != nil {
 		return nil, err
@@ -115,29 +115,15 @@ func (c *Client) Req(method string, params interface{}) (*Request, error) {
 	}, nil
 }
 
-// Note constructs a notification request for the specified method and parameters.
-// This does not transmit the request to the server; use c.Send to do so.
-func (c *Client) Note(method string, params interface{}) (*Request, error) {
-	bits, err := marshalParams(params)
-	if err != nil {
-		return nil, err
-	}
-	c.log("Notification params: %+v", params)
-	return &Request{
-		method: method,
-		params: bits,
-	}, nil
-}
-
-// Send transmits the specified requests to the server and returns a slice of
+// send transmits the specified requests to the server and returns a slice of
 // Pending stubs that can be used to wait for their responses.
 //
 // The resulting slice will contain one entry for each input request that
 // expects a response (that is, all those that are not notifications). If all
 // the requests are notifications, the slice will be empty.
 //
-// Send blocks until the entire batch of requests has been transmitted.
-func (c *Client) Send(reqs ...*Request) ([]*Pending, error) {
+// This method blocks until the entire batch of requests has been transmitted.
+func (c *Client) send(reqs ...*Request) ([]*Pending, error) {
 	if len(reqs) == 0 {
 		return nil, errors.New("empty request batch")
 	}
@@ -181,32 +167,31 @@ func (c *Client) Send(reqs ...*Request) ([]*Pending, error) {
 	return pends, nil
 }
 
-// Call is shorthand for Req + Send + Wait for a single request.  It
-// blocks until the request is complete.
-func (c *Client) Call(method string, params interface{}) (*Response, error) {
-	req, err := c.Req(method, params)
+// Call initiates a single request.  It blocks until the request is sent.
+func (c *Client) Call(method string, params interface{}) (*Pending, error) {
+	req, err := c.req(method, params)
 	if err != nil {
 		return nil, err
 	}
-	ps, err := c.Send(req)
+	ps, err := c.send(req)
 	if err != nil {
 		return nil, err
 	}
-	return ps[0].Wait()
+	return ps[0], nil
 }
 
-// Batch is shorthand for Req + Send for a batch of requests described by the
-// given specs.
+// Batch initiates a batch of concurrent requests.  It blocks until the entire
+// batch is sent.
 func (c *Client) Batch(specs []Spec) (Batch, error) {
 	reqs := make([]*Request, len(specs))
 	for i, spec := range specs {
-		req, err := c.Req(spec.Method, spec.Params)
+		req, err := c.req(spec.Method, spec.Params)
 		if err != nil {
 			return nil, err
 		}
 		reqs[i] = req
 	}
-	return c.Send(reqs...)
+	return c.send(reqs...)
 }
 
 // A Spec combines a method name and parameter value.
@@ -224,19 +209,23 @@ type Batch []*Pending
 func (b Batch) Wait() []*Response {
 	rsps := make([]*Response, len(b))
 	for i, p := range b {
-		rsps[i], _ = p.Wait()
+		rsps[i] = p.wait()
 	}
 	return rsps
 }
 
-// Notify is shorthand for Note + Send for a single request. It blocks until
-// the notification has been sent.
+// Notify transmits a notification to the specified method and parameters.  It
+// blocks until the notification has been sent.
 func (c *Client) Notify(method string, params interface{}) error {
-	req, err := c.Note(method, params)
+	bits, err := marshalParams(params)
 	if err != nil {
 		return err
 	}
-	_, err = c.Send(req)
+	c.log("Notification params: %+v", params)
+	_, err = c.send(&Request{
+		method: method,
+		params: bits,
+	})
 	return err
 }
 
@@ -281,30 +270,36 @@ type Pending struct {
 	ch  chan *jresponse
 	id  string // the ID from the request
 	rsp *Response
-	err error
 }
 
 func newPending(id string) *Pending {
 	// Buffer the channel so the response reader does not need to rendezvous
 	// with the recipient.
-	return &Pending{ch: make(chan *jresponse, 1), id: id, err: errIncomplete}
+	return &Pending{ch: make(chan *jresponse, 1), id: id}
 }
-
-var errIncomplete = errors.New("request incomplete")
 
 // complete delivers a response to p, completing the request.
 func (p *Pending) complete(rsp *jresponse) { p.ch <- rsp }
 
-// abandon closes p's channel signaling that it will never complete.
-func (p *Pending) abandon() { close(p.ch) }
+// abandon delivers a failure to p, indicating it will never complete.
+func (p *Pending) abandon() {
+	p.ch <- &jresponse{
+		ID: json.RawMessage(p.id),
+		E:  jerrorf(E_InternalError, "request incomplete"),
+	}
+}
 
 // ID reports the request identifier of the request p is waiting for.
 func (p *Pending) ID() string { return p.id }
 
-// Wait blocks until p is complete, then returns the response and any error
-// that occurred.  A non-nil response is returned whether or not there is an
-// error.
+// Wait blocks until p is complete, then returns the response. A response is
+// returned whether or not there was an error.
 func (p *Pending) Wait() (*Response, error) {
+	rsp := p.wait()
+	return rsp, rsp.Error()
+}
+
+func (p *Pending) wait() *Response {
 	raw, ok := <-p.ch
 	if ok {
 		// N.B. We intentionally did not have the sender close the channel, to
@@ -313,18 +308,14 @@ func (p *Pending) Wait() (*Response, error) {
 		// are updated -- that way subsequent waiters will get a zero from the
 		// closed channel and correctly fall through to the stored responses.
 
-		p.err = nil // clear incomplete status
 		p.rsp = &Response{
 			id:     raw.ID,
 			err:    raw.E.toError(),
 			result: raw.R,
 		}
-		if err := raw.E.toError(); err != nil {
-			p.err = err
-		}
 		close(p.ch)
 	}
-	return p.rsp, p.err
+	return p.rsp
 }
 
 // marshalParams validates and marshals params to JSON for a request.  It's

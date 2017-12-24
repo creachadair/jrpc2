@@ -66,32 +66,44 @@ To establish a client we need a Conn:
    ...
    cli := jrpc2.NewClient(conn)
 
-There are three phases to sending an RPC: First, construct the request, given
-the method name to call and the arguments to the method:
+There are two parts to sending an RPC: First, we construct a request given the
+method name and parameters, and send it to the server. This returns a pending
+call:
 
-   req, err := cli.Req("Math.Add", []int{1, 3, 5, 7})
+   p, err := cli.Call("Math.Add", []int{1, 3, 5, 7})
 
-Second, send the request to the server, and obtain a pending call you can use
-to wait for it to complete and receive its results:
+Second, we must wait for the pending call to complete to receive its results:
 
-   p, err := cli.Send(req)
+   rsp, err := p.Wait()
 
-Third, wait for the pending call to complete to receive its results:
+The separation of call and response allows requests to be issued in parallel.
+For convenience, the client has a CallWait method that combines these:
 
-   rsp, err := p[0].Wait()
+   rsp, err := cli.CallWait("Math.Add", []int{1, 3, 5, 7})
 
-This is a fairly complicated flow, allowing in-flight requests to be batched
-and to run concurrently. Fortunately for the more common case of a single,
-synchronous request, there is a simpler solution that combines all three steps
-in a single method:
+To issue a batch of requests all at once, use the Batch method:
 
-   rsp, err := cli.Call("Math.Add", []int{1, 3, 5, 7})
+   batch, err := cli.Batch([]jrpc2.Spec{
+      {"Math.Add", []int{1, 2, 3}},
+      {"Math.Mul", []int{4, 5, 6}},
+      {"Math.Max", []int{-1, 5, 3, 0, 1}},
+   })
+   ...
+   rsps := batch.Wait()
 
-To decode the response from the server, write:
+In this mode of operation, the caller must check each response for errors:
+
+   for i, rsp := range batch.Wait() {
+      if err := rsp.Error(); err != nil {
+        log.Printf("Request %d [%s] failed: %v", i, rsp.ID(), err)
+      }
+   }
+
+To decode the result from a response, use its UnmarshalResult method:
 
    var result int
    if err := rsp.UnmarshalResult(&result); err != nil {
-      log.Fatal("UnmarshalResult:", err)
+      log.Fatalln("UnmarshalResult:", err)
    }
 
 To shut down a client and discard all its pending work, call cli.Close().
@@ -104,19 +116,10 @@ client sends them to the server, but the server does not reply.
 
 A Client also supports sending notifications, as follows:
 
-   req, err := cli.Note("Alert", struct{Msg string}{"a fire is burning"})
-   ...
-   _, err := cli.Send(req)
-
-Unlike ordinary requests, there are no pending calls for notifications.  As
-with ordinary requests, however, notifications can be posted in concurrent
-batches. Indeed, you can even mix notifications with ordinary requests in the
-same batch.  To simplify the common case of posting a single notification,
-however, the client provides:
-
    err := cli.Notify("Alert", struct{Msg string}{"a fire is burning"})
 
-This is equivalent to the above, for the case of a single notification.
+Unlike ordinary requests, there are no pending calls for notifications; the
+notification is complete once it has been sent.
 
 On the server side, notifications are identical to ordinary requests, save that
 their return value is discarded once the handler returns. If a handler does not
