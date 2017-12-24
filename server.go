@@ -63,7 +63,7 @@ func (s *Server) Start(conn Conn) (*Server, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.closer != nil {
-		return s, errors.New("T is already started")
+		return s, errors.New("server is already running")
 	}
 
 	// Set up the queues and condition variable used by the workers.
