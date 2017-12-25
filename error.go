@@ -46,11 +46,22 @@ var ErrClientStopped = errors.New("the client has been stopped")
 
 // Errorf returns an error value of concrete type *Error having the specified
 // code and formatted message string.
+// It is shorthand for DataErrorf(code, nil, msg, args...)
 func Errorf(code Code, msg string, args ...interface{}) error {
-	return &Error{
-		Code:    code,
-		Message: fmt.Sprintf(msg, args...),
+	return DataErrorf(code, nil, msg, args...)
+}
+
+// DataErrorf returns an error value of concrete type *Error having the
+// specified code, error data, and formatted message string.
+// If v == nil this behaves identically to Errorf(code, msg, args...).
+func DataErrorf(code Code, v interface{}, msg string, args ...interface{}) error {
+	e := &Error{Code: code, Message: fmt.Sprintf(msg, args...)}
+	if v != nil {
+		if data, err := json.Marshal(v); err == nil {
+			e.data = data
+		}
 	}
+	return e
 }
 
 // A Code is an error response code, that satisfies the Error interface.  Codes
