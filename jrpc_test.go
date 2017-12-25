@@ -2,6 +2,7 @@ package jrpc2
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -28,6 +29,29 @@ func pipePair() (client, server pipeConn) {
 	cr, sw := io.Pipe()
 	sr, cw := io.Pipe()
 	return pipeConn{PipeReader: cr, PipeWriter: cw}, pipeConn{PipeReader: sr, PipeWriter: sw}
+}
+
+func newServer(t *testing.T, assigner Assigner, opts *ServerOptions) (*Server, *Client, func()) {
+	t.Helper()
+	if opts == nil {
+		opts = &ServerOptions{LogWriter: os.Stderr}
+	}
+
+	cpipe, spipe := pipePair()
+	srv, err := NewServer(assigner, opts).Start(spipe)
+	if err != nil {
+		t.Fatalf("NewServer: %v", err)
+	}
+	t.Logf("Server running on pipe %+v", spipe)
+
+	cli := NewClient(cpipe, &ClientOptions{LogWriter: os.Stderr})
+	t.Logf("Client running on pipe %v", cpipe)
+
+	return srv, cli, func() {
+		t.Logf("Client close: err=%v", cli.Close())
+		srv.Stop()
+		t.Logf("Server wait: err=%v", srv.Wait())
+	}
 }
 
 type dummy struct{}
@@ -82,29 +106,14 @@ func (dummy) Ctx(ctx context.Context, req *Request) (int, error) {
 func (dummy) Unrelated() string { return "ceci n'est pas une méthode" }
 
 func TestClientServer(t *testing.T) {
-	cpipe, spipe := pipePair()
-
-	ass := ServiceMapper{
+	_, c, cleanup := newServer(t, ServiceMapper{
 		"Test": NewService(dummy{}),
-	}
-	s, err := NewServer(ass, &ServerOptions{
+	}, &ServerOptions{
 		LogWriter:   os.Stderr,
 		AllowV1:     true,
 		Concurrency: 16,
-	}).Start(spipe)
-	if err != nil {
-		t.Fatalf("Start failed: %v", err)
-	}
-	t.Logf("Server running on pipe %v", spipe)
-	c := NewClient(cpipe, &ClientOptions{
-		LogWriter: os.Stderr,
 	})
-	t.Logf("Client running on pipe %v", cpipe)
-	defer func() {
-		t.Logf("Client close: err=%v", c.Close())
-		s.Stop()
-		t.Logf("Server wait: err=%v", s.Wait())
-	}()
+	defer cleanup()
 
 	tests := []struct {
 		method string
@@ -169,8 +178,6 @@ func TestClientServer(t *testing.T) {
 }
 
 func TestNewCaller(t *testing.T) {
-	cpipe, spipe := pipePair()
-
 	// A dummy method that returns the length of its argument slice.
 	ass := MapAssigner{
 		"F": NewMethod(func(_ context.Context, req []string) (int, error) {
@@ -188,16 +195,8 @@ func TestNewCaller(t *testing.T) {
 		}),
 	}
 
-	s, err := NewServer(ass, &ServerOptions{LogWriter: os.Stderr}).Start(spipe)
-	if err != nil {
-		t.Fatalf("Start failed: %v", err)
-	}
-	c := NewClient(cpipe, &ClientOptions{LogWriter: os.Stderr})
-	defer func() {
-		t.Logf("Client close: err=%v", c.Close())
-		s.Stop()
-		t.Logf("Server wait: err=%v", s.Wait())
-	}()
+	_, c, cleanup := newServer(t, ass, nil)
+	defer cleanup()
 
 	caller := NewCaller("F", []string(nil), int(0))
 	F, ok := caller.(func(*Client, []string) (int, error))
@@ -256,5 +255,37 @@ func TestNewCaller(t *testing.T) {
 		t.Errorf("OK(c): unexpected error: %v", err)
 	} else {
 		t.Logf("OK(c): returned message %q", m)
+	}
+}
+
+func TestErrors(t *testing.T) {
+	const errCode = -32000
+	const errData = `{"caroline":452}`
+	const errMessage = "error thingy"
+	_, c, cleanup := newServer(t, MapAssigner{
+		"Err": NewMethod(func(_ context.Context) (int, error) {
+			return 17, DataErrorf(errCode, json.RawMessage(errData), errMessage)
+		}),
+	}, nil)
+	defer cleanup()
+
+	Err := NewCaller("Err", nil, int(0)).(func(*Client) (int, error))
+
+	got, err := Err(c)
+	if err == nil {
+		t.Fatalf("CallWait(Err): expected error, got %d", got)
+	} else if e, ok := err.(*Error); !ok {
+		t.Fatalf("CallWait(Err): wrong error type %T: %v", err, err)
+	} else {
+		t.Logf("Response error is %#v", e)
+		if e.Code != errCode {
+			t.Errorf("Err code: got %d, want %d", e.Code, errCode)
+		}
+		if e.Message != errMessage {
+			t.Errorf("Err message: got %q, want %q", e.Message, errMessage)
+		}
+		if s := string(e.data); s != errData {
+			t.Errorf("Err data: got %q, want %q", s, errData)
+		}
 	}
 }
