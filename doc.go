@@ -5,8 +5,16 @@ defined by http://www.jsonrpc.org/specification.
 Servers
 
 The *Server type implements a JSON-RPC server. A server communicates with a
-client over a Conn, and dispatches client requests to user-defined handlers.
-For example, suppose we have defined the following Add function:
+client over a Conn, and dispatches client requests to user-defined method
+handlers.  These handlers satisfy the jrpc2.Method interface by exporting a
+Call method:
+
+   Call(ctx Context.Context, req *jrpc2.Request) (interface{}, error)
+
+The server finds the Method for request by looking up its name in a
+jrpc2.Assigner provided when the server is set up.
+
+Let's work an example. Suppose we have defined the following Add function:
 
    // Add returns the sum of a slice of integers.
    func Add(ctx context.Context, values []int) (int, error) {
@@ -17,23 +25,27 @@ For example, suppose we have defined the following Add function:
       return sum, nil
    }
 
-The server uses an Assigner to locate the implementation of methods by name.
-For this example, let's advertise this function under the name "Math.Add".  For
-static assignments, we can use a jrpc2.MapAssigner, which finds methods by
-looking them up in a Go map:
+To convert this into a jrpc2.Method, we can use the NewMethod function, which
+uses reflection to lift the function into the interface:
+
+   m := jrpc2.NewMethod(Add)  // m is a jrpc2.Method
+
+Now let's advertise this function under the name "Math.Add".  For static
+assignments, we can use a jrpc2.MapAssigner, which finds methods by looking
+them up in a Go map:
 
    import "bitbucket.org/creachadair/jrpc2"
 
-   var assigner = jrpc2.MapAssigner{
+   assigner := jrpc2.MapAssigner{
       "Math.Add": jrpc2.NewMethod(Add),
    }
 
-Equipped with an Assigner we can construct a Server:
+Equipped with an Assigner we can now construct a Server:
 
    srv := jrpc2.NewServer(assigner, nil)
 
-Now we need a connection to serve requests on. A net.Conn will do, so let's say
-for example:
+To serve requests, we will next need a connection. A net.Conn will do, so we
+can say for example:
 
    import "net"
 
