@@ -11,7 +11,7 @@ Call method:
 
    Call(ctx Context.Context, req *jrpc2.Request) (interface{}, error)
 
-The server finds the Method for request by looking up its name in a
+The server finds the Method for a request by looking up its name in a
 jrpc2.Assigner provided when the server is set up.
 
 Let's work an example. Suppose we have defined the following Add function:
@@ -65,11 +65,11 @@ This will report the error that led to the server exiting.
 Clients
 
 The *Client type implements a JSON-RPC client. A client communicates with a
-server over a Conn. The client is safe for concurrent use by multiple
-goroutines. It supports batched requests and may have arbitrarily many pending
-requests in flight simultaneously.
+server over a Conn, and is safe for concurrent use by multiple goroutines. It
+supports batched requests and may have arbitrarily many pending requests in
+flight simultaneously.
 
-To establish a client we need a Conn:
+To establish a client we first need a Conn:
 
    import "net"
 
@@ -78,17 +78,18 @@ To establish a client we need a Conn:
    cli := jrpc2.NewClient(conn, nil)
 
 There are two parts to sending an RPC: First, we construct a request given the
-method name and parameters, and send it to the server. This returns a pending
+method name and parameters, and issue it to the server. This returns a pending
 call:
 
    p, err := cli.Call("Math.Add", []int{1, 3, 5, 7})
 
-Second, we must wait for the pending call to complete to receive its results:
+Second, we wait for the pending call to complete to receive its results:
 
    rsp, err := p.Wait()
 
-The separation of call and response allows requests to be issued in parallel.
-For convenience, the client has a CallWait method that combines these:
+The separation of call and response allows requests to be issued serially and
+waited for in parallel.  For convenience, the client has a CallWait method that
+combines these for a single synchronous call:
 
    rsp, err := cli.CallWait("Math.Add", []int{1, 3, 5, 7})
 
@@ -100,7 +101,7 @@ To issue a batch of requests all at once, use the Batch method:
       {"Math.Max", []int{-1, 5, 3, 0, 1}},
    })
    ...
-   rsps := batch.Wait()
+   rsps := batch.Wait()  // waits for all the pending responses
 
 In this mode of operation, the caller must check each response for errors:
 
@@ -109,6 +110,13 @@ In this mode of operation, the caller must check each response for errors:
         log.Printf("Request %d [%s] failed: %v", i, rsp.ID(), err)
       }
    }
+
+Alternatively, you may choose to wait for each request independently (though
+note that batch requests will usually not be returned until all results are
+complete anyway):
+
+   rsp0, err := batch[0].Wait()
+   ...
 
 To decode the result from a response, use its UnmarshalResult method:
 
