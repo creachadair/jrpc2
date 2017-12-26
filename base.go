@@ -159,3 +159,13 @@ func jerrorf(code Code, msg string, args ...interface{}) *jerror {
 		Msg:  fmt.Sprintf(msg, args...),
 	}
 }
+
+// fixID filters id, treating "null" as a synonym for an unset ID.  This
+// supports interoperation with JSON-RPC v1 where "null" is used as an ID for
+// notifications.
+func fixID(id json.RawMessage) json.RawMessage {
+	if string(id) != "null" {
+		return id
+	}
+	return nil
+}

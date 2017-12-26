@@ -69,8 +69,7 @@ func NewClient(conn Conn, opts *ClientOptions) *Client {
 			// channel is buffered so we don't need to rendezvous.
 			c.log("Received %d responses", len(in))
 			for _, rsp := range in {
-				id := string(rsp.ID)
-				if id == "" {
+				if id := string(fixID(rsp.ID)); id == "" {
 					c.log("Discarding response without ID: %v", rsp)
 				} else if p := c.pending[id]; p == nil {
 					c.log("Discarding response for unknown ID %q", id)
@@ -319,7 +318,7 @@ func (p *Pending) wait() *Response {
 		// closed channel and correctly fall through to the stored responses.
 
 		p.rsp = &Response{
-			id:     raw.ID,
+			id:     fixID(raw.ID),
 			err:    raw.E.toError(),
 			result: raw.R,
 		}

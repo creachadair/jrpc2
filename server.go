@@ -128,6 +128,7 @@ func (s *Server) nextRequest() (func() error, error) {
 	for _, req := range next {
 		s.log("Checking request for %q: %s", req.M, string(req.P))
 		t := &task{req: req}
+		req.ID = fixID(req.ID)
 		if !s.versionOK(req.V) {
 			t.err = Errorf(E_InvalidRequest, "incorrect version marker %q", req.V)
 		} else if id := string(req.ID); id != "" && !s.used.Add(id) {
@@ -187,7 +188,7 @@ func (s *Server) dispatch(m Method, req *Request) (json.RawMessage, error) {
 	}
 	v, err := m.Call(context.WithValue(ctx, inboundRequestKey, req), req)
 	if err != nil {
-		if req.id == nil {
+		if req.IsNotification() {
 			s.log("Discarding error from notification to %q: %v", req.Method(), err)
 			return nil, nil // a notification
 		}
