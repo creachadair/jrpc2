@@ -53,6 +53,11 @@ func main() {
 	cli := jrpc2.NewClient(conn, nil)
 	defer cli.Close()
 
+	log.Print("\n-- Sending a notification...")
+	if err := cli.Notify("Post.Alert", struct{ Msg string }{"There is a fire!"}); err != nil {
+		log.Fatalln("Notify:", err)
+	}
+
 	log.Print("\n-- Sending some individual requests...")
 	if sum, err := add(cli, 1, 3, 5, 7); err != nil {
 		log.Fatalln("Math.Add:", err)
@@ -120,9 +125,4 @@ func main() {
 		}
 	}
 	wg.Wait()
-
-	log.Print("\n-- Sending a notification...")
-	if err := cli.Notify("Post.Alert", struct{ Msg string }{"There is a fire!"}); err != nil {
-		log.Fatalln("Notify:", err)
-	}
 }
