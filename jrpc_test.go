@@ -259,6 +259,8 @@ func TestNewCaller(t *testing.T) {
 }
 
 func TestErrors(t *testing.T) {
+	// Test that an error with data attached to it is correctly propagated back
+	// from the server to the client, in a value of concrete type *Error.
 	const errCode = -32000
 	const errData = `{"caroline":452}`
 	const errMessage = "error thingy"
