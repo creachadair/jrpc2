@@ -19,6 +19,7 @@ import (
 	"os/exec"
 
 	"bitbucket.org/creachadair/jrpc2"
+	"bitbucket.org/creachadair/jrpc2/server"
 )
 
 // RunReq is a request to invoke a program.
@@ -91,25 +92,10 @@ func main() {
 	}
 	log.Printf("Listening for connections at %s...", lst.Addr())
 
-	m := jrpc2.MapAssigner{"Run": jrpc2.NewMethod(Run)}
-	for {
-		conn, err := lst.Accept()
-		if err != nil {
-			log.Fatalln("Accept:", err)
-		}
-		log.Printf("New connection from %s", conn.RemoteAddr())
-		go func() {
-			defer conn.Close()
-			srv, err := jrpc2.NewServer(m, &jrpc2.ServerOptions{
-				AllowV1:   true,
-				LogWriter: lw,
-			}).Start(conn)
-			if err != nil {
-				log.Fatalln("Start:", err)
-			}
-			if err := srv.Wait(); err != nil {
-				log.Printf("Wait: %v", err)
-			}
-		}()
-	}
+	server.Loop(server.Listener(lst), jrpc2.MapAssigner{
+		"Run": jrpc2.NewMethod(Run),
+	}, &jrpc2.ServerOptions{
+		AllowV1:   true,
+		LogWriter: lw,
+	})
 }

@@ -17,6 +17,7 @@ import (
 	"os"
 
 	"bitbucket.org/creachadair/jrpc2"
+	"bitbucket.org/creachadair/jrpc2/server"
 )
 
 // The math type defines several arithmetic methods we can expose via the
@@ -85,23 +86,8 @@ func main() {
 		log.Fatalln("Listen:", err)
 	}
 	log.Printf("Listening at %v...", lst.Addr())
-
-	srv := jrpc2.NewServer(mux, &jrpc2.ServerOptions{
+	server.Loop(server.Listener(lst), mux, &jrpc2.ServerOptions{
 		LogWriter:   os.Stderr,
 		Concurrency: *maxTasks,
 	})
-	for {
-		conn, err := lst.Accept()
-		if err != nil {
-			log.Fatalln("Accept:", err)
-		}
-		log.Printf("New connection from %v", conn.RemoteAddr())
-
-		// Start up the server, and enable logging to stderr.
-		if _, err := srv.Start(conn); err != nil {
-			log.Fatalln("Start:", err)
-		}
-		log.Print("<serving requests>")
-		log.Printf("Server finished (err=%v)", srv.Wait())
-	}
 }
