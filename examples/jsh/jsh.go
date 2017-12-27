@@ -52,7 +52,7 @@ func Run(ctx context.Context, req *RunReq) (*RunResult, error) {
 	}
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	cmd := exec.Command(req.Args[0], req.Args[1:]...)
+	cmd := exec.CommandContext(ctx, req.Args[0], req.Args[1:]...)
 	if len(req.Input) != 0 {
 		cmd.Stdin = bytes.NewReader(req.Input)
 	}
