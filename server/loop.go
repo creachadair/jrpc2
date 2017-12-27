@@ -2,6 +2,7 @@
 package server
 
 import (
+	"io"
 	"log"
 	"sync"
 
@@ -27,7 +28,7 @@ func Loop(accept func() (jrpc2.Conn, error), assigner jrpc2.Assigner, opts *jrpc
 			srv, err := jrpc2.NewServer(assigner, opts).Start(conn)
 			if err != nil {
 				log.Printf("Error starting server: %v", err)
-			} else if err := srv.Wait(); err != nil {
+			} else if err := srv.Wait(); err != nil && err != io.EOF {
 				log.Printf("Server exit: %v", err)
 			}
 		}()
