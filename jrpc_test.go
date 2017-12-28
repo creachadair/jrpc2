@@ -291,3 +291,24 @@ func TestErrors(t *testing.T) {
 		}
 	}
 }
+
+func TestRegistration(t *testing.T) {
+	const message = "fun for the whole family"
+	c := RegisterCode(-100, message)
+	if got := c.Error(); got != message {
+		t.Errorf("RegisterCode(-100): got %q, want %q", got, message)
+	} else if c != -100 {
+		t.Errorf("RegisterCode(-100): got %d instead", c)
+	}
+}
+
+func TestRegistrationError(t *testing.T) {
+	defer func() {
+		if v := recover(); v != nil {
+			t.Logf("RegisterCode correctly panicked: %v", v)
+		} else {
+			t.Fatalf("RegisterCode should have panicked on input %d, but did not", E_ParseError)
+		}
+	}()
+	RegisterCode(int32(E_ParseError), "bogus")
+}

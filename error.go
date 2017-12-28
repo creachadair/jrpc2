@@ -93,3 +93,14 @@ var stdError = map[Code]string{
 	E_InvalidParams:  "invalid parameters",
 	E_InternalError:  "internal error",
 }
+
+// RegisterCode adds a new Code value with the specified message string.  This
+// function will panic if the proposed value is already registered.
+func RegisterCode(value int32, message string) Code {
+	code := Code(value)
+	if s, ok := stdError[code]; ok {
+		panic(fmt.Sprintf("code %d is already registered for %q", code, s))
+	}
+	stdError[code] = message
+	return code
+}
