@@ -1,4 +1,5 @@
-// Program jcl is a client program for the shell server defined in jsh.go.
+// Program jcl is a client program for the demonstration shell-server defined
+// in jsh.go.
 //
 // It implements a trivial command-line reader and dispatcher that sends
 // commands via JSON-RPC to the server and prints the responses.  Unlike a real

@@ -1,4 +1,5 @@
-// Program jsh exposes a trivial command-shell functionality via JSON-RPC.
+// Program jsh exposes a trivial command-shell functionality via JSON-RPC for
+// demonstration purposes.
 //
 // Usage:
 //    go build bitbucket.org/creachadair/jrpc2/examples/jsh
