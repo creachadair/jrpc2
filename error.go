@@ -64,6 +64,22 @@ func DataErrorf(code Code, v interface{}, msg string, args ...interface{}) error
 	return e
 }
 
+// ErrorCode reports the error code associated with err. If err == nil,
+// E_NoError is returned. If err is a Code, that code is returned. If err has
+// type *Error, its code is returned. Otherwise E_SystemError is returned.
+func ErrorCode(err error) Code {
+	switch t := err.(type) {
+	case nil:
+		return E_NoError
+	case *Error:
+		return t.Code
+	case Code:
+		return t
+	default:
+		return E_SystemError
+	}
+}
+
 // A Code is an error response code, that satisfies the Error interface.  Codes
 // can be used directly as error values, but a more useful value can be
 // obtained by passing a Code to the Errorf function along with a descriptive
@@ -84,6 +100,11 @@ const (
 	E_MethodNotFound Code = -32601 // The method does not exist or is unavailable
 	E_InvalidParams  Code = -32602 // Invalid method parameters
 	E_InternalError  Code = -32603 // Internal JSON-RPC error
+	E_SystemError    Code = -32098 // Errors from the operating environment
+	E_NoError        Code = -32099 // Denotes a nil error
+
+	// Note that E_SystemError and E_NoError are not defined by JSON-RPC.  They
+	// occupy values reserved for "implementation-defined server-errors".
 )
 
 var stdError = map[Code]string{
@@ -92,6 +113,8 @@ var stdError = map[Code]string{
 	E_MethodNotFound: "method not found",
 	E_InvalidParams:  "invalid parameters",
 	E_InternalError:  "internal error",
+	E_SystemError:    "system error",
+	E_NoError:        "no error (success)",
 }
 
 // RegisterCode adds a new Code value with the specified message string.  This

@@ -312,3 +312,20 @@ func TestRegistrationError(t *testing.T) {
 	}()
 	RegisterCode(int32(E_ParseError), "bogus")
 }
+
+func TestErrorCode(t *testing.T) {
+	tests := []struct {
+		err  error
+		want Code
+	}{
+		{nil, E_NoError},                            // no error (success)
+		{errors.New("bad"), E_SystemError},          // an unrelated error
+		{Errorf(E_ParseError, "bad"), E_ParseError}, // a package error
+		{E_InvalidParams, E_InvalidParams},          // a naked code
+	}
+	for _, test := range tests {
+		if got := ErrorCode(test.err); got != test.want {
+			t.Errorf("ErrorCode(%v): got %v, want %v", test.err, got, test.want)
+		}
+	}
+}
