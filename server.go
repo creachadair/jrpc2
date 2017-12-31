@@ -202,7 +202,7 @@ func (s *Server) dispatch(m Method, req *Request) (json.RawMessage, error) {
 func (s *Server) Stop() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.stop(ErrServerStopped)
+	s.stop(errServerStopped)
 }
 
 // Wait blocks until the connection terminates and returns the resulting error.

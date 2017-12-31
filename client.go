@@ -242,7 +242,7 @@ func (c *Client) Notify(method string, params interface{}) error {
 func (c *Client) Close() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.stop(ErrClientStopped)
+	c.stop(errClientStopped)
 	return c.err
 }
 

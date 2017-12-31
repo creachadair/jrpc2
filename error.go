@@ -36,13 +36,13 @@ func (e Error) tojerror() *jerror {
 // ErrNoData indicates that there are no data to unmarshal.
 var ErrNoData = errors.New("no data to unmarshal")
 
-// ErrServerStopped is returned by Server.Wait when the server was shut down by
+// errServerStopped is returned by Server.Wait when the server was shut down by
 // an explicit call to its Stop method.
-var ErrServerStopped = errors.New("the server has been stopped")
+var errServerStopped = errors.New("the server has been stopped")
 
-// ErrClientStopped is the error reported when a client is shut down by an
+// errClientStopped is the error reported when a client is shut down by an
 // explicit call to its Close method.
-var ErrClientStopped = errors.New("the client has been stopped")
+var errClientStopped = errors.New("the client has been stopped")
 
 // Errorf returns an error value of concrete type *Error having the specified
 // code and formatted message string.
