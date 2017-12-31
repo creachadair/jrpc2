@@ -329,3 +329,21 @@ func TestErrorCode(t *testing.T) {
 		}
 	}
 }
+
+func TestParseRequest(t *testing.T) {
+	req, err := ParseRequest([]byte(`{
+  "jsonrpc": "2.0",
+  "id":      123,
+  "method":  "foo",
+  "params":  ["a", "b", "c"]
+}`))
+	if err != nil {
+		t.Errorf("ParseRequest failed: %v", err)
+	} else if s := string(req.id); s != "123" {
+		t.Errorf("ParseRequest ID: got %q, want 123", s)
+	} else if req.method != "foo" {
+		t.Errorf("ParseRequest method: got %q, want foo", req.method)
+	} else if s, want := string(req.params), `["a", "b", "c"]`; s != want {
+		t.Errorf("ParseRequest params: got %q, want %q", s, want)
+	}
+}

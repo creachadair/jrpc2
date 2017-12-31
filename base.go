@@ -169,3 +169,18 @@ func fixID(id json.RawMessage) json.RawMessage {
 	}
 	return nil
 }
+
+// ParseRequest parses a request from an encoded JSON message.
+func ParseRequest(req []byte) (*Request, error) {
+	var dec jrequest
+	if err := json.Unmarshal(req, &dec); err != nil {
+		return nil, err
+	} else if dec.M == "" {
+		return nil, errors.New("missing method")
+	}
+	return &Request{
+		id:     dec.ID,
+		method: dec.M,
+		params: json.RawMessage(dec.P),
+	}, nil
+}
