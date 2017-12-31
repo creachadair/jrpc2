@@ -57,7 +57,7 @@ func HTTP(cli *jrpc2.Client) http.Handler {
 		if rsp == nil {
 			http.Error(w, "call failed: "+err.Error(), http.StatusInternalServerError)
 			return
-		} else if data, err := jrpc2.MarshalResponse(rsp); err != nil {
+		} else if data, err := jrpc2.MarshalResponse(rsp, parsed.ID); err != nil {
 			http.Error(w, "encoding response failed: "+err.Error(), http.StatusInternalServerError)
 			return
 		} else {
