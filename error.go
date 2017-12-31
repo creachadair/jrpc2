@@ -93,6 +93,9 @@ func (c Code) Error() string {
 	return fmt.Sprintf("error code %d", c)
 }
 
+// ToError converts a Code to an *Error using its default message.
+func (c Code) ToError() *Error { return &Error{Code: c, Message: c.Error()} }
+
 // Well-known error codes defined by the JSON-RPC specification.
 const (
 	E_ParseError     Code = -32700 // Invalid JSON received by the server

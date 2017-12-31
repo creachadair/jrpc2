@@ -353,8 +353,8 @@ func TestMarshalResponse(t *testing.T) {
 		rsp  *Response
 		want string
 	}{
-		{&Response{id: json.RawMessage(`"abc"`), err: &Error{Code: E_ParseError, Message: "bad"}},
-			`{"jsonrpc":"2.0","id":"abc","error":{"code":-32700,"message":"bad"}}`},
+		{&Response{id: json.RawMessage(`"abc"`), err: E_InvalidParams.ToError()},
+			`{"jsonrpc":"2.0","id":"abc","error":{"code":-32602,"message":"invalid parameters"}}`},
 		{&Response{id: json.RawMessage("123"), result: json.RawMessage("456")},
 			`{"jsonrpc":"2.0","id":123,"result":456}`},
 		{&Response{id: json.RawMessage("null"), err: &Error{Code: 11, Message: "bad", data: json.RawMessage(`"horse"`)}},
