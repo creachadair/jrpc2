@@ -298,7 +298,8 @@ func (p *Pending) abandon() {
 	}
 }
 
-// ID reports the request identifier of the request p is waiting for.
+// ID reports the request identifier of the request p is waiting for.  It is
+// safe to call ID even if the request has not yet completed.
 func (p *Pending) ID() string { return p.id }
 
 // Wait blocks until p is complete, then returns the response. A response is
