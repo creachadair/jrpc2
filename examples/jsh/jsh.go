@@ -93,7 +93,7 @@ func main() {
 	}
 	log.Printf("Listening for connections at %s...", lst.Addr())
 
-	server.Loop(server.Listener(lst), jrpc2.MapAssigner{
+	server.Loop(lst, jrpc2.MapAssigner{
 		"Run": jrpc2.NewMethod(Run),
 	}, &jrpc2.ServerOptions{
 		AllowV1:   true,

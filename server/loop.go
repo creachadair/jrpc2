@@ -4,19 +4,20 @@ package server
 import (
 	"io"
 	"log"
+	"net"
 	"sync"
 
 	"bitbucket.org/creachadair/jrpc2"
 )
 
-// Loop obtains connections from accept and starts a server for each with the
+// Loop obtains connections from lst and starts a server for each with the
 // given assigner and options, running in a new goroutine. If accept reports an
 // error, the loop will terminate and the error will be reported once all the
 // servers currently active have returned.
-func Loop(accept func() (jrpc2.Conn, error), assigner jrpc2.Assigner, opts *jrpc2.ServerOptions) error {
+func Loop(lst net.Listener, assigner jrpc2.Assigner, opts *jrpc2.ServerOptions) error {
 	var wg sync.WaitGroup
 	for {
-		conn, err := accept()
+		conn, err := lst.Accept()
 		if err != nil {
 			log.Printf("Error accepting new connection: %v", err)
 			wg.Wait()
