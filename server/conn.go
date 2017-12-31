@@ -26,18 +26,6 @@ func Listener(lst net.Listener) func() (jrpc2.Conn, error) {
 // RPC are reported as status 500 (Internal Server Error). A complete RPC reply
 // reports status 200 (OK) even if the reply contains an error.
 func HTTP(cli *jrpc2.Client) http.Handler {
-	type jerror struct {
-		Code int32           `json:"code"`
-		Msg  string          `json:"message,omitempty"`
-		Data json.RawMessage `json:"data,omitempty"`
-	}
-	type jresponse struct {
-		V  string          `json:"jsonrpc"`
-		ID json.RawMessage `json:"id,omitempty"`
-		E  *jerror         `json:"error,omitempty"`
-		R  json.RawMessage `json:"result,omitempty"`
-	}
-
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		data, err := ioutil.ReadAll(req.Body)
 		if err != nil {
@@ -60,33 +48,18 @@ func HTTP(cli *jrpc2.Client) http.Handler {
 			// Send a notification, and reply with an empty success.
 			if err := cli.Notify(parsed.Method, parsed.Params); err != nil {
 				http.Error(w, "sending notification: "+err.Error(), http.StatusInternalServerError)
-
 			}
 			return
 		}
 
 		// Unpack the response and restore the original request ID.
 		rsp, err := cli.CallWait(parsed.Method, parsed.Params)
-		encoded := &jresponse{V: jrpc2.Version, ID: parsed.ID}
-		if err != nil {
-			if e, ok := err.(*jrpc2.Error); ok {
-				encoded.E = &jerror{
-					Code: int32(e.Code),
-					Msg:  e.Message,
-				}
-				e.UnmarshalData(&encoded.E.Data) // cannot fail
-			} else {
-				encoded.E = &jerror{
-					Code: int32(jrpc2.E_InternalError),
-					Msg:  err.Error(),
-					// no data
-				}
-			}
-		} else {
-			rsp.UnmarshalResult(&encoded.R) // cannot fail
-		}
-		if data, err := json.Marshal(encoded); err != nil {
-			http.Error(w, "encoding response failed", http.StatusInternalServerError)
+		if rsp == nil {
+			http.Error(w, "call failed: "+err.Error(), http.StatusInternalServerError)
+			return
+		} else if data, err := jrpc2.MarshalResponse(rsp); err != nil {
+			http.Error(w, "encoding response failed: "+err.Error(), http.StatusInternalServerError)
+			return
 		} else {
 			w.Header().Set("Content-Type", "application/json")
 			w.Write(data)
