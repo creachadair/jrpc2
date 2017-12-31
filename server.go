@@ -4,7 +4,6 @@ import (
 	"container/list"
 	"context"
 	"encoding/json"
-	"errors"
 	"io"
 	"sync"
 	"time"
@@ -58,12 +57,13 @@ func NewServer(mux Assigner, opts *ServerOptions) *Server {
 	return s
 }
 
-// Start enables processing of requests from conn.
-func (s *Server) Start(conn Conn) (*Server, error) {
+// Start enables processing of requests from conn. This function will panic if
+// the server is already running.
+func (s *Server) Start(conn Conn) *Server {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.closer != nil {
-		return s, errors.New("server is already running")
+		panic("server is already running")
 	}
 
 	// Set up the queues and condition variable used by the workers.
@@ -101,7 +101,7 @@ func (s *Server) Start(conn Conn) (*Server, error) {
 			g.Go(next)
 		}
 	}()
-	return s, nil
+	return s
 }
 
 // nextRequest blocks until a request batch is available and returns a function

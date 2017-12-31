@@ -26,10 +26,8 @@ func Loop(lst net.Listener, assigner jrpc2.Assigner, opts *jrpc2.ServerOptions) 
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			srv, err := jrpc2.NewServer(assigner, opts).Start(conn)
-			if err != nil {
-				log.Printf("Error starting server: %v", err)
-			} else if err := srv.Wait(); err != nil && err != io.EOF {
+			srv := jrpc2.NewServer(assigner, opts).Start(conn)
+			if err := srv.Wait(); err != nil && err != io.EOF {
 				log.Printf("Server exit: %v", err)
 			}
 		}()

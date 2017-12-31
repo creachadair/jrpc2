@@ -38,10 +38,7 @@ func newServer(t *testing.T, assigner Assigner, opts *ServerOptions) (*Server, *
 	}
 
 	cpipe, spipe := pipePair()
-	srv, err := NewServer(assigner, opts).Start(spipe)
-	if err != nil {
-		t.Fatalf("NewServer: %v", err)
-	}
+	srv := NewServer(assigner, opts).Start(spipe)
 	t.Logf("Server running on pipe %+v", spipe)
 
 	cli := NewClient(cpipe, &ClientOptions{LogWriter: os.Stderr})

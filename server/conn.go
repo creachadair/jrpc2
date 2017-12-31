@@ -65,9 +65,7 @@ func HTTP(cli *jrpc2.Client) http.Handler {
 // options, and connects an in-memory client to it with the client options.
 func Local(assigner jrpc2.Assigner, serverOpt *jrpc2.ServerOptions, clientOpt *jrpc2.ClientOptions) *jrpc2.Client {
 	cpipe, spipe := newPipe()
-	if _, err := jrpc2.NewServer(assigner, serverOpt).Start(spipe); err != nil {
-		panic(err) // should not be possible
-	}
+	jrpc2.NewServer(assigner, serverOpt).Start(spipe)
 	return jrpc2.NewClient(cpipe, clientOpt)
 }
 
