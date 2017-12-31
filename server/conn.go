@@ -67,9 +67,9 @@ func HTTP(cli *jrpc2.Client) http.Handler {
 	})
 }
 
-// InMemory constructs a jrpc2.Server from the specified assigner and server
+// Local constructs a jrpc2.Server from the specified assigner and server
 // options, and connects an in-memory client to it with the client options.
-func InMemory(assigner jrpc2.Assigner, serverOpt *jrpc2.ServerOptions, clientOpt *jrpc2.ClientOptions) (*jrpc2.Client, error) {
+func Local(assigner jrpc2.Assigner, serverOpt *jrpc2.ServerOptions, clientOpt *jrpc2.ClientOptions) (*jrpc2.Client, error) {
 	cpipe, spipe := newPipe()
 	if _, err := jrpc2.NewServer(assigner, serverOpt).Start(spipe); err != nil {
 		return nil, err
