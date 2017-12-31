@@ -12,7 +12,7 @@
 //      "id": 1,
 //      "method": "Sort",
 //      "params": [13, 17, 2, 5, 3, 11, 7, 23, 19]
-//    }' http://localhost:8080/call ; echo
+//    }' http://localhost:8080/call
 //
 package main
 
