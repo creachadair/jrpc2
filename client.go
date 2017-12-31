@@ -148,7 +148,7 @@ func (c *Client) send(reqs ...*Request) ([]*Pending, error) {
 	} else {
 		c.log("Outgoing batch: %s", string(b))
 	}
-	if err := c.enc.Encode(batch); err != nil {
+	if err := c.enc.Encode(json.RawMessage(b)); err != nil {
 		return nil, err
 	}
 
