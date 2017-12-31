@@ -333,17 +333,20 @@ func TestErrorCode(t *testing.T) {
 func TestMarshalResponse(t *testing.T) {
 	tests := []struct {
 		rsp  *Response
+		id   json.RawMessage
 		want string
 	}{
-		{&Response{id: json.RawMessage(`"abc"`), err: E_InvalidParams.ToError()},
+		{&Response{id: json.RawMessage(`"abc"`), err: E_InvalidParams.ToError()}, nil,
 			`{"jsonrpc":"2.0","id":"abc","error":{"code":-32602,"message":"invalid parameters"}}`},
-		{&Response{id: json.RawMessage("123"), result: json.RawMessage("456")},
+		{&Response{id: json.RawMessage("123"), result: json.RawMessage("456")}, nil,
 			`{"jsonrpc":"2.0","id":123,"result":456}`},
-		{&Response{id: json.RawMessage("null"), err: &Error{Code: 11, Message: "bad", data: json.RawMessage(`"horse"`)}},
+		{&Response{id: json.RawMessage("null"), err: &Error{Code: 11, Message: "bad", data: json.RawMessage(`"horse"`)}}, nil,
 			`{"jsonrpc":"2.0","id":null,"error":{"code":11,"message":"bad","data":"horse"}}`},
+		{&Response{id: json.RawMessage("123"), result: json.RawMessage(`"abc"`)}, json.RawMessage(`"foo"`),
+			`{"jsonrpc":"2.0","id":"foo","result":"abc"}`},
 	}
 	for _, test := range tests {
-		got, err := MarshalResponse(test.rsp)
+		got, err := MarshalResponse(test.rsp, test.id)
 		if err != nil {
 			t.Errorf("MarshalResponse %+v: unexpected error: %v", test.rsp, err)
 		} else if s := string(got); s != test.want {

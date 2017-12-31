@@ -170,9 +170,13 @@ func fixID(id json.RawMessage) json.RawMessage {
 	return nil
 }
 
-// MarshalResponse marshals a response to JSON.
-func MarshalResponse(rsp *Response) ([]byte, error) {
+// MarshalResponse marshals a response to JSON. If id is non-empty, the ID of
+// the resulting message is replaced with it.
+func MarshalResponse(rsp *Response, id json.RawMessage) ([]byte, error) {
 	m := &jresponse{V: Version, ID: rsp.id}
+	if id != nil {
+		m.ID = id
+	}
 	if rsp.err == nil {
 		m.R = rsp.result
 	} else {
