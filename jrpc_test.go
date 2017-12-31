@@ -347,3 +347,25 @@ func TestParseRequest(t *testing.T) {
 		t.Errorf("ParseRequest params: got %q, want %q", s, want)
 	}
 }
+
+func TestMarshalResponse(t *testing.T) {
+	tests := []struct {
+		rsp  *Response
+		want string
+	}{
+		{&Response{id: json.RawMessage(`"abc"`), err: &Error{Code: E_ParseError, Message: "bad"}},
+			`{"jsonrpc":"2.0","id":"abc","error":{"code":-32700,"message":"bad"}}`},
+		{&Response{id: json.RawMessage("123"), result: json.RawMessage("456")},
+			`{"jsonrpc":"2.0","id":123,"result":456}`},
+		{&Response{id: json.RawMessage("null"), err: &Error{Code: 11, Message: "bad", data: json.RawMessage(`"horse"`)}},
+			`{"jsonrpc":"2.0","id":null,"error":{"code":11,"message":"bad","data":"horse"}}`},
+	}
+	for _, test := range tests {
+		got, err := MarshalResponse(test.rsp)
+		if err != nil {
+			t.Errorf("MarshalResponse %+v: unexpected error: %v", test.rsp, err)
+		} else if s := string(got); s != test.want {
+			t.Errorf("MarshalResponse %+v: got %#q, want %#q", test.rsp, s, test.want)
+		}
+	}
+}

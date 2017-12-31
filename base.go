@@ -184,3 +184,14 @@ func ParseRequest(req []byte) (*Request, error) {
 		params: json.RawMessage(dec.P),
 	}, nil
 }
+
+// MarshalResponse marshals a response to JSON.
+func MarshalResponse(rsp *Response) ([]byte, error) {
+	m := &jresponse{V: Version, ID: rsp.id}
+	if rsp.err == nil {
+		m.R = rsp.result
+	} else {
+		m.E = rsp.err.tojerror()
+	}
+	return json.Marshal(m)
+}
