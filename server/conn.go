@@ -69,12 +69,12 @@ func HTTP(cli *jrpc2.Client) http.Handler {
 
 // Local constructs a jrpc2.Server from the specified assigner and server
 // options, and connects an in-memory client to it with the client options.
-func Local(assigner jrpc2.Assigner, serverOpt *jrpc2.ServerOptions, clientOpt *jrpc2.ClientOptions) (*jrpc2.Client, error) {
+func Local(assigner jrpc2.Assigner, serverOpt *jrpc2.ServerOptions, clientOpt *jrpc2.ClientOptions) *jrpc2.Client {
 	cpipe, spipe := newPipe()
 	if _, err := jrpc2.NewServer(assigner, serverOpt).Start(spipe); err != nil {
-		return nil, err
+		panic(err) // should not be possible
 	}
-	return jrpc2.NewClient(cpipe, clientOpt), nil
+	return jrpc2.NewClient(cpipe, clientOpt)
 }
 
 // newPipe creates a pair of connected jrpc2.Conn values suitable for wiring
