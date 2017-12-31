@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"runtime"
 )
 
 const logFlags = log.LstdFlags | log.Lshortfile
@@ -20,7 +21,7 @@ type ServerOptions struct {
 	AllowV1 bool
 
 	// Allows up to the specified number of concurrent goroutines to execute
-	// when processing requests. A value less than 1 is treated as 1.
+	// when processing requests. A value less than 1 uses runtime.NumCPU().
 	Concurrency int
 
 	// If not nil, this function is called to obtain a context value to use for
@@ -40,7 +41,7 @@ func (s *ServerOptions) allowV1() bool { return s != nil && s.AllowV1 }
 
 func (s *ServerOptions) concurrency() int64 {
 	if s == nil || s.Concurrency < 1 {
-		return 1
+		return int64(runtime.NumCPU())
 	}
 	return int64(s.Concurrency)
 }
