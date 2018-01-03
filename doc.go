@@ -42,7 +42,7 @@ them up in a Go map:
 
 Equipped with an Assigner we can now construct a Server:
 
-   srv := jrpc2.NewServer(assigner, nil)
+   srv := jrpc2.NewServer(assigner, nil)  // nil for default options
 
 To serve requests, we will next need a connection. A net.Conn will do, so we
 can say for example:
