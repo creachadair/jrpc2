@@ -180,8 +180,9 @@ func (c *Client) Call(method string, params interface{}) (*Pending, error) {
 }
 
 // CallWait initiates a single request and blocks until the response returns.
-// It is shorthand for Call + Wait. Any error returned is from the initial
-// Call; errors from the pending Wait must be checked by the caller:
+// It is shorthand for Call + Wait. If err != nil then rsp == nil: Any error
+// returned is from the initial Call; errors from the pending Wait must be
+// checked by the caller:
 //
 //    rsp, err := c.CallWait(method, params)
 //    if err != nil {
