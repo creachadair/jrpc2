@@ -123,10 +123,10 @@ Alternatively, you may choose to wait for each request independently (though
 note that batch requests will usually not be returned until all results are
 complete anyway):
 
-   rsp0, err := batch[0].Wait()
+   rsp0 := batch[0].Wait()
    ...
 
-To decode the result from a response, use its UnmarshalResult method:
+To decode the result from a successful response use its UnmarshalResult method:
 
    var result int
    if err := rsp.UnmarshalResult(&result); err != nil {
