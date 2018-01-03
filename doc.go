@@ -85,7 +85,15 @@ call:
 
 Second, we wait for the pending call to complete to receive its results:
 
-   rsp, err := p.Wait()
+   rsp := p.Wait()
+
+You can check whether a response contains an error using its Error method:
+
+   if err := rsp.Error(); err != nil {
+      log.Printf("Error from server: %v", err)
+   }
+
+The concrete type of errors returned by Wait is *jrpc2.Error.
 
 The separation of call and response allows requests to be issued serially and
 waited for in parallel.  For convenience, the client has a CallWait method that
