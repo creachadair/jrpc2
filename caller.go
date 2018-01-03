@@ -95,8 +95,10 @@ func NewCaller(method string, X, Y interface{}, opts ...CallerOption) interface{
 			ps, err = cli.send(req)
 			if err == nil {
 				raw := ps[0].Wait()
-				if err = raw.Error(); err == nil {
+				if raw.Error() == nil {
 					err = raw.UnmarshalResult(rsp.Interface())
+				} else {
+					err = raw.Error()
 				}
 			}
 		}

@@ -44,9 +44,8 @@ type Response struct {
 // ID returns the request identifier for r.
 func (r *Response) ID() string { return string(r.id) }
 
-// Error returns a non-nil error of concrete type *Error if the response
-// contains an error.
-func (r *Response) Error() error {
+// Error returns a non-nil *Error if the response contains an error.
+func (r *Response) Error() *Error {
 	if r.err != nil {
 		return r.err
 	}
