@@ -180,13 +180,22 @@ func (c *Client) Call(method string, params interface{}) (*Pending, error) {
 }
 
 // CallWait initiates a single request and blocks until the response returns.
-// It is shorthand for Call + Wait.
+// It is shorthand for Call + Wait. Any error returned is from the initial
+// Call; errors from the pending Wait must be checked by the caller:
+//
+//    rsp, err := c.CallWait(method, params)
+//    if err != nil {
+//       log.Fatalf("Call failed: %v", err)
+//    } else if err := rsp.Error(); err != nil {
+//       log.Printf("Error from server: %v", err)
+//    }
+//
 func (c *Client) CallWait(method string, params interface{}) (*Response, error) {
 	p, err := c.Call(method, params)
-	if err == nil {
-		return p.Wait()
+	if err != nil {
+		return nil, err
 	}
-	return nil, err
+	return p.Wait(), nil
 }
 
 // Batch initiates a batch of concurrent requests.  It blocks until the entire
@@ -218,7 +227,7 @@ type Batch []*Pending
 func (b Batch) Wait() []*Response {
 	rsps := make([]*Response, len(b))
 	for i, p := range b {
-		rsps[i] = p.wait()
+		rsps[i] = p.Wait()
 	}
 	return rsps
 }
@@ -302,14 +311,9 @@ func (p *Pending) abandon() {
 // safe to call ID even if the request has not yet completed.
 func (p *Pending) ID() string { return p.id }
 
-// Wait blocks until p is complete, then returns the response. A response is
-// returned whether or not there was an error.
-func (p *Pending) Wait() (*Response, error) {
-	rsp := p.wait()
-	return rsp, rsp.Error()
-}
-
-func (p *Pending) wait() *Response {
+// Wait blocks until p is complete, then returns the response.  The caller must
+// check the response for an error from the server.
+func (p *Pending) Wait() *Response {
 	raw, ok := <-p.ch
 	if ok {
 		// N.B. We intentionally did not have the sender close the channel, to
