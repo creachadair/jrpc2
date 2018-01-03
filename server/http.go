@@ -66,10 +66,7 @@ func (c Caller) CallWait(req []byte) ([]byte, error) {
 		return nil, c.cli.Notify(parsed.Method, parsed.Params)
 	}
 	rsp, err := c.cli.CallWait(parsed.Method, parsed.Params)
-	if rsp == nil {
-		// We only need to directly report the error in case it prevented us
-		// from getting a response at all; errors within the protocol are
-		// encoded in the response directly.
+	if err != nil {
 		return nil, err
 	}
 	return jrpc2.MarshalResponse(rsp, parsed.ID)
