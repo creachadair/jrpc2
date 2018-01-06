@@ -11,24 +11,40 @@ import (
 	"testing"
 )
 
-type pipeConn struct {
-	*io.PipeReader
-	*io.PipeWriter
+type pipeChannel struct {
+	dec   *json.Decoder
+	enc   *json.Encoder
+	close func() error
 }
 
-func (p pipeConn) Close() error {
-	rerr := p.PipeReader.Close()
-	werr := p.PipeWriter.Close()
-	if werr != nil {
-		return werr
+func (p pipeChannel) Send(msg []byte) error { return p.enc.Encode(json.RawMessage(msg)) }
+
+func (p pipeChannel) Recv() ([]byte, error) {
+	var msg json.RawMessage
+	if err := p.dec.Decode(&msg); err != nil {
+		return nil, err
 	}
-	return rerr
+	return []byte(msg), nil
 }
 
-func pipePair() (client, server pipeConn) {
+func (p pipeChannel) Close() error { return p.close() }
+
+func pipePair() (client, server pipeChannel) {
 	cr, sw := io.Pipe()
 	sr, cw := io.Pipe()
-	return pipeConn{PipeReader: cr, PipeWriter: cw}, pipeConn{PipeReader: sr, PipeWriter: sw}
+	client.dec = json.NewDecoder(cr)
+	client.enc = json.NewEncoder(cw)
+	client.close = func() error {
+		cr.Close()
+		return cw.Close()
+	}
+	server.dec = json.NewDecoder(sr)
+	server.enc = json.NewEncoder(sw)
+	server.close = func() error {
+		sr.Close()
+		return sw.Close()
+	}
+	return
 }
 
 func newServer(t *testing.T, assigner Assigner, opts *ServerOptions) (*Server, *Client, func()) {

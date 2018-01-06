@@ -16,6 +16,7 @@ import (
 	"sync"
 
 	"bitbucket.org/creachadair/jrpc2"
+	"bitbucket.org/creachadair/jrpc2/channel"
 )
 
 var serverAddr = flag.String("server", "", "Server address")
@@ -50,7 +51,7 @@ func main() {
 	log.Printf("Connected to %v", conn.RemoteAddr())
 
 	// Start up the client, and enable logging to stderr.
-	cli := jrpc2.NewClient(conn, nil)
+	cli := jrpc2.NewClient(channel.NewRaw(conn), nil)
 	defer cli.Close()
 
 	log.Print("\n-- Sending a notification...")

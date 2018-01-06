@@ -5,7 +5,7 @@ defined by http://www.jsonrpc.org/specification.
 Servers
 
 The *Server type implements a JSON-RPC server. A server communicates with a
-client over a Conn, and dispatches client requests to user-defined method
+client over a Channel, and dispatches client requests to user-defined method
 handlers.  These handlers satisfy the jrpc2.Method interface by exporting a
 Call method:
 
@@ -44,8 +44,8 @@ Equipped with an Assigner we can now construct a Server:
 
    srv := jrpc2.NewServer(assigner, nil)  // nil for default options
 
-To serve requests, we will next need a connection. A net.Conn will do, so we
-can say for example:
+To serve requests, we will next need a connection. The channel package's NewRaw
+function will adapt a net.Conn to a jrpc2.Channel for us:
 
    import "net"
 
@@ -53,7 +53,7 @@ can say for example:
    ...
    conn, err := inc.Accept()
    ...
-   srv.Start(conn)
+   srv.Start(channel.NewRaw(conn))
 
 The running server will handle incoming requests until the connection fails or
 until it is stopped (by calling srv.Stop()). To wait for the server to finish,
@@ -65,17 +65,17 @@ This will report the error that led to the server exiting.
 Clients
 
 The *Client type implements a JSON-RPC client. A client communicates with a
-server over a Conn, and is safe for concurrent use by multiple goroutines. It
-supports batched requests and may have arbitrarily many pending requests in
-flight simultaneously.
+server over a Channel, and is safe for concurrent use by multiple
+goroutines. It supports batched requests and may have arbitrarily many pending
+requests in flight simultaneously.
 
-To establish a client we first need a Conn:
+To establish a client we first need a Channel:
 
    import "net"
 
    conn, err := net.Dial("tcp", "localhost:8080")
    ...
-   cli := jrpc2.NewClient(conn, nil)
+   cli := jrpc2.NewClient(channel.NewRaw(conn), nil)
 
 There are two parts to sending an RPC: First, we construct a request given the
 method name and parameters, and issue it to the server. This returns a pending

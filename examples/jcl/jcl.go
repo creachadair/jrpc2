@@ -34,6 +34,7 @@ import (
 	"strings"
 
 	"bitbucket.org/creachadair/jrpc2"
+	"bitbucket.org/creachadair/jrpc2/channel"
 	"bitbucket.org/creachadair/shell"
 )
 
@@ -55,7 +56,7 @@ func main() {
 	log.Printf("Connected to %s...", conn.RemoteAddr())
 	defer conn.Close()
 
-	cli := jrpc2.NewClient(conn, nil)
+	cli := jrpc2.NewClient(channel.NewRaw(conn), nil)
 	in := bufio.NewScanner(os.Stdin)
 	for {
 		req, err := readCommand(in)

@@ -4,7 +4,6 @@ import (
 	"container/list"
 	"context"
 	"encoding/json"
-	"io"
 	"sync"
 	"time"
 
@@ -14,7 +13,7 @@ import (
 )
 
 // A Server is a JSON-RPC 2.0 server. The server receives requests and sends
-// responses on a Conn provided by the caller, and dispatches requests to
+// responses on a Channel provided by the caller, and dispatches requests to
 // user-defined Method handlers.
 type Server struct {
 	wg     sync.WaitGroup               // ready when workers are done at shutdown time
@@ -25,12 +24,11 @@ type Server struct {
 
 	reqctx func(req *Request) (context.Context, error) // obtain a context for req
 
-	mu     *sync.Mutex   // protects the fields below
-	closer io.Closer     // close to terminate the connection
-	err    error         // error from a previous operation
-	work   *sync.Cond    // for signaling message availability
-	inq    *list.List    // inbound requests awaiting processing
-	outq   *json.Encoder // encoder for outbound replies
+	mu   *sync.Mutex // protects the fields below
+	err  error       // error from a previous operation
+	work *sync.Cond  // for signaling message availability
+	inq  *list.List  // inbound requests awaiting processing
+	ch   Channel     // the channel to the client
 
 	used stringset.Set // IDs of requests being processed
 }
@@ -59,24 +57,22 @@ func NewServer(mux Assigner, opts *ServerOptions) *Server {
 
 // Start enables processing of requests from conn. This function will panic if
 // the server is already running.
-func (s *Server) Start(conn Conn) *Server {
+func (s *Server) Start(c Channel) *Server {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.closer != nil {
+	if s.ch != nil {
 		panic("server is already running")
 	}
 
 	// Set up the queues and condition variable used by the workers.
-	s.closer = conn
+	s.ch = c
 	s.work = sync.NewCond(s.mu)
 	s.inq = list.New()
 	s.used = stringset.New()
 
 	// Reset all the I/O structures and start up the workers.
 	s.err = nil
-	s.outq = json.NewEncoder(conn)
-	dec := json.NewDecoder(conn)
-	dec.UseNumber()
+
 	// TODO(fromberger): Disallow extra fields once 1.10 lands.
 
 	// The task group carries goroutines dispatched to handle individual
@@ -86,7 +82,7 @@ func (s *Server) Start(conn Conn) *Server {
 	s.wg.Add(2)
 
 	// Accept requests from the client and enqueue them for processing.
-	go func() { defer s.wg.Done(); s.read(dec) }()
+	go func() { defer s.wg.Done(); s.read(c) }()
 
 	// Remove requests from the queue and dispatch them to handlers.  The
 	// responses are written back by the handler goroutines.
@@ -113,12 +109,13 @@ func (s *Server) Start(conn Conn) *Server {
 func (s *Server) nextRequest() (func() error, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	for s.closer != nil && s.inq.Len() == 0 {
+	for s.ch != nil && s.inq.Len() == 0 {
 		s.work.Wait()
 	}
-	if s.closer == nil {
+	if s.ch == nil {
 		return nil, s.err
 	}
+	ch := s.ch // capture
 
 	next := s.inq.Remove(s.inq.Front()).(jrequests)
 	s.log("Processing %d requests", len(next))
@@ -173,7 +170,7 @@ func (s *Server) nextRequest() (func() error, error) {
 		// Deliver any responses (or errors) we owe.
 		if len(rsps) != 0 {
 			s.log("Sending response: %v", rsps)
-			return s.send(rsps)
+			return encode(ch, rsps)
 		}
 		return nil
 	}, nil
@@ -217,13 +214,13 @@ func (s *Server) Wait() error {
 // caller must hold s.mu. If multiple callers invoke stop, only the first will
 // successfully record its error status.
 func (s *Server) stop(err error) {
-	if s.closer == nil {
+	if s.ch == nil {
 		return // nothing is running
 	}
-	s.closer.Close()
+	s.ch.Close()
 	s.work.Broadcast()
 	s.err = err
-	s.closer = nil
+	s.ch = nil
 }
 
 func isRecoverableJSONError(err error) bool {
@@ -237,12 +234,15 @@ func isRecoverableJSONError(err error) bool {
 	}
 }
 
-func (s *Server) read(dec *json.Decoder) {
+func (s *Server) read(ch Channel) {
 	for {
 		// If the message is not sensible, report an error; otherwise enqueue
 		// it for processing.
 		var in jrequests
-		err := dec.Decode(&in)
+		bits, err := ch.Recv()
+		if err == nil {
+			err = json.Unmarshal(bits, &in)
+		}
 		s.mu.Lock()
 		if isRecoverableJSONError(err) {
 			s.pushError(nil, jerrorf(E_ParseError, "invalid JSON request message"))
@@ -262,22 +262,17 @@ func (s *Server) read(dec *json.Decoder) {
 	s.mu.Unlock()
 }
 
+// pushError reports an error for the given request ID.
+// Requires that the caller hold s.mu.
 func (s *Server) pushError(id json.RawMessage, err *jerror) {
 	s.log("Error for request %q: %v", string(id), err)
-	if err := s.outq.Encode(jresponses{{
+	if err := encode(s.ch, jresponses{{
 		V:  Version,
 		ID: id,
 		E:  err,
 	}}); err != nil {
 		s.log("Writing error response: %v", err)
 	}
-}
-
-// send enqueues a request or a response for delivery. The caller must hold s.mu.
-func (s *Server) send(msg jresponses) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.outq.Encode(msg)
 }
 
 func (s *Server) versionOK(v string) bool {

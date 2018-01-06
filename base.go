@@ -4,14 +4,22 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 )
 
-// A Conn represents the ability to transmit and receive JSON-RPC messages.
-type Conn interface {
-	io.Reader
-	io.Writer
-	io.Closer
+// A Channel represents the ability to transmit and receive messages.  The
+// channel does not interpret the results, but may add and remove framing so
+// that messages can be embedded in higher-level protocols. Multiple goroutines
+// may invoke methods on a Channel simultaneously.
+type Channel interface {
+	// Send transmits a message on the channel.
+	Send([]byte) error
+
+	// Recv returns the next available message from the channel.
+	Recv() ([]byte, error)
+
+	// Close shuts down the channel, after which no further messages may be
+	// sent or received.
+	Close() error
 }
 
 // A Request is a request message from a client to a server.
@@ -182,4 +190,22 @@ func MarshalResponse(rsp *Response, id json.RawMessage) ([]byte, error) {
 		m.E = rsp.err.tojerror()
 	}
 	return json.Marshal(m)
+}
+
+// encode marshals v as JSON and forwards it to the channel.
+func encode(ch Channel, v interface{}) error {
+	bits, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	return ch.Send(bits)
+}
+
+// decode receives a message from the channel and unmarshals it as JSON to v.
+func decode(ch Channel, v interface{}) error {
+	bits, err := ch.Recv()
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(bits, v)
 }

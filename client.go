@@ -4,13 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"strconv"
 	"sync"
 )
 
 // A Client is a JSON-RPC 2.0 client. The client sends requests and receives
-// responses on a Conn provided by the caller.
+// responses on a Channel provided by the caller.
 type Client struct {
 	wg sync.WaitGroup // ready when the reader is done at shutdown time
 
@@ -18,22 +17,20 @@ type Client struct {
 	allow1 bool                         // tolerate v1 replies with no version marker
 
 	mu      sync.Mutex          // protects the fields below
-	closer  io.Closer           // close to shut down the connection
-	enc     *json.Encoder       // encode requests to the server
+	ch      Channel             // channel to the server
 	err     error               // error from a previous operation
 	pending map[string]*Pending // requests pending completion, by ID
 	nextID  int64               // next unused request ID
 }
 
 // NewClient returns a new client that communicates with the server via conn.
-func NewClient(conn Conn, opts *ClientOptions) *Client {
+func NewClient(ch Channel, opts *ClientOptions) *Client {
 	c := &Client{
 		log:    opts.logger(),
 		allow1: opts.allowV1(),
 
 		// Lock-protected fields
-		closer:  conn,
-		enc:     json.NewEncoder(conn),
+		ch:      ch,
 		pending: make(map[string]*Pending),
 	}
 
@@ -41,8 +38,6 @@ func NewClient(conn Conn, opts *ClientOptions) *Client {
 	// back to pending requests by their ID. Outbound requests do not queue;
 	// they are sent synchronously in the Send method.
 
-	dec := json.NewDecoder(conn)
-	dec.UseNumber()
 	c.wg.Add(1)
 	go func() {
 		defer c.wg.Done()
@@ -51,7 +46,7 @@ func NewClient(conn Conn, opts *ClientOptions) *Client {
 			// either be a list or a single object, the decoder for jresponses
 			// knows how to handle both.
 			var in jresponses
-			err := dec.Decode(&in)
+			err := decode(ch, &in)
 			c.mu.Lock()
 			if isRecoverableJSONError(err) {
 				c.log("Recoverable decoding error: %v", err)
@@ -148,7 +143,7 @@ func (c *Client) send(reqs ...*Request) ([]*Pending, error) {
 	} else {
 		c.log("Outgoing batch: %s", string(b))
 	}
-	if err := c.enc.Encode(json.RawMessage(b)); err != nil {
+	if err := c.ch.Send(b); err != nil {
 		return nil, err
 	}
 
@@ -260,16 +255,16 @@ func (c *Client) Close() error {
 // caller must hold c.mu. If multiple callers invoke stop, only the first will
 // successfully record its error status.
 func (c *Client) stop(err error) {
-	if c.closer == nil {
+	if c.ch == nil {
 		return // nothing is running
 	}
-	c.closer.Close()
+	c.ch.Close()
 	for id, p := range c.pending {
 		delete(c.pending, id)
 		p.abandon()
 	}
 	c.err = err
-	c.closer = nil
+	c.ch = nil
 }
 
 func (c *Client) versionOK(v string) bool {
