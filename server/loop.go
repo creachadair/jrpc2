@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"bitbucket.org/creachadair/jrpc2"
+	"bitbucket.org/creachadair/jrpc2/channel"
 )
 
 // Loop obtains connections from lst and starts a server for each with the
@@ -23,10 +24,11 @@ func Loop(lst net.Listener, assigner jrpc2.Assigner, opts *jrpc2.ServerOptions) 
 			wg.Wait()
 			return err
 		}
+		ch := channel.NewRaw(conn)
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			srv := jrpc2.NewServer(assigner, opts).Start(conn)
+			srv := jrpc2.NewServer(assigner, opts).Start(ch)
 			if err := srv.Wait(); err != nil && err != io.EOF {
 				log.Printf("Server exit: %v", err)
 			}
