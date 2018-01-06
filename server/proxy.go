@@ -2,41 +2,9 @@ package server
 
 import (
 	"encoding/json"
-	"io/ioutil"
-	"net/http"
 
 	"bitbucket.org/creachadair/jrpc2"
 )
-
-// HTTP adapts a *jrpc2.Client to an http.Handler. The body of each HTTP
-// request is transmitted as a JSON-RPC request through the client, and its
-// response is written back as the body of the HTTP reply. Each HTTP request is
-// handled as a synchronous RPC, but arbitrarily-many HTTP requests may be in
-// flight concurrently.
-//
-// If the HTTP request body is empty or malformed, the handler reports status
-// 400 (Bad Request). Any other structural errors in sending or receiving the
-// RPC are reported as status 500 (Internal Server Error). A complete RPC reply
-// reports status 200 (OK) even if the reply contains an error.
-func HTTP(cli *jrpc2.Client) http.Handler {
-	caller := RawCaller(cli)
-	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		data, err := ioutil.ReadAll(req.Body)
-		if err != nil {
-			http.Error(w, "unable to read request", http.StatusBadRequest)
-			return
-		}
-		rsp, err := caller.CallWait(data)
-		if err != nil {
-			http.Error(w, "call failed: "+err.Error(), http.StatusInternalServerError)
-			return
-		} else if len(rsp) != 0 {
-			w.Header().Set("Content-Type", "application/json")
-			w.Write(rsp)
-			w.Write([]byte("\n"))
-		}
-	})
-}
 
 // RawCaller returns a wrapper around c that accepts requests as undecoded
 // (raw) JSON and returns replies in the same format.
