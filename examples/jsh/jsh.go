@@ -95,8 +95,10 @@ func main() {
 
 	server.Loop(lst, jrpc2.MapAssigner{
 		"Run": jrpc2.NewMethod(Run),
-	}, &jrpc2.ServerOptions{
-		AllowV1:   true,
-		LogWriter: lw,
+	}, &server.LoopOptions{
+		ServerOptions: &jrpc2.ServerOptions{
+			AllowV1:   true,
+			LogWriter: lw,
+		},
 	})
 }

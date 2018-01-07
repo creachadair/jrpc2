@@ -15,7 +15,7 @@ import (
 // given assigner and options, running in a new goroutine. If accept reports an
 // error, the loop will terminate and the error will be reported once all the
 // servers currently active have returned.
-func Loop(lst net.Listener, assigner jrpc2.Assigner, opts *jrpc2.ServerOptions) error {
+func Loop(lst net.Listener, assigner jrpc2.Assigner, opts *LoopOptions) error {
 	var wg sync.WaitGroup
 	for {
 		conn, err := lst.Accept()
@@ -24,14 +24,39 @@ func Loop(lst net.Listener, assigner jrpc2.Assigner, opts *jrpc2.ServerOptions) 
 			wg.Wait()
 			return err
 		}
-		ch := channel.NewRaw(conn)
+		ch := opts.newChannel(conn)
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			srv := jrpc2.NewServer(assigner, opts).Start(ch)
+			srv := jrpc2.NewServer(assigner, opts.serverOpts()).Start(ch)
 			if err := srv.Wait(); err != nil && err != io.EOF {
 				log.Printf("Server exit: %v", err)
 			}
 		}()
 	}
+}
+
+// LoopOptions control the
+type LoopOptions struct {
+	// If non-nil, this function is used to convert a network connection to an
+	// RPC channel. If not nil, channel.NewRaw is used.
+	NewChannel func(net.Conn) jrpc2.Channel
+
+	// If non-nil, these options are used when constructing the server to
+	// handle requests on an inbound connection.
+	ServerOptions *jrpc2.ServerOptions
+}
+
+func (o *LoopOptions) serverOpts() *jrpc2.ServerOptions {
+	if o == nil {
+		return nil
+	}
+	return o.ServerOptions
+}
+
+func (o *LoopOptions) newChannel(conn net.Conn) jrpc2.Channel {
+	if o == nil || o.NewChannel == nil {
+		return channel.NewRaw(conn)
+	}
+	return o.NewChannel(conn)
 }

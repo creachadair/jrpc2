@@ -86,8 +86,10 @@ func main() {
 		log.Fatalln("Listen:", err)
 	}
 	log.Printf("Listening at %v...", lst.Addr())
-	server.Loop(lst, mux, &jrpc2.ServerOptions{
-		LogWriter:   os.Stderr,
-		Concurrency: *maxTasks,
+	server.Loop(lst, mux, &server.LoopOptions{
+		ServerOptions: &jrpc2.ServerOptions{
+			LogWriter:   os.Stderr,
+			Concurrency: *maxTasks,
+		},
 	})
 }
