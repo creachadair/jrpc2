@@ -8,8 +8,8 @@ import (
 
 // A Channel represents the ability to transmit and receive messages.  The
 // channel does not interpret the results, but may add and remove framing so
-// that messages can be embedded in higher-level protocols. Multiple goroutines
-// may invoke methods on a Channel simultaneously.
+// that messages can be embedded in higher-level protocols.  The methods of a
+// Channel need not be safe for concurrent use by multiple goroutines.
 type Channel interface {
 	// Send transmits a message on the channel.
 	Send([]byte) error
