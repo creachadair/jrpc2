@@ -39,7 +39,7 @@ func Loop(lst net.Listener, assigner jrpc2.Assigner, opts *LoopOptions) error {
 // LoopOptions control the
 type LoopOptions struct {
 	// If non-nil, this function is used to convert a stream connection to an
-	// RPC channel. If not nil, channel.Raw is used.
+	// RPC channel. If this field is nil, channel.Raw is used.
 	NewChannel func(io.ReadWriteCloser) jrpc2.Channel
 
 	// If non-nil, these options are used when constructing the server to
