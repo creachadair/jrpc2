@@ -56,7 +56,7 @@ func main() {
 	log.Printf("Connected to %s...", conn.RemoteAddr())
 	defer conn.Close()
 
-	cli := jrpc2.NewClient(channel.NewRaw(conn), nil)
+	cli := jrpc2.NewClient(channel.Raw(conn), nil)
 	in := bufio.NewScanner(os.Stdin)
 	for {
 		req, err := readCommand(in)

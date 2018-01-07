@@ -12,27 +12,27 @@ import (
 	"bitbucket.org/creachadair/jrpc2"
 )
 
-// NewLSP constructs a jrpc2.Channel that transmits and receives messages on
-// rwc using the Language Server Protocol (LSP) framing, defined by the LSP
+// LSP constructs a jrpc2.Channel that transmits and receives messages on rwc
+// using the Language Server Protocol (LSP) framing, defined by the LSP
 // specification at http://github.com/Microsoft/language-server-protocol.
-func NewLSP(rwc io.ReadWriteCloser) jrpc2.Channel { return &LSP{rwc: rwc, rd: bufio.NewReader(rwc)} }
+func LSP(rwc io.ReadWriteCloser) jrpc2.Channel { return &lsp{rwc: rwc, rd: bufio.NewReader(rwc)} }
 
-// LSP implements jrpc2.Channel. Messages sent on a LSP channel are framed as a
-// header/body transaction, similar to HTTP.
+// An lsp implements jrpc2.Channel. Messages sent on a LSP channel are framed
+// as a header/body transaction, similar to HTTP.
 //
 //    Content-Length: n<CRLF>
 //    ...other headers...
 //    <CRLF>
 //    <n-byte message>
 //
-type LSP struct {
+type lsp struct {
 	rwc io.ReadWriteCloser
 	rd  *bufio.Reader
 	buf []byte
 }
 
 // Send implements part of jrpc2.Channel.
-func (c *LSP) Send(msg []byte) error {
+func (c *lsp) Send(msg []byte) error {
 	n := len(msg)
 	needBreak := !bytes.HasSuffix(msg, []byte("\r\n"))
 	if needBreak {
@@ -49,7 +49,7 @@ func (c *LSP) Send(msg []byte) error {
 }
 
 // Recv implements part of jrpc2.Channel.
-func (c *LSP) Recv() ([]byte, error) {
+func (c *lsp) Recv() ([]byte, error) {
 	h := make(map[string]string)
 	for {
 		raw, err := c.rd.ReadString('\n')
@@ -95,4 +95,4 @@ func (c *LSP) Recv() ([]byte, error) {
 }
 
 // Close implements part of jrpc2.Channel.
-func (c *LSP) Close() error { return c.rwc.Close() }
+func (c *lsp) Close() error { return c.rwc.Close() }
