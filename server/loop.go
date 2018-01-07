@@ -36,7 +36,8 @@ func Loop(lst net.Listener, assigner jrpc2.Assigner, opts *LoopOptions) error {
 	}
 }
 
-// LoopOptions control the
+// LoopOptions control the behaviour of the Loop function.  A nil *LoopOptions
+// provides default values as described.
 type LoopOptions struct {
 	// If non-nil, this function is used to convert a stream connection to an
 	// RPC channel. If this field is nil, channel.Raw is used.
