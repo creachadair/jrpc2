@@ -170,6 +170,8 @@ func (s *Server) nextRequest() (func() error, error) {
 		// Deliver any responses (or errors) we owe.
 		if len(rsps) != 0 {
 			s.log("Sending response: %v", rsps)
+			s.mu.Lock()
+			defer s.mu.Unlock()
 			return encode(ch, rsps)
 		}
 		return nil
