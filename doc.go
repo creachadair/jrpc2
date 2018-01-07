@@ -53,7 +53,7 @@ function will adapt a net.Conn to a jrpc2.Channel for us:
    ...
    conn, err := inc.Accept()
    ...
-   srv.Start(channel.NewRaw(conn))
+   srv.Start(channel.Raw(conn))
 
 The running server will handle incoming requests until the connection fails or
 until it is stopped (by calling srv.Stop()). To wait for the server to finish,
@@ -75,7 +75,7 @@ To establish a client we first need a Channel:
 
    conn, err := net.Dial("tcp", "localhost:8080")
    ...
-   cli := jrpc2.NewClient(channel.NewRaw(conn), nil)
+   cli := jrpc2.NewClient(channel.Raw(conn), nil)
 
 There are two parts to sending an RPC: First, we construct a request given the
 method name and parameters, and issue it to the server. This returns a pending

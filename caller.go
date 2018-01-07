@@ -21,7 +21,7 @@ import (
 // NewCaller will panic if Y == nil.
 //
 // Example:
-//    cli := jrpc2.NewClient(conn, nil)
+//    cli := jrpc2.NewClient(ch, nil)
 //
 //    type Req struct{ A, B int }
 //

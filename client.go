@@ -23,7 +23,7 @@ type Client struct {
 	nextID  int64               // next unused request ID
 }
 
-// NewClient returns a new client that communicates with the server via conn.
+// NewClient returns a new client that communicates with the server via ch.
 func NewClient(ch Channel, opts *ClientOptions) *Client {
 	c := &Client{
 		log:    opts.logger(),
