@@ -44,7 +44,7 @@ Equipped with an Assigner we can now construct a Server:
 
    srv := jrpc2.NewServer(assigner, nil)  // nil for default options
 
-To serve requests, we will next need a connection. The channel package's NewRaw
+To serve requests, we will next need a connection. The channel package's Raw
 function will adapt a net.Conn to a jrpc2.Channel for us:
 
    import "net"
