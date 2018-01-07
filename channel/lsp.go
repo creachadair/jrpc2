@@ -2,17 +2,20 @@ package channel
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
 	"strconv"
 	"strings"
+
+	"bitbucket.org/creachadair/jrpc2"
 )
 
 // NewLSP constructs a jrpc2.Channel that transmits and receives messages on
 // rwc using the Language Server Protocol (LSP) framing, defined by the LSP
 // specification at http://github.com/Microsoft/language-server-protocol.
-func NewLSP(rwc io.ReadWriteCloser) *LSP { return &LSP{rwc: rwc, rd: bufio.NewReader(rwc)} }
+func NewLSP(rwc io.ReadWriteCloser) jrpc2.Channel { return &LSP{rwc: rwc, rd: bufio.NewReader(rwc)} }
 
 // LSP implements jrpc2.Channel. Messages sent on a LSP channel are framed as a
 // header/body transaction, similar to HTTP.
@@ -30,10 +33,18 @@ type LSP struct {
 
 // Send implements part of jrpc2.Channel.
 func (c *LSP) Send(msg []byte) error {
-	if _, err := fmt.Fprintf(c.rwc, "Content-Length: %d\r\n\r\n", len(msg)); err != nil {
+	n := len(msg)
+	needBreak := !bytes.HasSuffix(msg, []byte("\r\n"))
+	if needBreak {
+		n += 2
+	}
+	if _, err := fmt.Fprintf(c.rwc, "Content-Length: %d\r\n\r\n", n); err != nil {
 		return err
 	}
 	_, err := c.rwc.Write(msg)
+	if err == nil && needBreak {
+		_, err = c.rwc.Write([]byte("\r\n"))
+	}
 	return err
 }
 
