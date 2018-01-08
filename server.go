@@ -29,6 +29,7 @@ type Server struct {
 	work *sync.Cond  // for signaling message availability
 	inq  *list.List  // inbound requests awaiting processing
 	ch   Channel     // the channel to the client
+	info *ServerInfo // the current server info
 
 	used stringset.Set // IDs of requests being processed
 }
@@ -51,6 +52,7 @@ func NewServer(mux Assigner, opts *ServerOptions) *Server {
 		log:    opts.logger(),
 		reqctx: opts.reqContext(),
 		mu:     new(sync.Mutex),
+		info:   &ServerInfo{AllowV1: opts.allowV1()},
 	}
 	return s
 }
@@ -172,7 +174,9 @@ func (s *Server) nextRequest() (func() error, error) {
 			s.log("Sending response: %v", rsps)
 			s.mu.Lock()
 			defer s.mu.Unlock()
-			return encode(ch, rsps)
+			nw, err := encode(ch, rsps)
+			s.info.BytesOut += int64(nw)
+			return err
 		}
 		return nil
 	}, nil
@@ -246,6 +250,8 @@ func (s *Server) read(ch Channel) {
 			err = json.Unmarshal(bits, &in)
 		}
 		s.mu.Lock()
+		s.info.Requests++
+		s.info.BytesIn += int64(len(bits))
 		if isRecoverableJSONError(err) {
 			s.pushError(nil, jerrorf(E_ParseError, "invalid JSON request message"))
 		} else if err != nil {
@@ -266,7 +272,13 @@ func (s *Server) read(ch Channel) {
 
 // ServerInfo is the concrete type of responses from the rpc.serverInfo method.
 type ServerInfo struct {
+	// The list of method names exported by this server.
 	Methods []string `json:"methods,omitempty"`
+	AllowV1 bool     `json:"allowV1"`
+
+	Requests int64 `json:"requests"` // number of requests received
+	BytesIn  int64 `json:"bytesIn"`  // number of request bytes received
+	BytesOut int64 `json:"bytesOut"` // number of response bytes written
 }
 
 // assign returns a Method to handle the specified name, or nil.
@@ -275,9 +287,10 @@ func (s *Server) assign(name string) Method {
 	const serverInfo = "rpc.serverInfo"
 	switch name {
 	case serverInfo:
-		info := ServerInfo{Methods: s.mux.Names()}
+		info := *s.info
+		info.Methods = s.mux.Names()
 		return methodFunc(func(context.Context, *Request) (interface{}, error) {
-			return info, nil
+			return &info, nil
 		})
 	default:
 		return s.mux.Assign(name)
@@ -286,13 +299,15 @@ func (s *Server) assign(name string) Method {
 
 // pushError reports an error for the given request ID.
 // Requires that the caller hold s.mu.
-func (s *Server) pushError(id json.RawMessage, err *jerror) {
-	s.log("Error for request %q: %v", string(id), err)
-	if err := encode(s.ch, jresponses{{
+func (s *Server) pushError(id json.RawMessage, jerr *jerror) {
+	s.log("Error for request %q: %v", string(id), jerr)
+	nw, err := encode(s.ch, jresponses{{
 		V:  Version,
 		ID: id,
-		E:  err,
-	}}); err != nil {
+		E:  jerr,
+	}})
+	s.info.BytesOut += int64(nw)
+	if err != nil {
 		s.log("Writing error response: %v", err)
 	}
 }
