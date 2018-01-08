@@ -5,12 +5,19 @@ import (
 	"errors"
 	"reflect"
 	"strings"
+
+	"bitbucket.org/creachadair/stringset"
 )
 
 // An Assigner assigns a Method to handle the specified method name, or nil if
 // no method is available to handle the request.
 type Assigner interface {
+	// Assign returns the handler for the named method, or nil.
 	Assign(method string) Method
+
+	// Names returns a slice of all known method names for the assigner.  The
+	// resulting slice is ordered lexicographically and contains no duplicates.
+	Names() []string
 }
 
 // A Method handles a single request.
@@ -31,6 +38,8 @@ func (m methodFunc) Call(ctx context.Context, req *Request) (interface{}, error)
 type MapAssigner map[string]Method
 
 func (m MapAssigner) Assign(method string) Method { return m[method] }
+
+func (m MapAssigner) Names() []string { return stringset.FromKeys(m).Elements() }
 
 // A ServiceMapper combines multiple assigners into one, permitting a server to
 // export multiple services under different names.
@@ -55,6 +64,18 @@ func (m ServiceMapper) Assign(method string) Method {
 		return ass.Assign(parts[1])
 	}
 	return nil
+}
+
+// Names reports the composed names of all the methods in the service, each
+// having the form Service.Method.
+func (m ServiceMapper) Names() []string {
+	var all stringset.Set
+	for svc, assigner := range m {
+		for _, name := range assigner.Names() {
+			all.Add(svc + "." + name)
+		}
+	}
+	return all.Elements()
 }
 
 // NewMethod adapts a function to a Method. The concrete value of fn must be a

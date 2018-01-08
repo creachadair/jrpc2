@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -119,7 +120,7 @@ func (dummy) Ctx(ctx context.Context, req *Request) (int, error) {
 func (dummy) Unrelated() string { return "ceci n'est pas une méthode" }
 
 func TestClientServer(t *testing.T) {
-	_, c, cleanup := newServer(t, ServiceMapper{
+	s, c, cleanup := newServer(t, ServiceMapper{
 		"Test": NewService(dummy{}),
 	}, &ServerOptions{
 		LogWriter:   os.Stderr,
@@ -127,6 +128,11 @@ func TestClientServer(t *testing.T) {
 		Concurrency: 16,
 	})
 	defer cleanup()
+
+	// Verify that the assigner got the names it was supposed to.
+	if got, want := s.mux.Names(), []string{"Test.Add", "Test.Ctx", "Test.Max", "Test.Mul", "Test.Nil"}; !reflect.DeepEqual(got, want) {
+		t.Errorf("Names:\ngot  %+q\nwant %+q", got, want)
+	}
 
 	tests := []struct {
 		method string
@@ -206,6 +212,9 @@ func TestNewCaller(t *testing.T) {
 			t.Log("Call to OK")
 			return "OK, hello", nil
 		}),
+	}
+	if got, want := ass.Names(), []string{"F", "OK"}; !reflect.DeepEqual(got, want) {
+		t.Errorf("Names: got %+q, want %+q", got, want)
 	}
 
 	_, c, cleanup := newServer(t, ass, nil)
