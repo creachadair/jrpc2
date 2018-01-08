@@ -4,6 +4,11 @@ import (
 	"reflect"
 )
 
+// RPC_serverInfo calls the built-in rpc.serverInfo method exported by servers
+// in this package.
+var RPC_serverInfo = NewCaller("rpc.serverInfo",
+	nil, (*ServerInfo)(nil)).(func(*Client) (*ServerInfo, error))
+
 // NewCaller reflectively constructs a function of type:
 //
 //     func(*Client, X) (Y, error)

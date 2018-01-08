@@ -264,15 +264,20 @@ func (s *Server) read(ch Channel) {
 	s.mu.Unlock()
 }
 
+// ServerInfo is the concrete type of responses from the rpc.serverInfo method.
+type ServerInfo struct {
+	Methods []string `json:"methods,omitempty"`
+}
+
 // assign returns a Method to handle the specified name, or nil.
 // The caller must hold s.mu.
 func (s *Server) assign(name string) Method {
-	const methodNames = "rpc.MethodNames"
+	const serverInfo = "rpc.serverInfo"
 	switch name {
-	case methodNames:
-		names := s.mux.Names()
+	case serverInfo:
+		info := ServerInfo{Methods: s.mux.Names()}
 		return methodFunc(func(context.Context, *Request) (interface{}, error) {
-			return names, nil
+			return info, nil
 		})
 	default:
 		return s.mux.Assign(name)
