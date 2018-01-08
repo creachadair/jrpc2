@@ -270,7 +270,7 @@ func (s *Server) assign(name string) Method {
 	const methodNames = "rpc.MethodNames"
 	switch name {
 	case methodNames:
-		names := append([]string{methodNames}, s.mux.Names()...)
+		names := s.mux.Names()
 		return methodFunc(func(context.Context, *Request) (interface{}, error) {
 			return names, nil
 		})

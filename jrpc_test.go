@@ -285,7 +285,7 @@ func TestNewCaller(t *testing.T) {
 	names, err := rpcMethodNames(c)
 	if err != nil {
 		t.Errorf("rpc.MethodNames: unexpected error: %v", err)
-	} else if want := []string{"rpc.MethodNames", "F", "OK"}; !reflect.DeepEqual(names, want) {
+	} else if want := []string{"F", "OK"}; !reflect.DeepEqual(names, want) {
 		t.Errorf("rpc.MethodNames: got %+q, want %+q", names, want)
 	}
 }
