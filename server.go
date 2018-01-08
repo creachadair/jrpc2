@@ -52,7 +52,7 @@ func NewServer(mux Assigner, opts *ServerOptions) *Server {
 		log:    opts.logger(),
 		reqctx: opts.reqContext(),
 		mu:     new(sync.Mutex),
-		info:   &ServerInfo{AllowV1: opts.allowV1()},
+		info:   opts.serverInfo(),
 	}
 	return s
 }
@@ -274,7 +274,6 @@ func (s *Server) read(ch Channel) {
 type ServerInfo struct {
 	// The list of method names exported by this server.
 	Methods []string `json:"methods,omitempty"`
-	AllowV1 bool     `json:"allowV1"`
 
 	Requests int64 `json:"requests"` // number of requests received
 	BytesIn  int64 `json:"bytesIn"`  // number of request bytes received
@@ -285,16 +284,14 @@ type ServerInfo struct {
 // The caller must hold s.mu.
 func (s *Server) assign(name string) Method {
 	const serverInfo = "rpc.serverInfo"
-	switch name {
-	case serverInfo:
+	if s.info != nil && name == serverInfo {
 		info := *s.info
 		info.Methods = s.mux.Names()
 		return methodFunc(func(context.Context, *Request) (interface{}, error) {
 			return &info, nil
 		})
-	default:
-		return s.mux.Assign(name)
 	}
+	return s.mux.Assign(name)
 }
 
 // pushError reports an error for the given request ID.
