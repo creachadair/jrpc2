@@ -126,10 +126,10 @@ func (s *Server) nextRequest() (func() error, error) {
 		s.log("Checking request for %q: %s", req.M, string(req.P))
 		t := &task{req: req}
 		req.ID = fixID(req.ID)
-		if !s.versionOK(req.V) {
-			t.err = Errorf(E_InvalidRequest, "incorrect version marker %q", req.V)
-		} else if id := string(req.ID); id != "" && !s.used.Add(id) {
+		if id := string(req.ID); id != "" && !s.used.Add(id) {
 			t.err = Errorf(E_InvalidRequest, "duplicate request id %q", id)
+		} else if !s.versionOK(req.V) {
+			t.err = Errorf(E_InvalidRequest, "incorrect version marker %q", req.V)
 		} else if req.M == "" {
 			t.err = Errorf(E_InvalidRequest, "empty method name")
 		} else if m := s.assign(req.M); m == nil {
