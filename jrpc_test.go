@@ -213,9 +213,6 @@ func TestNewCaller(t *testing.T) {
 			return "OK, hello", nil
 		}),
 	}
-	if got, want := ass.Names(), []string{"F", "OK"}; !reflect.DeepEqual(got, want) {
-		t.Errorf("Names: got %+q, want %+q", got, want)
-	}
 
 	_, c, cleanup := newServer(t, ass, nil)
 	defer cleanup()
@@ -234,6 +231,11 @@ func TestNewCaller(t *testing.T) {
 	OK, ok := okcaller.(func(*Client) (string, error))
 	if !ok {
 		t.Fatalf("NewCaller (niladic): wrong type: %T", okcaller)
+	}
+	methcaller := NewCaller("rpc.MethodNames", nil, []string(nil))
+	rpcMethodNames, ok := methcaller.(func(*Client) ([]string, error))
+	if !ok {
+		t.Fatalf("NewCaller (rpc.MethodNames): wrong type: %T", methcaller)
 	}
 
 	// Verify that various success cases do indeed.
@@ -277,6 +279,14 @@ func TestNewCaller(t *testing.T) {
 		t.Errorf("OK(c): unexpected error: %v", err)
 	} else {
 		t.Logf("OK(c): returned message %q", m)
+	}
+
+	// Verify that we can list the methods via the server hook.
+	names, err := rpcMethodNames(c)
+	if err != nil {
+		t.Errorf("rpc.MethodNames: unexpected error: %v", err)
+	} else if want := []string{"rpc.MethodNames", "F", "OK"}; !reflect.DeepEqual(names, want) {
+		t.Errorf("rpc.MethodNames: got %+q, want %+q", names, want)
 	}
 }
 

@@ -132,7 +132,7 @@ func (s *Server) nextRequest() (func() error, error) {
 			t.err = Errorf(E_InvalidRequest, "duplicate request id %q", id)
 		} else if req.M == "" {
 			t.err = Errorf(E_InvalidRequest, "empty method name")
-		} else if m := s.mux.Assign(req.M); m == nil {
+		} else if m := s.assign(req.M); m == nil {
 			t.err = Errorf(E_MethodNotFound, "no such method %q", req.M)
 		} else {
 			t.m = m
@@ -262,6 +262,21 @@ func (s *Server) read(ch Channel) {
 	}
 	s.inq = nil
 	s.mu.Unlock()
+}
+
+// assign returns a Method to handle the specified name, or nil.
+// The caller must hold s.mu.
+func (s *Server) assign(name string) Method {
+	const methodNames = "rpc.MethodNames"
+	switch name {
+	case methodNames:
+		names := append([]string{methodNames}, s.mux.Names()...)
+		return methodFunc(func(context.Context, *Request) (interface{}, error) {
+			return names, nil
+		})
+	default:
+		return s.mux.Assign(name)
+	}
 }
 
 // pushError reports an error for the given request ID.
