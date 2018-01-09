@@ -250,7 +250,7 @@ func (s *Server) read(ch Channel) {
 			err = json.Unmarshal(bits, &in)
 		}
 		s.mu.Lock()
-		s.info.Requests++
+		s.info.Requests += int64(len(in))
 		s.info.BytesIn += int64(len(bits))
 		if isRecoverableJSONError(err) {
 			s.pushError(nil, jerrorf(E_ParseError, "invalid JSON request message"))
