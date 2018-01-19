@@ -8,17 +8,19 @@ import (
 	"log"
 	"net"
 	"os"
+	"time"
 
 	"bitbucket.org/creachadair/jrpc2"
 	"bitbucket.org/creachadair/jrpc2/channel"
 )
 
 var (
-	doNotify = flag.Bool("notify", false, "Send a notification")
+	dialTimeout = flag.Duration("dial", 5*time.Second, "Timeout on dialing the server (0 for no timeout)")
+	doNotify    = flag.Bool("notify", false, "Send a notification")
 )
 
 // TODO(fromberger): Allow Unix-domain socket connections.  Allow other channel
-// layouts. Add a timeout on dial.
+// layouts.
 
 func main() {
 	flag.Parse()
@@ -39,7 +41,7 @@ func main() {
 	}
 
 	// Connect to the server and establish a client.
-	conn, err := net.Dial("tcp", addr)
+	conn, err := net.DialTimeout("tcp", addr, *dialTimeout)
 	if err != nil {
 		log.Fatalf("Dial %q: %v", addr, err)
 	}
