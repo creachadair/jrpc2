@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"os"
@@ -17,10 +18,10 @@ import (
 var (
 	dialTimeout = flag.Duration("dial", 5*time.Second, "Timeout on dialing the server (0 for no timeout)")
 	doNotify    = flag.Bool("notify", false, "Send a notification")
+	chanFormat  = flag.String("channel", "raw", `Channel format ("line", "lsp", "raw")`)
 )
 
-// TODO(fromberger): Allow Unix-domain socket connections.  Allow other channel
-// layouts.
+// TODO(fromberger): Allow Unix-domain socket connections.
 
 func main() {
 	flag.Parse()
@@ -30,6 +31,8 @@ func main() {
 	if flag.NArg() < 3 || flag.NArg()%2 == 0 {
 		log.Fatal("Arguments are <address> {<method> <params>}...")
 	}
+	nc := newChannel(*chanFormat)
+
 	addr := flag.Arg(0)
 	specs := make([]jrpc2.Spec, flag.NArg()/2)
 	for i, j := 1, 0; i < flag.NArg(); i += 2 {
@@ -46,7 +49,7 @@ func main() {
 		log.Fatalf("Dial %q: %v", addr, err)
 	}
 	defer conn.Close()
-	cli := jrpc2.NewClient(channel.Raw(conn), nil)
+	cli := jrpc2.NewClient(nc(conn), nil)
 
 	// Handle notifications...
 	if *doNotify {
@@ -82,4 +85,17 @@ func main() {
 	if failed {
 		os.Exit(1)
 	}
+}
+
+func newChannel(fmt string) func(io.ReadWriteCloser) jrpc2.Channel {
+	switch fmt {
+	case "raw":
+		return channel.Raw
+	case "lsp":
+		return channel.LSP
+	case "line":
+		return channel.Line
+	}
+	log.Fatalf("Unknown channel format %q", fmt)
+	panic("unreachable")
 }
