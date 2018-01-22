@@ -4,6 +4,7 @@ import (
 	"container/list"
 	"context"
 	"encoding/json"
+	"io"
 	"sync"
 	"time"
 
@@ -114,7 +115,7 @@ func (s *Server) nextRequest() (func() error, error) {
 	for s.ch != nil && s.inq.Len() == 0 {
 		s.work.Wait()
 	}
-	if s.ch == nil {
+	if s.ch == nil && s.inq.Len() == 0 {
 		return nil, s.err
 	}
 	ch := s.ch // capture
@@ -223,7 +224,24 @@ func (s *Server) stop(err error) {
 	if s.ch == nil {
 		return // nothing is running
 	}
+	s.log("Server signaled to stop with err=%v", err)
 	s.ch.Close()
+
+	// Remove any pending requests from the queue, but retain notifications.
+	// The server will process pending notifications before giving up.
+	for cur, end := s.inq.Front(), s.inq.Back(); cur != end; cur = cur.Next() {
+		var keep jrequests
+		for _, req := range cur.Value.(jrequests) {
+			if req.ID != nil {
+				keep = append(keep, req)
+				s.log("Retaining notification %+v", req)
+			}
+		}
+		if len(keep) != 0 {
+			s.inq.PushBack(keep)
+		}
+		s.inq.Remove(cur)
+	}
 	s.work.Broadcast()
 	s.err = err
 	s.ch = nil
@@ -246,9 +264,10 @@ func (s *Server) read(ch Channel) {
 		// it for processing.
 		var in jrequests
 		bits, err := ch.Recv()
-		if err == nil {
+		if err == nil || (err == io.EOF && len(bits) != 0) {
 			err = json.Unmarshal(bits, &in)
 		}
+
 		s.mu.Lock()
 		s.info.Requests += int64(len(in))
 		s.info.BytesIn += int64(len(bits))
@@ -256,7 +275,8 @@ func (s *Server) read(ch Channel) {
 			s.pushError(nil, jerrorf(E_ParseError, "invalid JSON request message"))
 		} else if err != nil {
 			s.stop(err)
-			break
+			s.mu.Unlock()
+			return
 		} else if len(in) == 0 {
 			s.pushError(nil, jerrorf(E_InvalidRequest, "empty request batch"))
 		} else {
@@ -266,8 +286,6 @@ func (s *Server) read(ch Channel) {
 		}
 		s.mu.Unlock()
 	}
-	s.inq = nil
-	s.mu.Unlock()
 }
 
 // ServerInfo is the concrete type of responses from the rpc.serverInfo method.
