@@ -9,6 +9,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"log"
 	"math/rand"
@@ -53,9 +54,10 @@ func main() {
 	// Start up the client, and enable logging to stderr.
 	cli := jrpc2.NewClient(channel.Line(conn), nil)
 	defer cli.Close()
+	ctx := context.Background()
 
 	log.Print("\n-- Sending a notification...")
-	if err := cli.Notify("Post.Alert", struct{ Msg string }{"There is a fire!"}); err != nil {
+	if err := cli.Notify(ctx, "Post.Alert", struct{ Msg string }{"There is a fire!"}); err != nil {
 		log.Fatalln("Notify:", err)
 	}
 
@@ -95,7 +97,7 @@ func main() {
 			})
 		}
 	}
-	batch, err := cli.Batch(specs)
+	batch, err := cli.Batch(ctx, specs)
 	if err != nil {
 		log.Fatalln("Batch:", err)
 	}
@@ -116,7 +118,7 @@ func main() {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				rsp, err := cli.CallWait("Math.Sub", struct{ X, Y int }{x, y})
+				rsp, err := cli.CallWait(ctx, "Math.Sub", struct{ X, Y int }{x, y})
 				if err != nil {
 					log.Printf("Req (%d-%d) failed: %v", x, y, err)
 					return

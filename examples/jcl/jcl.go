@@ -24,6 +24,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"flag"
 	"fmt"
 	"io"
@@ -55,6 +56,7 @@ func main() {
 	}
 	log.Printf("Connected to %s...", conn.RemoteAddr())
 	defer conn.Close()
+	ctx := context.Background()
 
 	cli := jrpc2.NewClient(channel.Raw(conn), nil)
 	in := bufio.NewScanner(os.Stdin)
@@ -67,7 +69,7 @@ func main() {
 		}
 
 		var result RunResult
-		rsp, err := cli.CallWait("Run", req)
+		rsp, err := cli.CallWait(ctx, "Run", req)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "# Error: %v\n", err)
 		} else if err := rsp.UnmarshalResult(&result); err != nil {

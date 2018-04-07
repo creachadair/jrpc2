@@ -2,6 +2,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -32,6 +33,7 @@ func main() {
 		log.Fatal("Arguments are <address> {<method> <params>}...")
 	}
 	nc := newChannel(*chanFormat)
+	ctx := context.Background()
 
 	addr := flag.Arg(0)
 	specs := make([]jrpc2.Spec, flag.NArg()/2)
@@ -54,7 +56,7 @@ func main() {
 	// Handle notifications...
 	if *doNotify {
 		for _, spec := range specs {
-			if err := cli.Notify(spec.Method, spec.Params); err != nil {
+			if err := cli.Notify(ctx, spec.Method, spec.Params); err != nil {
 				log.Fatalf("Notify %q failed: %v", spec.Method, err)
 			}
 		}
@@ -62,7 +64,7 @@ func main() {
 	}
 
 	// Handle a batch of requests.
-	batch, err := cli.Batch(specs)
+	batch, err := cli.Batch(ctx, specs)
 	if err != nil {
 		log.Fatalf("Call failed: %v", err)
 	}

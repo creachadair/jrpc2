@@ -128,6 +128,7 @@ func TestClientServer(t *testing.T) {
 		Concurrency: 16,
 	})
 	defer cleanup()
+	ctx := context.Background()
 
 	// Verify that the assigner got the names it was supposed to.
 	if got, want := s.mux.Names(), []string{"Test.Add", "Test.Ctx", "Test.Max", "Test.Mul", "Test.Nil"}; !reflect.DeepEqual(got, want) {
@@ -150,7 +151,7 @@ func TestClientServer(t *testing.T) {
 
 	// Verify that individual sequential requests work.
 	for _, test := range tests {
-		rsp, err := c.CallWait(test.method, test.params)
+		rsp, err := c.CallWait(ctx, test.method, test.params)
 		if err != nil {
 			t.Errorf("Call %q %v: unexpected error: %v", test.method, test.params, err)
 			continue
@@ -165,7 +166,7 @@ func TestClientServer(t *testing.T) {
 			t.Errorf("Call %q: got %v, want %v", test.method, got, test.want)
 		}
 
-		if err := c.Notify(test.method, test.params); err != nil {
+		if err := c.Notify(ctx, test.method, test.params); err != nil {
 			t.Errorf("Notify %q %v: unexpected error: %v", test.method, test.params, err)
 		}
 	}
@@ -175,7 +176,7 @@ func TestClientServer(t *testing.T) {
 	for i, test := range tests {
 		specs[i] = Spec{test.method, test.params}
 	}
-	batch, err := c.Batch(specs)
+	batch, err := c.Batch(ctx, specs)
 	if err != nil {
 		t.Fatalf("Batch failed: %v", err)
 	}
