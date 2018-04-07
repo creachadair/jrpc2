@@ -1,6 +1,7 @@
 package jrpc2
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -162,7 +163,7 @@ func (c *Client) send(reqs ...*Request) ([]*Pending, error) {
 }
 
 // Call initiates a single request.  It blocks until the request is sent.
-func (c *Client) Call(method string, params interface{}) (*Pending, error) {
+func (c *Client) Call(_ context.Context, method string, params interface{}) (*Pending, error) {
 	req, err := c.req(method, params)
 	if err != nil {
 		return nil, err
@@ -179,15 +180,15 @@ func (c *Client) Call(method string, params interface{}) (*Pending, error) {
 // returned is from the initial Call; errors from the pending Wait must be
 // checked by the caller:
 //
-//    rsp, err := c.CallWait(method, params)
+//    rsp, err := c.CallWait(ctx, method, params)
 //    if err != nil {
 //       log.Fatalf("Call failed: %v", err)
 //    } else if err := rsp.Error(); err != nil {
 //       log.Printf("Error from server: %v", err)
 //    }
 //
-func (c *Client) CallWait(method string, params interface{}) (*Response, error) {
-	p, err := c.Call(method, params)
+func (c *Client) CallWait(ctx context.Context, method string, params interface{}) (*Response, error) {
+	p, err := c.Call(ctx, method, params)
 	if err != nil {
 		return nil, err
 	}
@@ -196,7 +197,7 @@ func (c *Client) CallWait(method string, params interface{}) (*Response, error) 
 
 // Batch initiates a batch of concurrent requests.  It blocks until the entire
 // batch is sent.
-func (c *Client) Batch(specs []Spec) (Batch, error) {
+func (c *Client) Batch(_ context.Context, specs []Spec) (Batch, error) {
 	reqs := make([]*Request, len(specs))
 	for i, spec := range specs {
 		req, err := c.req(spec.Method, spec.Params)
@@ -230,7 +231,7 @@ func (b Batch) Wait() []*Response {
 
 // Notify transmits a notification to the specified method and parameters.  It
 // blocks until the notification has been sent.
-func (c *Client) Notify(method string, params interface{}) error {
+func (c *Client) Notify(_ context.Context, method string, params interface{}) error {
 	bits, err := marshalParams(params)
 	if err != nil {
 		return err
