@@ -1,17 +1,18 @@
 package jrpc2
 
 import (
+	"context"
 	"reflect"
 )
 
 // RPC_serverInfo calls the built-in rpc.serverInfo method exported by servers
 // in this package.
 var RPC_serverInfo = NewCaller("rpc.serverInfo",
-	nil, (*ServerInfo)(nil)).(func(*Client) (*ServerInfo, error))
+	nil, (*ServerInfo)(nil)).(func(context.Context, *Client) (*ServerInfo, error))
 
 // NewCaller reflectively constructs a function of type:
 //
-//     func(*Client, X) (Y, error)
+//     func(context.Context, *Client, X) (Y, error)
 //
 // that invokes the designated method via the client given, encoding the
 // provided request and decoding the response automatically. This supports
@@ -21,7 +22,7 @@ var RPC_serverInfo = NewCaller("rpc.serverInfo",
 // As a special case, if X == nil, the returned function will omit the request
 // argument and have the signature:
 //
-//     func(*Client) (Y, error)
+//     func(context.Context, *Client) (Y, error)
 //
 // NewCaller will panic if Y == nil.
 //
@@ -31,9 +32,9 @@ var RPC_serverInfo = NewCaller("rpc.serverInfo",
 //    type Req struct{ A, B int }
 //
 //    // Suppose Math.Add is a method taking *Req to int.
-//    F := jrpc2.NewCaller("Math.Add", (*Req)(nil), int(0)).(func(*Client, *Req) (int, error))
+//    F := jrpc2.NewCaller("Math.Add", (*Req)(nil), int(0)).(func(context.Context, *Client, *Req) (int, error))
 //
-//    n, err := F(cli, &Req{A: 7, B: 3})
+//    n, err := F(ctx, cli, &Req{A: 7, B: 3})
 //    if err != nil {
 //       log.Fatal(err)
 //    }
@@ -52,11 +53,12 @@ func NewCaller(method string, X, Y interface{}, opts ...CallerOption) interface{
 	reqType := reflect.TypeOf(X)
 	rspType := reflect.TypeOf(Y)
 	errType := reflect.TypeOf((*error)(nil)).Elem()
+	ctxType := reflect.TypeOf((*context.Context)(nil)).Elem()
 
 	if wantVariadic {
 		reqType = reflect.SliceOf(reqType)
 	}
-	argTypes := []reflect.Type{cliType}
+	argTypes := []reflect.Type{ctxType, cliType}
 	if reqType != nil {
 		argTypes = append(argTypes, reqType)
 	}
@@ -70,7 +72,7 @@ func NewCaller(method string, X, Y interface{}, opts ...CallerOption) interface{
 	}
 
 	// The default condition is we have one request argument.
-	param := func(v []reflect.Value) interface{} { return v[1].Interface() }
+	param := func(v []reflect.Value) interface{} { return v[2].Interface() }
 	if reqType == nil {
 		// If there is no request type, don't populate a request argument.
 		param = func([]reflect.Value) interface{} { return nil }
@@ -80,15 +82,16 @@ func NewCaller(method string, X, Y interface{}, opts ...CallerOption) interface{
 		// for slice typed parameters catch the nil case and convert it silently
 		// into an empty slice of the correct type.
 		param = func(v []reflect.Value) interface{} {
-			if v[1].IsNil() {
+			if v[2].IsNil() {
 				return reflect.MakeSlice(reqType, 0, 0).Interface()
 			}
-			return v[1].Interface()
+			return v[2].Interface()
 		}
 	}
 
 	return reflect.MakeFunc(funType, func(args []reflect.Value) []reflect.Value {
-		cli := args[0].Interface().(*Client)
+		_ = args[0].Interface().(context.Context) // TODO(fromberger): Plumb through.
+		cli := args[1].Interface().(*Client)
 		rsp := reflect.New(rspType)
 		rerr := reflect.Zero(errType)
 
