@@ -81,7 +81,7 @@ There are two parts to sending an RPC: First, we construct a request given the
 method name and parameters, and issue it to the server. This returns a pending
 call:
 
-   p, err := cli.Call("Math.Add", []int{1, 3, 5, 7})
+   p, err := cli.Call(ctx, "Math.Add", []int{1, 3, 5, 7})
 
 Second, we wait for the pending call to complete to receive its results:
 
@@ -97,11 +97,11 @@ The separation of call and response allows requests to be issued serially and
 waited for in parallel.  For convenience, the client has a CallWait method that
 combines these for a single synchronous call:
 
-   rsp, err := cli.CallWait("Math.Add", []int{1, 3, 5, 7})
+   rsp, err := cli.CallWait(ctx, "Math.Add", []int{1, 3, 5, 7})
 
 To issue a batch of requests all at once, use the Batch method:
 
-   batch, err := cli.Batch([]jrpc2.Spec{
+   batch, err := cli.Batch(ctx, []jrpc2.Spec{
       {"Math.Add", []int{1, 2, 3}},
       {"Math.Mul", []int{4, 5, 6}},
       {"Math.Max", []int{-1, 5, 3, 0, 1}},
@@ -141,7 +141,7 @@ client sends them to the server, but the server does not reply.
 
 A Client supports sending notifications as follows:
 
-   err := cli.Notify("Alert", struct{Msg string}{"a fire is burning"})
+   err := cli.Notify(ctx, "Alert", struct{Msg string}{"a fire is burning"})
 
 Unlike ordinary requests, there are no pending calls for notifications; the
 notification is complete once it has been sent.
@@ -206,21 +206,21 @@ The result can be asserted to this type and used as a normal function:
 
    // Request type: []int
    // Result type:  int
-   Add := jrpc2.NewCaller("Math.Add", []int(nil), int(0)).(func(*jrpc2.Client, []int) (int, error))
+   Add := jrpc2.NewCaller("Math.Add", []int(nil), int(0)).(func(context.Context, *jrpc2.Client, []int) (int, error))
    ...
-   sum, err := Add(cli, []int{1, 3, 5, 7})
+   sum, err := Add(ctx, cli, []int{1, 3, 5, 7})
    ...
 
 NewCaller can also optionally generate a variadic function:
 
-   Mul := jrpc2.NewCaller("Math.Mul", int(0), int(0), jrpc2.Variadic()).(func(*jrpc2.Client, ...int) (int, error))
+   Mul := jrpc2.NewCaller("Math.Mul", int(0), int(0), jrpc2.Variadic()).(func(context.Context, *jrpc2.Client, ...int) (int, error))
    ...
-   prod, err := Mul(cli, 1, 2, 3, 4, 5)
+   prod, err := Mul(ctx, cli, 1, 2, 3, 4, 5)
    ...
 
 It can also generate a function with no request parameter (with X == nil):
 
-   Status := jrpc.NewCaller("Status", nil, string("")).(func(*jrpc2.Client) (string, error))
+   Status := jrpc.NewCaller("Status", nil, string("")).(func(context.Context, *jrpc2.Client) (string, error))
 
 */
 package jrpc2
