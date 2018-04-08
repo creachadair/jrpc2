@@ -120,7 +120,7 @@ func (c *Client) req(ctx context.Context, method string, params interface{}) (*R
 // the requests are notifications, the slice will be empty.
 //
 // This method blocks until the entire batch of requests has been transmitted.
-func (c *Client) send(reqs ...*Request) ([]*Pending, error) {
+func (c *Client) send(ctx context.Context, reqs ...*Request) ([]*Pending, error) {
 	if len(reqs) == 0 {
 		return nil, errors.New("empty request batch")
 	}
@@ -156,7 +156,7 @@ func (c *Client) send(reqs ...*Request) ([]*Pending, error) {
 	var pends []*Pending
 	for _, req := range reqs {
 		if id := req.ID(); id != "" {
-			p := newPending(id)
+			p := newPending(ctx, id)
 			c.pending[id] = p
 			pends = append(pends, p)
 		}
@@ -170,7 +170,7 @@ func (c *Client) Call(ctx context.Context, method string, params interface{}) (*
 	if err != nil {
 		return nil, err
 	}
-	ps, err := c.send(req)
+	ps, err := c.send(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -208,7 +208,7 @@ func (c *Client) Batch(ctx context.Context, specs []Spec) (Batch, error) {
 		}
 		reqs[i] = req
 	}
-	return c.send(reqs...)
+	return c.send(ctx, reqs...)
 }
 
 // A Spec combines a method name and parameter value.
@@ -239,7 +239,7 @@ func (c *Client) Notify(ctx context.Context, method string, params interface{}) 
 		return err
 	}
 	c.log("Notification params: %+v", params)
-	_, err = c.send(&Request{
+	_, err = c.send(ctx, &Request{
 		method: method,
 		params: bits,
 	})
@@ -308,14 +308,22 @@ type Pending struct {
 	// synchronization between the client and the caller. Once a value is
 	// received, the pending call is complete.
 	ch  chan *jresponse
-	id  string // the ID from the request
+	ctx context.Context // the context governing the request
+	id  string          // the ID from the request
 	rsp *Response
+
+	// TODO(fromberger): Make Wait correctly deal with context termination.
+	// Right now the context is ignored.
 }
 
-func newPending(id string) *Pending {
+func newPending(ctx context.Context, id string) *Pending {
 	// Buffer the channel so the response reader does not need to rendezvous
 	// with the recipient.
-	return &Pending{ch: make(chan *jresponse, 1), id: id}
+	return &Pending{
+		ch:  make(chan *jresponse, 1),
+		ctx: ctx,
+		id:  id,
+	}
 }
 
 // complete delivers a response to p, completing the request.
@@ -325,7 +333,7 @@ func (p *Pending) complete(rsp *jresponse) { p.ch <- rsp }
 func (p *Pending) abandon() {
 	p.ch <- &jresponse{
 		ID: json.RawMessage(p.id),
-		E:  jerrorf(E_InternalError, "request incomplete"),
+		E:  jerrorf(E_Cancelled, "request cancelled by client shutdown"),
 	}
 }
 

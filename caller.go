@@ -100,7 +100,7 @@ func NewCaller(method string, X, Y interface{}, opts ...CallerOption) interface{
 		req, err := cli.req(ctx, method, param(args))
 		if err == nil {
 			var ps []*Pending
-			ps, err = cli.send(req)
+			ps, err = cli.send(ctx, req)
 			if err == nil {
 				raw := ps[0].Wait()
 				if raw.Error() == nil {
