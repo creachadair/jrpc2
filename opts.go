@@ -2,6 +2,7 @@ package jrpc2
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -72,6 +73,12 @@ type ClientOptions struct {
 	// Instructs the client to tolerate responses that do not include the
 	// required "jsonrpc" version marker.
 	AllowV1 bool
+
+	// If set, this function is called with the context and encoded request
+	// parameters before the request is sent to the server. Its return value
+	// replaces the request parameters. This allows the client to send context
+	// metadata along with the request. If unset, the parameters are unchanged.
+	EncodeContext func(context.Context, json.RawMessage) (json.RawMessage, error)
 }
 
 // ClientLog enables debug logging to the specified writer.
@@ -84,3 +91,10 @@ func (c *ClientOptions) logger() func(string, ...interface{}) {
 }
 
 func (c *ClientOptions) allowV1() bool { return c != nil && c.AllowV1 }
+
+func (c *ClientOptions) encodeContext() func(context.Context, json.RawMessage) (json.RawMessage, error) {
+	if c == nil || c.EncodeContext == nil {
+		return func(_ context.Context, params json.RawMessage) (json.RawMessage, error) { return params, nil }
+	}
+	return c.EncodeContext
+}
