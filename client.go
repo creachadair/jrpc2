@@ -94,8 +94,8 @@ func NewClient(ch Channel, opts *ClientOptions) *Client {
 
 // req constructs a fresh request for the specified method and parameters.
 // This does not transmit the request to the server; use c.send to do so.
-func (c *Client) req(method string, params interface{}) (*Request, error) {
-	bits, err := c.marshalParams(context.TODO(), params)
+func (c *Client) req(ctx context.Context, method string, params interface{}) (*Request, error) {
+	bits, err := c.marshalParams(ctx, params)
 	if err != nil {
 		return nil, err
 	}
@@ -165,8 +165,8 @@ func (c *Client) send(reqs ...*Request) ([]*Pending, error) {
 }
 
 // Call initiates a single request.  It blocks until the request is sent.
-func (c *Client) Call(_ context.Context, method string, params interface{}) (*Pending, error) {
-	req, err := c.req(method, params)
+func (c *Client) Call(ctx context.Context, method string, params interface{}) (*Pending, error) {
+	req, err := c.req(ctx, method, params)
 	if err != nil {
 		return nil, err
 	}
@@ -199,10 +199,10 @@ func (c *Client) CallWait(ctx context.Context, method string, params interface{}
 
 // Batch initiates a batch of concurrent requests.  It blocks until the entire
 // batch is sent.
-func (c *Client) Batch(_ context.Context, specs []Spec) (Batch, error) {
+func (c *Client) Batch(ctx context.Context, specs []Spec) (Batch, error) {
 	reqs := make([]*Request, len(specs))
 	for i, spec := range specs {
-		req, err := c.req(spec.Method, spec.Params)
+		req, err := c.req(ctx, spec.Method, spec.Params)
 		if err != nil {
 			return nil, err
 		}

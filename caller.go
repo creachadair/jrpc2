@@ -90,14 +90,14 @@ func NewCaller(method string, X, Y interface{}, opts ...CallerOption) interface{
 	}
 
 	return reflect.MakeFunc(funType, func(args []reflect.Value) []reflect.Value {
-		_ = args[0].Interface().(context.Context) // TODO(fromberger): Plumb through.
+		ctx := args[0].Interface().(context.Context)
 		cli := args[1].Interface().(*Client)
 		rsp := reflect.New(rspType)
 		rerr := reflect.Zero(errType)
 
 		// N.B. the same err is threaded all the way through, so that there is
 		// only one point of exit where all the remaining reflection occurs.
-		req, err := cli.req(method, param(args))
+		req, err := cli.req(ctx, method, param(args))
 		if err == nil {
 			var ps []*Pending
 			ps, err = cli.send(req)
