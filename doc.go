@@ -200,7 +200,7 @@ request and decoding the response internally.
 NewCaller takes the name of a method, a request type X and a return type Y, and
 returns a function having the signature:
 
-   func(*jrpc2.Client, X) (Y, error)
+   func(context.Context, *jrpc2.Client, X) (Y, error)
 
 The result can be asserted to this type and used as a normal function:
 
