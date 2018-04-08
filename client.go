@@ -16,6 +16,7 @@ type Client struct {
 
 	log    func(string, ...interface{}) // write debug logs here
 	allow1 bool                         // tolerate v1 replies with no version marker
+	enctx  func(context.Context, json.RawMessage) (json.RawMessage, error)
 
 	mu      sync.Mutex          // protects the fields below
 	ch      Channel             // channel to the server
@@ -29,6 +30,7 @@ func NewClient(ch Channel, opts *ClientOptions) *Client {
 	c := &Client{
 		log:    opts.logger(),
 		allow1: opts.allowV1(),
+		enctx:  opts.encodeContext(),
 
 		// Lock-protected fields
 		ch:      ch,
@@ -93,7 +95,7 @@ func NewClient(ch Channel, opts *ClientOptions) *Client {
 // req constructs a fresh request for the specified method and parameters.
 // This does not transmit the request to the server; use c.send to do so.
 func (c *Client) req(method string, params interface{}) (*Request, error) {
-	bits, err := marshalParams(params)
+	bits, err := c.marshalParams(context.TODO(), params)
 	if err != nil {
 		return nil, err
 	}
@@ -231,8 +233,8 @@ func (b Batch) Wait() []*Response {
 
 // Notify transmits a notification to the specified method and parameters.  It
 // blocks until the notification has been sent.
-func (c *Client) Notify(_ context.Context, method string, params interface{}) error {
-	bits, err := marshalParams(params)
+func (c *Client) Notify(ctx context.Context, method string, params interface{}) error {
+	bits, err := c.marshalParams(ctx, params)
 	if err != nil {
 		return err
 	}
@@ -273,6 +275,29 @@ func (c *Client) versionOK(v string) bool {
 		return c.allow1
 	}
 	return v == Version
+}
+
+// marshalParams validates and marshals params to JSON for a request.  It's
+// okay for the parameters to be empty, but if they are not they must be valid
+// JSON. We check for the required structural properties also.
+func (c *Client) marshalParams(ctx context.Context, params interface{}) (json.RawMessage, error) {
+	if params == nil {
+		return c.enctx(ctx, nil) // no parameters, that is OK
+	}
+	pbits, err := json.Marshal(params)
+	if err != nil {
+		return nil, err
+	}
+	bits, err := c.enctx(ctx, pbits)
+	if err != nil {
+		return nil, err
+	}
+	if len(bits) != 0 && bits[0] != '[' && bits[0] != '{' {
+		// JSON-RPC requires that if parameters are provided at all, they are
+		// an array or an object
+		return nil, Errorf(E_InvalidRequest, "invalid parameters: array or object required")
+	}
+	return bits, err
 }
 
 // A Pending tracks a single pending request whose response is awaited.
@@ -327,23 +352,4 @@ func (p *Pending) Wait() *Response {
 		close(p.ch)
 	}
 	return p.rsp
-}
-
-// marshalParams validates and marshals params to JSON for a request.  It's
-// okay for the parameters to be empty, but if they are not they must be valid
-// JSON. We check for the required structural properties also.
-func marshalParams(params interface{}) (json.RawMessage, error) {
-	if params == nil {
-		return nil, nil // no parameters, that is OK
-	}
-	bits, err := json.Marshal(params)
-	if err != nil {
-		return nil, err
-	}
-	if len(bits) != 0 && bits[0] != '[' && bits[0] != '{' {
-		// JSON-RPC requires that if parameters are provided at all, they are
-		// an array or an object
-		return nil, Errorf(E_InvalidRequest, "invalid parameters: array or object required")
-	}
-	return bits, err
 }
