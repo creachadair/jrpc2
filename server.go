@@ -22,8 +22,7 @@ type Server struct {
 	sem    *semaphore.Weighted          // bounds concurrent execution (default 1)
 	allow1 bool                         // allow v1 requests with no version marker
 	log    func(string, ...interface{}) // write debug logs here
-
-	reqctx func(req *Request) (context.Context, error) // obtain a context for req
+	dectx  func(context.Context, json.RawMessage) (context.Context, json.RawMessage, error)
 
 	mu   *sync.Mutex // protects the fields below
 	err  error       // error from a previous operation
@@ -51,7 +50,7 @@ func NewServer(mux Assigner, opts *ServerOptions) *Server {
 		sem:    semaphore.NewWeighted(opts.concurrency()),
 		allow1: opts.allowV1(),
 		log:    opts.logger(),
-		reqctx: opts.reqContext(),
+		dectx:  opts.decodeContext(),
 		mu:     new(sync.Mutex),
 		info:   opts.serverInfo(),
 	}
@@ -186,11 +185,14 @@ func (s *Server) nextRequest() (func() error, error) {
 // dispatch invokes m for the specified request type, and marshals the return
 // value into JSON if there is one.
 func (s *Server) dispatch(m Method, req *Request) (json.RawMessage, error) {
-	ctx, err := s.reqctx(req)
+	base, params, err := s.dectx(context.Background(), req.params)
 	if err != nil {
 		return nil, err
 	}
-	v, err := m.Call(context.WithValue(ctx, inboundRequestKey, req), req)
+	req.params = params
+	ctx := context.WithValue(base, inboundRequestKey, req)
+
+	v, err := m.Call(ctx, req)
 	if err != nil {
 		if req.IsNotification() {
 			s.log("Discarding error from notification to %q: %v", req.Method(), err)
