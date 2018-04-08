@@ -25,10 +25,6 @@ type ServerOptions struct {
 	// when processing requests. A value less than 1 uses runtime.NumCPU().
 	Concurrency int
 
-	// If not nil, this function is called to obtain a context value to use for
-	// each inbound request. By default, a server uses the background context.
-	RequestContext func(*Request) (context.Context, error)
-
 	// If set, this function is called with the encoded request parameters
 	// received from the client, before they are delivered to the handler.  Its
 	// return value replaces the context and argument values. This allows the
@@ -55,13 +51,6 @@ func (s *ServerOptions) concurrency() int64 {
 		return int64(runtime.NumCPU())
 	}
 	return int64(s.Concurrency)
-}
-
-func (s *ServerOptions) reqContext() func(*Request) (context.Context, error) {
-	if s == nil || s.RequestContext == nil {
-		return func(*Request) (context.Context, error) { return context.Background(), nil }
-	}
-	return s.RequestContext
 }
 
 func (s *ServerOptions) serverInfo() *ServerInfo {
