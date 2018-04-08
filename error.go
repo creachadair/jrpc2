@@ -103,8 +103,11 @@ const (
 	E_MethodNotFound Code = -32601 // The method does not exist or is unavailable
 	E_InvalidParams  Code = -32602 // Invalid method parameters
 	E_InternalError  Code = -32603 // Internal JSON-RPC error
-	E_SystemError    Code = -32098 // Errors from the operating environment
-	E_NoError        Code = -32099 // Denotes a nil error
+
+	E_NoError          Code = -32099 // Denotes a nil error
+	E_SystemError      Code = -32098 // Errors from the operating environment
+	E_Cancelled        Code = -32097 // Request cancelled
+	E_DeadlineExceeded Code = -32096 // Request deadline exceeded
 
 	// Note that E_SystemError and E_NoError are not defined by JSON-RPC.  They
 	// occupy values reserved for "implementation-defined server-errors".
@@ -116,8 +119,11 @@ var stdError = map[Code]string{
 	E_MethodNotFound: "method not found",
 	E_InvalidParams:  "invalid parameters",
 	E_InternalError:  "internal error",
-	E_SystemError:    "system error",
-	E_NoError:        "no error (success)",
+
+	E_NoError:          "no error (success)",
+	E_SystemError:      "system error",
+	E_Cancelled:        "request cancelled",
+	E_DeadlineExceeded: "deadline exceeded",
 }
 
 // RegisterCode adds a new Code value with the specified message string.  This
