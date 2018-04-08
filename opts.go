@@ -29,6 +29,13 @@ type ServerOptions struct {
 	// each inbound request. By default, a server uses the background context.
 	RequestContext func(*Request) (context.Context, error)
 
+	// If set, this function is called with the encoded request parameters
+	// received from the client, before they are delivered to the handler.  Its
+	// return value replaces the context and argument values. This allows the
+	// server to decode context metadata sent by the client. If unset, ctx and
+	// params are used as given.
+	DecodeContext func(context.Context, json.RawMessage) (context.Context, json.RawMessage, error)
+
 	// If not nil, this value is used to capture server statistics.
 	ServerInfo *ServerInfo
 }
@@ -62,6 +69,15 @@ func (s *ServerOptions) serverInfo() *ServerInfo {
 		return new(ServerInfo)
 	}
 	return s.ServerInfo
+}
+
+func (s *ServerOptions) decodeContext() func(context.Context, json.RawMessage) (context.Context, json.RawMessage, error) {
+	if s == nil || s.DecodeContext == nil {
+		return func(ctx context.Context, params json.RawMessage) (context.Context, json.RawMessage, error) {
+			return ctx, params, nil
+		}
+	}
+	return s.DecodeContext
 }
 
 // ClientOptions control the behaviour of a client created by NewClient.
