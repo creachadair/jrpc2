@@ -63,12 +63,16 @@ func Run(ctx context.Context, req *RunReq) (*RunResult, error) {
 		run = cmd.CombinedOutput
 	}
 	out, err := run()
-	ex, ok := err.(*exec.ExitError)
-	if err != nil && !ok {
-		return nil, err
+	success := err == nil
+	if err != nil {
+		if ex, ok := err.(*exec.ExitError); ok && ex.Success() {
+			success = true
+		} else {
+			return nil, err
+		}
 	}
 	return &RunResult{
-		Success: err == nil || ex.Success(),
+		Success: success,
 		Output:  out,
 	}, nil
 }
