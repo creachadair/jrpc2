@@ -27,7 +27,8 @@ func Encode(ctx context.Context, params json.RawMessage) (json.RawMessage, error
 	return json.Marshal(c)
 }
 
-// Decode decodes request parameters from the specified context.
+// Decode decodes the specified request message as a context-wrapped request,
+// and returns the updated context (based on ctx) and the embedded parameters.
 func Decode(ctx context.Context, req json.RawMessage) (context.Context, json.RawMessage, error) {
 	var c wireContext
 	if err := json.Unmarshal(req, &c); err != nil {
