@@ -36,12 +36,14 @@ import (
 
 	"bitbucket.org/creachadair/jrpc2"
 	"bitbucket.org/creachadair/jrpc2/channel"
+	"bitbucket.org/creachadair/jrpc2/jcontext"
 	"bitbucket.org/creachadair/shell"
 )
 
 var (
-	serverAddr = flag.String("server", "", "Server address")
-	wantStderr = flag.Bool("stderr", false, "Capture stderr from commands")
+	serverAddr  = flag.String("server", "", "Server address")
+	wantStderr  = flag.Bool("stderr", false, "Capture stderr from commands")
+	callTimeout = flag.Duration("timeout", 0, "Call timeout (0 means none)")
 )
 
 func main() {
@@ -56,9 +58,10 @@ func main() {
 	}
 	log.Printf("Connected to %s...", conn.RemoteAddr())
 	defer conn.Close()
-	ctx := context.Background()
 
-	cli := jrpc2.NewClient(channel.Raw(conn), nil)
+	cli := jrpc2.NewClient(channel.Raw(conn), &jrpc2.ClientOptions{
+		EncodeContext: jcontext.Encode,
+	})
 	in := bufio.NewScanner(os.Stdin)
 	for {
 		req, err := readCommand(in)
@@ -68,6 +71,11 @@ func main() {
 			log.Fatalf("ERROR: %v", err)
 		}
 
+		ctx := context.Background()
+		var cancel context.CancelFunc = func() {}
+		if *callTimeout > 0 {
+			ctx, cancel = context.WithTimeout(ctx, *callTimeout)
+		}
 		var result RunResult
 		rsp, err := cli.CallWait(ctx, "Run", req)
 		if err != nil {
@@ -78,6 +86,7 @@ func main() {
 			fmt.Fprintf(os.Stderr, "# Succeeded: %v\n", result.Success)
 			os.Stdout.Write(result.Output)
 		}
+		cancel()
 	}
 	fmt.Fprintln(os.Stderr, "Bye!")
 }

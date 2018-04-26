@@ -20,6 +20,7 @@ import (
 	"os/exec"
 
 	"bitbucket.org/creachadair/jrpc2"
+	"bitbucket.org/creachadair/jrpc2/jcontext"
 	"bitbucket.org/creachadair/jrpc2/server"
 )
 
@@ -97,8 +98,9 @@ func main() {
 		"Run": jrpc2.NewMethod(Run),
 	}, &server.LoopOptions{
 		ServerOptions: &jrpc2.ServerOptions{
-			AllowV1:   true,
-			LogWriter: lw,
+			AllowV1:       true,
+			LogWriter:     lw,
+			DecodeContext: jcontext.Decode,
 		},
 	})
 }
