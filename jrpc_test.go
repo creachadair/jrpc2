@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"reflect"
 	"testing"
 )
@@ -49,15 +48,11 @@ func pipePair() (client, server pipeChannel) {
 
 func newServer(t *testing.T, assigner Assigner, opts *ServerOptions) (*Server, *Client, func()) {
 	t.Helper()
-	if opts == nil {
-		opts = &ServerOptions{LogWriter: os.Stderr}
-	}
-
 	cpipe, spipe := pipePair()
 	srv := NewServer(assigner, opts).Start(spipe)
 	t.Logf("Server running on pipe %+v", spipe)
 
-	cli := NewClient(cpipe, &ClientOptions{LogWriter: os.Stderr})
+	cli := NewClient(cpipe, nil)
 	t.Logf("Client running on pipe %v", cpipe)
 
 	return srv, cli, func() {
@@ -122,7 +117,6 @@ func TestClientServer(t *testing.T) {
 	s, c, cleanup := newServer(t, ServiceMapper{
 		"Test": NewService(dummy{}),
 	}, &ServerOptions{
-		LogWriter:   os.Stderr,
 		AllowV1:     true,
 		Concurrency: 16,
 	})
