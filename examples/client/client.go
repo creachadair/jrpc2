@@ -17,6 +17,7 @@ import (
 	"sync"
 
 	"bitbucket.org/creachadair/jrpc2"
+	"bitbucket.org/creachadair/jrpc2/caller"
 	"bitbucket.org/creachadair/jrpc2/channel"
 )
 
@@ -24,9 +25,9 @@ var serverAddr = flag.String("server", "", "Server address")
 
 var (
 	// Reflective call wrappers for the remote methods.
-	add  = jrpc2.NewCaller("Math.Add", int(0), int(0), jrpc2.Variadic()).(func(context.Context, *jrpc2.Client, ...int) (int, error))
-	div  = jrpc2.NewCaller("Math.Div", binarg{}, float64(0)).(func(context.Context, *jrpc2.Client, binarg) (float64, error))
-	stat = jrpc2.NewCaller("Math.Status", nil, "").(func(context.Context, *jrpc2.Client) (string, error))
+	add  = caller.New("Math.Add", int(0), int(0), caller.Variadic()).(func(context.Context, *jrpc2.Client, ...int) (int, error))
+	div  = caller.New("Math.Div", binarg{}, float64(0)).(func(context.Context, *jrpc2.Client, binarg) (float64, error))
+	stat = caller.New("Math.Status", nil, "").(func(context.Context, *jrpc2.Client) (string, error))
 )
 
 type binarg struct{ X, Y int }
