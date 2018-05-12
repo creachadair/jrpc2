@@ -8,7 +8,6 @@ import (
 	"io"
 	"os"
 	"reflect"
-	"strings"
 	"testing"
 )
 
@@ -197,96 +196,6 @@ func TestClientServer(t *testing.T) {
 	}
 }
 
-func TestNewCaller(t *testing.T) {
-	// A dummy method that returns the length of its argument slice.
-	ass := MapAssigner{
-		"F": NewMethod(func(_ context.Context, req []string) (int, error) {
-			t.Logf("Call to F with arguments %#v", req)
-
-			// Check for this special form, and generate an error if it matches.
-			if len(req) > 0 && req[0] == "fail" {
-				return 0, errors.New(strings.Join(req[1:], " "))
-			}
-			return len(req), nil
-		}),
-		"OK": NewMethod(func(context.Context) (string, error) {
-			t.Log("Call to OK")
-			return "OK, hello", nil
-		}),
-	}
-
-	_, c, cleanup := newServer(t, ass, nil)
-	defer cleanup()
-	ctx := context.Background()
-
-	caller := NewCaller("F", []string(nil), int(0))
-	F, ok := caller.(func(context.Context, *Client, []string) (int, error))
-	if !ok {
-		t.Fatalf("NewCaller (plain): wrong type: %T", caller)
-	}
-	vcaller := NewCaller("F", string(""), int(0), Variadic())
-	V, ok := vcaller.(func(context.Context, *Client, ...string) (int, error))
-	if !ok {
-		t.Fatalf("NewCaller (variadic): wrong type: %T", vcaller)
-	}
-	okcaller := NewCaller("OK", nil, "")
-	OK, ok := okcaller.(func(context.Context, *Client) (string, error))
-	if !ok {
-		t.Fatalf("NewCaller (niladic): wrong type: %T", okcaller)
-	}
-
-	// Verify that various success cases do indeed.
-	tests := []struct {
-		in   []string
-		want int
-	}{
-		{nil, 0}, // nil should behave like an empty slice
-		{[]string{}, 0},
-		{[]string{"a"}, 1},
-		{[]string{"a", "b", "c"}, 3},
-		{[]string{"", "", "q"}, 3},
-	}
-	for _, test := range tests {
-		if got, err := F(ctx, c, test.in); err != nil {
-			t.Errorf("F(_, c, %q): unexpected error: %v", test.in, err)
-		} else if got != test.want {
-			t.Errorf("F(_, c, %q): got %d, want %d", test.in, got, test.want)
-		}
-		if got, err := V(ctx, c, test.in...); err != nil {
-			t.Errorf("V(_, c, %q): unexpected error: %v", test.in, err)
-		} else if got != test.want {
-			t.Errorf("V(_, c, %q): got %d, want %d", test.in, got, test.want)
-		}
-	}
-
-	// Verify that errors get propagated sensibly.
-	if got, err := F(ctx, c, []string{"fail", "propagate error"}); err == nil {
-		t.Errorf("F(_, c, _): should have failed, returned %d", got)
-	} else {
-		t.Logf("F(_, c, _): correctly failed: %v", err)
-	}
-	if got, err := V(ctx, c, "fail", "propagate error"); err == nil {
-		t.Errorf("V(_, c, _): should have failed, returned %d", got)
-	} else {
-		t.Logf("V(_, c, _): correctly failed: %v", err)
-	}
-
-	// Verify that we can call through a stub without request parameters.
-	if m, err := OK(ctx, c); err != nil {
-		t.Errorf("OK(_, c): unexpected error: %v", err)
-	} else {
-		t.Logf("OK(_, c): returned message %q", m)
-	}
-
-	// Verify that we can list the methods via the server hook.
-	info, err := RPC_serverInfo(ctx, c)
-	if err != nil {
-		t.Errorf("rpc.serverInfo: unexpected error: %v", err)
-	} else if want := []string{"F", "OK"}; !reflect.DeepEqual(info.Methods, want) {
-		t.Errorf("rpc.serverInfo: got %+v, want %+q", info, want)
-	}
-}
-
 func TestErrors(t *testing.T) {
 	// Test that an error with data attached to it is correctly propagated back
 	// from the server to the client, in a value of concrete type *Error.
@@ -300,13 +209,11 @@ func TestErrors(t *testing.T) {
 	}, nil)
 	defer cleanup()
 
-	Err := NewCaller("Err", nil, int(0)).(func(context.Context, *Client) (int, error))
-
-	got, err := Err(context.Background(), c)
-	if err == nil {
-		t.Fatalf("CallWait(Err): expected error, got %d", got)
-	} else if e, ok := err.(*Error); !ok {
-		t.Fatalf("CallWait(Err): wrong error type %T: %v", err, err)
+	got, err := c.CallWait(context.Background(), "Err", nil)
+	if err != nil {
+		t.Fatalf("CallWait(Err): unexpected error: %v", err)
+	} else if e := got.Error(); e == nil {
+		t.Fatalf("CallWait(Err): expected error, got %v", got)
 	} else {
 		t.Logf("Response error is %#v", e)
 		if e.Code != errCode {

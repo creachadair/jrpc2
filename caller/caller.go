@@ -1,16 +1,18 @@
-package jrpc2
+package caller
 
 import (
 	"context"
 	"reflect"
+
+	"bitbucket.org/creachadair/jrpc2"
 )
 
 // RPC_serverInfo calls the built-in rpc.serverInfo method exported by servers
 // in this package.
-var RPC_serverInfo = NewCaller("rpc.serverInfo",
-	nil, (*ServerInfo)(nil)).(func(context.Context, *Client) (*ServerInfo, error))
+var RPC_serverInfo = New("rpc.serverInfo",
+	nil, (*jrpc2.ServerInfo)(nil)).(func(context.Context, *jrpc2.Client) (*jrpc2.ServerInfo, error))
 
-// NewCaller reflectively constructs a function of type:
+// New reflectively constructs a function of type:
 //
 //     func(context.Context, *Client, X) (Y, error)
 //
@@ -24,7 +26,7 @@ var RPC_serverInfo = NewCaller("rpc.serverInfo",
 //
 //     func(context.Context, *Client) (Y, error)
 //
-// NewCaller will panic if Y == nil.
+// New will panic if Y == nil.
 //
 // Example:
 //    cli := jrpc2.NewClient(ch, nil)
@@ -32,7 +34,7 @@ var RPC_serverInfo = NewCaller("rpc.serverInfo",
 //    type Req struct{ A, B int }
 //
 //    // Suppose Math.Add is a method taking *Req to int.
-//    F := jrpc2.NewCaller("Math.Add", (*Req)(nil), int(0)).(func(context.Context, *Client, *Req) (int, error))
+//    F := caller.New("Math.Add", (*Req)(nil), int(0)).(func(context.Context, *Client, *Req) (int, error))
 //
 //    n, err := F(ctx, cli, &Req{A: 7, B: 3})
 //    if err != nil {
@@ -40,7 +42,7 @@ var RPC_serverInfo = NewCaller("rpc.serverInfo",
 //    }
 //    fmt.Println(n)
 //
-func NewCaller(method string, X, Y interface{}, opts ...CallerOption) interface{} {
+func New(method string, X, Y interface{}, opts ...Option) interface{} {
 	var wantVariadic bool
 	for _, opt := range opts {
 		switch opt.(type) {
@@ -49,7 +51,7 @@ func NewCaller(method string, X, Y interface{}, opts ...CallerOption) interface{
 		}
 	}
 
-	cliType := reflect.TypeOf((*Client)(nil))
+	cliType := reflect.TypeOf((*jrpc2.Client)(nil))
 	reqType := reflect.TypeOf(X)
 	rspType := reflect.TypeOf(Y)
 	errType := reflect.TypeOf((*error)(nil)).Elem()
@@ -91,23 +93,18 @@ func NewCaller(method string, X, Y interface{}, opts ...CallerOption) interface{
 
 	return reflect.MakeFunc(funType, func(args []reflect.Value) []reflect.Value {
 		ctx := args[0].Interface().(context.Context)
-		cli := args[1].Interface().(*Client)
+		cli := args[1].Interface().(*jrpc2.Client)
 		rsp := reflect.New(rspType)
 		rerr := reflect.Zero(errType)
 
 		// N.B. the same err is threaded all the way through, so that there is
 		// only one point of exit where all the remaining reflection occurs.
-		req, err := cli.req(ctx, method, param(args))
+		raw, err := cli.CallWait(ctx, method, param(args))
 		if err == nil {
-			var ps []*Pending
-			ps, err = cli.send(ctx, req)
-			if err == nil {
-				raw := ps[0].Wait()
-				if raw.Error() == nil {
-					err = raw.UnmarshalResult(rsp.Interface())
-				} else {
-					err = raw.Error()
-				}
+			if raw.Error() == nil {
+				err = raw.UnmarshalResult(rsp.Interface())
+			} else {
+				err = raw.Error()
 			}
 		}
 		if err != nil {
@@ -120,8 +117,8 @@ func NewCaller(method string, X, Y interface{}, opts ...CallerOption) interface{
 	}).Interface()
 }
 
-// A CallerOption controls an optional behaviour of the NewCaller function.
-type CallerOption interface {
+// An Option controls an optional behaviour of the New function.
+type Option interface {
 	callOption()
 }
 
@@ -138,4 +135,4 @@ func (variadic) callOption() {}
 //
 //    func(*jrpc2.Client, X) (Y, error)
 //
-func Variadic() CallerOption { return variadic{} }
+func Variadic() Option { return variadic{} }
