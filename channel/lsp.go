@@ -15,16 +15,24 @@ import (
 // LSP constructs a jrpc2.Channel that transmits and receives messages on rwc
 // using the Language Server Protocol (LSP) framing, defined by the LSP
 // specification at http://github.com/Microsoft/language-server-protocol.
+//
+// Specifically, each message is sent in the format:
+//
+//    Content-Length: <nbytes>\r\n
+//    \r\n
+//    <payload>\r\n
+//
+// The trailing CRLF pair is appended if the payload does not already include it.
+// The length is encoded as decimal digits. For example:
+//
+//    Content-Length: 4\r\n
+//    \r\n
+//    {}\r\n
+//
 func LSP(rwc io.ReadWriteCloser) jrpc2.Channel { return &lsp{rwc: rwc, rd: bufio.NewReader(rwc)} }
 
 // An lsp implements jrpc2.Channel. Messages sent on a LSP channel are framed
-// as a header/body transaction, similar to HTTP.
-//
-//    Content-Length: n<CRLF>
-//    ...other headers...
-//    <CRLF>
-//    <n-byte message>
-//
+// as a header/body transaction, similar to HTTP but with less header noise.
 type lsp struct {
 	rwc io.ReadWriteCloser
 	rd  *bufio.Reader
