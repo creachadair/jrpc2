@@ -1,6 +1,9 @@
 package channel
 
 import (
+	"fmt"
+	"io"
+	"log"
 	"sync"
 	"testing"
 )
@@ -20,11 +23,11 @@ func testSendRecv(t *testing.T, s sender, r receiver, msg string) {
 	wg.Add(2)
 	go func() {
 		defer wg.Done()
-		sendErr = s.Send([]byte(msg))
+		data, recvErr = r.Recv()
 	}()
 	go func() {
 		defer wg.Done()
-		data, recvErr = r.Recv()
+		sendErr = s.Send([]byte(msg))
 	}()
 	wg.Wait()
 
@@ -51,4 +54,31 @@ func TestPipe(t *testing.T) {
 	testSendRecv(t, lhs, rhs, message1)
 	t.Logf("Testing rhs ⇒ lhs :: %q", message2)
 	testSendRecv(t, rhs, lhs, message2)
+}
+
+func TestCombine(t *testing.T) {
+	ch := Line(Combine(io.Pipe()))
+	defer ch.Close()
+
+	const message = "Boo likes forests!"
+	t.Logf("Round-trip :: %q", message)
+	testSendRecv(t, ch, ch, message)
+}
+
+func ExampleCombine() {
+	rwc := Combine(io.Pipe())
+	comb := Raw(rwc)
+
+	const message = `"apple"`
+	go func() {
+		comb.Send([]byte(message))
+		comb.Close()
+	}()
+
+	msg, err := comb.Recv()
+	if err != nil {
+		log.Fatalf("Recv: %v", err)
+	}
+	fmt.Println(string(msg))
+	// Output: "apple"
 }
