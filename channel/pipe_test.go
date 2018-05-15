@@ -67,15 +67,17 @@ func TestCombine(t *testing.T) {
 
 func ExampleCombine() {
 	rwc := Combine(io.Pipe())
-	comb := Raw(rwc)
+	ch := Raw(rwc)
 
 	const message = `"apple"`
 	go func() {
-		comb.Send([]byte(message))
-		comb.Close()
+		if err := ch.Send([]byte(message)); err != nil {
+			log.Fatalf("Send: %v", err)
+		}
+		ch.Close()
 	}()
 
-	msg, err := comb.Recv()
+	msg, err := ch.Recv()
 	if err != nil {
 		log.Fatalf("Recv: %v", err)
 	}
