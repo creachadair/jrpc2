@@ -202,14 +202,17 @@ func (c *Client) Call(ctx context.Context, method string, params interface{}) (*
 
 // CallWait initiates a single request and blocks until the response returns.
 // It is shorthand for Call + Wait. If err != nil then rsp == nil: Any error
-// returned is from the initial Call; errors from the pending Wait must be
-// checked by the caller:
+// returned is either from the initial Call, or represents a cancelled request
+// context (such as a timeout or exceeded deadline). Errors from the server
+// must be checked by the caller, since they may contain payloads.
 //
 //    rsp, err := c.CallWait(ctx, method, params)
 //    if err != nil {
 //       log.Fatalf("Call failed: %v", err)
 //    } else if err := rsp.Error(); err != nil {
 //       log.Printf("Error from server: %v", err)
+//    } else {
+//       handleValidResponse(rsp)
 //    }
 //
 func (c *Client) CallWait(ctx context.Context, method string, params interface{}) (*Response, error) {
@@ -217,7 +220,16 @@ func (c *Client) CallWait(ctx context.Context, method string, params interface{}
 	if err != nil {
 		return nil, err
 	}
-	return p.Wait(), nil
+	rsp := p.Wait()
+	if err := rsp.Error(); err != nil {
+		switch err.Code {
+		case E_Cancelled:
+			return nil, context.Canceled
+		case E_DeadlineExceeded:
+			return nil, context.DeadlineExceeded
+		}
+	}
+	return rsp, nil
 }
 
 // Batch initiates a batch of concurrent requests.  It blocks until the entire

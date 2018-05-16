@@ -206,17 +206,14 @@ func TestCancellation(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
-	const wantCode = E_DeadlineExceeded
-
+	start := time.Now()
 	got, err := c.CallWait(ctx, "Stall", nil)
-	if err != nil {
-		t.Errorf("Stall: request unexpectedly failed: %v", err)
-	} else if e := got.Error(); e == nil {
+	if err == nil {
 		t.Errorf("Stall: got %+v, wanted error", got)
-	} else if e.Code != wantCode {
-		t.Errorf("Stall: got error code: %d (%v), want: %d (%v)", e.Code, e.Code, wantCode, wantCode)
+	} else if err != context.DeadlineExceeded {
+		t.Errorf("Stall: got error %v, want %v", err, context.DeadlineExceeded)
 	} else {
-		t.Logf("Cancellation error OK: %+v", e)
+		t.Logf("Successfully cancelled after %v", time.Since(start))
 	}
 }
 
