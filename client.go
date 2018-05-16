@@ -73,16 +73,16 @@ func NewClient(ch Channel, opts *ClientOptions) *Client {
 					c.log("Discarding response for unknown ID %q", id)
 				} else if !c.versionOK(rsp.V) {
 					delete(c.pending, id)
-					p.complete(&jresponse{
+					p.ch <- &jresponse{
 						ID: rsp.ID,
 						E:  jerrorf(E_InvalidRequest, "incorrect version marker %q", rsp.V),
-					})
+					}
 					c.log("Invalid response for ID %q", id)
 				} else {
 					// Remove the pending request from the set and deliver its response.
 					// Determining whether it's an error is the caller's responsibility.
 					delete(c.pending, id)
-					p.complete(rsp)
+					p.ch <- rsp
 					c.log("Completed request for ID %q", id)
 				}
 			}
@@ -156,9 +156,32 @@ func (c *Client) send(ctx context.Context, reqs ...*Request) ([]*Pending, error)
 	var pends []*Pending
 	for _, req := range reqs {
 		if id := req.ID(); id != "" {
-			p := newPending(ctx, id)
+			pctx, p := newPending(ctx, id)
 			c.pending[id] = p
 			pends = append(pends, p)
+
+			// Wait for cancellation of the pending request. When the context
+			// ends, check whether the request is still in the pending set for
+			// the client: If so, a reply has not yet been delivered.
+			// Otherwise, the cancellation is a no-op ("too late").
+			go func() {
+				<-pctx.Done()
+				c.mu.Lock()
+				defer c.mu.Unlock()
+				if _, ok := c.pending[id]; ok {
+					c.log("Context ended for id %q, err=%v", id, pctx.Err())
+					delete(c.pending, id)
+					code := E_Cancelled
+					if pctx.Err() == context.DeadlineExceeded {
+						code = E_DeadlineExceeded
+					}
+
+					p.ch <- &jresponse{
+						ID: json.RawMessage(id),
+						E:  jerrorf(code, pctx.Err().Error()),
+					}
+				}
+			}()
 		}
 	}
 	return pends, nil
@@ -264,7 +287,7 @@ func (c *Client) stop(err error) {
 	c.ch.Close()
 	for id, p := range c.pending {
 		delete(c.pending, id)
-		p.abandon()
+		p.cancel()
 	}
 	c.err = err
 	c.ch = nil
@@ -304,36 +327,25 @@ func (c *Client) marshalParams(ctx context.Context, params interface{}) (json.Ra
 // Calling Wait blocks until the response is received. It is safe to call Wait
 // multiple times from concurrent goroutines.
 type Pending struct {
-	// When the response is delivered, it is sent to ch, which is the point of
-	// synchronization between the client and the caller. Once a value is
-	// received, the pending call is complete.
-	ch  chan *jresponse
-	ctx context.Context // the context governing the request
-	id  string          // the ID from the request
-	rsp *Response
+	// Waiters synchronize on reading from ch. The first successful reader from
+	// ch completes the request and is responsible for updating rsp and then
+	// closing ch. The client owns writing to ch, and is responsible to ensure
+	// that at most one write is ever performed.
+	ch chan *jresponse
 
-	// TODO(fromberger): Make Wait correctly deal with context termination.
-	// Right now the context is ignored.
+	id     string    // the ID from the request
+	rsp    *Response // once complete, the response received
+	cancel func()    // cancel the context associated with this request
 }
 
-func newPending(ctx context.Context, id string) *Pending {
+func newPending(ctx context.Context, id string) (context.Context, *Pending) {
 	// Buffer the channel so the response reader does not need to rendezvous
 	// with the recipient.
-	return &Pending{
-		ch:  make(chan *jresponse, 1),
-		ctx: ctx,
-		id:  id,
-	}
-}
-
-// complete delivers a response to p, completing the request.
-func (p *Pending) complete(rsp *jresponse) { p.ch <- rsp }
-
-// abandon delivers a failure to p, indicating it will never complete.
-func (p *Pending) abandon() {
-	p.ch <- &jresponse{
-		ID: json.RawMessage(p.id),
-		E:  jerrorf(E_Cancelled, "request cancelled by client shutdown"),
+	pctx, cancel := context.WithCancel(ctx)
+	return pctx, &Pending{
+		ch:     make(chan *jresponse, 1),
+		id:     id,
+		cancel: cancel,
 	}
 }
 
@@ -346,18 +358,20 @@ func (p *Pending) ID() string { return p.id }
 func (p *Pending) Wait() *Response {
 	raw, ok := <-p.ch
 	if ok {
-		// N.B. We intentionally did not have the sender close the channel, to
-		// avoid a race between callers of Wait. The channel is closed by the
-		// first waiter to get a real value, after ensuring the response values
-		// are updated -- that way subsequent waiters will get a zero from the
-		// closed channel and correctly fall through to the stored responses.
-
+		// N.B. We intentionally DO NOT have the sender close the channel, to
+		// prevent a data race between callers of Wait. The channel is closed
+		// by the first waiter to get a real value (ok == true).
+		//
+		// The first waiter must update the response value, THEN close the
+		// channel and cancel the context. This order ensures that subsequent
+		// waiters all get the same response, and do not race on accessing it.
 		p.rsp = &Response{
 			id:     fixID(raw.ID),
 			err:    raw.E.toError(),
 			result: raw.R,
 		}
 		close(p.ch)
+		p.cancel() // release the context observer
 	}
 	return p.rsp
 }
