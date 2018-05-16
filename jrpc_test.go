@@ -8,6 +8,7 @@ import (
 	"io"
 	"reflect"
 	"testing"
+	"time"
 )
 
 type pipeChannel struct {
@@ -187,6 +188,35 @@ func TestClientServer(t *testing.T) {
 		if got != tests[i].want {
 			t.Errorf("Response %d (%q): got %v, want %v", i+1, rsp.ID(), got, tests[i].want)
 		}
+	}
+}
+
+func TestCancellation(t *testing.T) {
+	_, c, cleanup := newServer(t, MapAssigner{
+		"Stall": NewMethod(func(context.Context) (bool, error) {
+			const pause = 10 * time.Second // in effect, "forever"
+			t.Logf("Stalling for %v...", pause)
+			time.Sleep(pause)
+			t.Log("Done stalling")
+			return true, nil
+		}),
+	}, nil)
+	defer cleanup()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+
+	const wantCode = E_DeadlineExceeded
+
+	got, err := c.CallWait(ctx, "Stall", nil)
+	if err != nil {
+		t.Errorf("Stall: request unexpectedly failed: %v", err)
+	} else if e := got.Error(); e == nil {
+		t.Errorf("Stall: got %+v, wanted error", got)
+	} else if e.Code != wantCode {
+		t.Errorf("Stall: got error code: %d (%v), want: %d (%v)", e.Code, e.Code, wantCode, wantCode)
+	} else {
+		t.Logf("Cancellation error OK: %+v", e)
 	}
 }
 
