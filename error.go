@@ -96,7 +96,8 @@ func (c Code) Error() string {
 // ToError converts a Code to an *Error using its default message.
 func (c Code) ToError() *Error { return &Error{Code: c, Message: c.Error()} }
 
-// Well-known error codes defined by the JSON-RPC specification.
+// Pre-defined error codes, including the standard ones from the JSON-RPC
+// specification and some specific to this implementation.
 const (
 	E_ParseError     Code = -32700 // Invalid JSON received by the server
 	E_InvalidRequest Code = -32600 // The JSON sent is not a valid request object
@@ -104,13 +105,13 @@ const (
 	E_InvalidParams  Code = -32602 // Invalid method parameters
 	E_InternalError  Code = -32603 // Internal JSON-RPC error
 
+	// The JSON-RPC 2.0 specification reserves the range -32000 to -32099 for
+	// implementation-defined server errors, such as the following:
+
 	E_NoError          Code = -32099 // Denotes a nil error
 	E_SystemError      Code = -32098 // Errors from the operating environment
 	E_Cancelled        Code = -32097 // Request cancelled
 	E_DeadlineExceeded Code = -32096 // Request deadline exceeded
-
-	// Note that E_SystemError and E_NoError are not defined by JSON-RPC.  They
-	// occupy values reserved for "implementation-defined server-errors".
 )
 
 var stdError = map[Code]string{
