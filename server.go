@@ -155,8 +155,6 @@ func (s *Server) nextRequest() (func() error, error) {
 			}
 			t := t
 			g.Go(func() error {
-				s.sem.Acquire(context.Background(), 1)
-				defer s.sem.Release(1)
 				t.val, t.err = s.dispatch(t.m, &Request{
 					id:     t.req.ID,
 					method: t.req.M,
@@ -191,6 +189,10 @@ func (s *Server) dispatch(m Method, req *Request) (json.RawMessage, error) {
 	}
 	req.params = params
 	ctx := context.WithValue(base, inboundRequestKey, req)
+	if err := s.sem.Acquire(ctx, 1); err != nil {
+		return nil, err
+	}
+	defer s.sem.Release(1)
 
 	v, err := m.Call(ctx, req)
 	if err != nil {
