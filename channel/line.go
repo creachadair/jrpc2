@@ -51,8 +51,11 @@ func (c line) Recv() ([]byte, error) {
 			buf.Reset()
 			continue // empty line
 		}
-		line := buf.Bytes()[:buf.Len()-1]
-		return line, err
+		line := buf.Bytes()
+		if n := len(line) - 1; n >= 0 {
+			return line[:n], err
+		}
+		return nil, err
 	}
 }
 
