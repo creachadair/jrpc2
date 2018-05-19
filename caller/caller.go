@@ -45,6 +45,13 @@ import (
 var RPC_serverInfo = New("rpc.serverInfo",
 	nil, (*jrpc2.ServerInfo)(nil)).(func(context.Context, *jrpc2.Client) (*jrpc2.ServerInfo, error))
 
+// Common types used by all invocations.
+var (
+	cliType = reflect.TypeOf((*jrpc2.Client)(nil))
+	errType = reflect.TypeOf((*error)(nil)).Elem()
+	ctxType = reflect.TypeOf((*context.Context)(nil)).Elem()
+)
+
 // New reflectively constructs a function of type:
 //
 //     func(context.Context, *Client, X) (Y, error)
@@ -84,12 +91,8 @@ func New(method string, X, Y interface{}, opts ...Option) interface{} {
 		}
 	}
 
-	cliType := reflect.TypeOf((*jrpc2.Client)(nil))
 	reqType := reflect.TypeOf(X)
 	rspType := reflect.TypeOf(Y)
-	errType := reflect.TypeOf((*error)(nil)).Elem()
-	ctxType := reflect.TypeOf((*context.Context)(nil)).Elem()
-
 	if wantVariadic {
 		reqType = reflect.SliceOf(reqType)
 	}
