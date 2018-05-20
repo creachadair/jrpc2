@@ -29,12 +29,14 @@ import (
 //    \r\n
 //    {}\r\n
 //
-func LSP(rwc io.ReadWriteCloser) jrpc2.Channel { return &lsp{rwc: rwc, rd: bufio.NewReader(rwc)} }
+func LSP(r io.Reader, wc io.WriteCloser) jrpc2.Channel {
+	return &lsp{wc: wc, rd: bufio.NewReader(r)}
+}
 
 // An lsp implements jrpc2.Channel. Messages sent on a LSP channel are framed
 // as a header/body transaction, similar to HTTP but with less header noise.
 type lsp struct {
-	rwc io.ReadWriteCloser
+	wc  io.WriteCloser
 	rd  *bufio.Reader
 	buf []byte
 }
@@ -46,12 +48,12 @@ func (c *lsp) Send(msg []byte) error {
 	if needBreak {
 		n += 2
 	}
-	if _, err := fmt.Fprintf(c.rwc, "Content-Length: %d\r\n\r\n", n); err != nil {
+	if _, err := fmt.Fprintf(c.wc, "Content-Length: %d\r\n\r\n", n); err != nil {
 		return err
 	}
-	_, err := c.rwc.Write(msg)
+	_, err := c.wc.Write(msg)
 	if err == nil && needBreak {
-		_, err = c.rwc.Write([]byte("\r\n"))
+		_, err = c.wc.Write([]byte("\r\n"))
 	}
 	return err
 }
@@ -103,4 +105,4 @@ func (c *lsp) Recv() ([]byte, error) {
 }
 
 // Close implements part of jrpc2.Channel.
-func (c *lsp) Close() error { return c.rwc.Close() }
+func (c *lsp) Close() error { return c.wc.Close() }

@@ -11,12 +11,14 @@ import (
 // Line constructs a jrpc2.Channel that transmits and receives messages on rwc
 // with line framing. Each message is terminated by a Unicode LF (10) and LF
 // are stripped from outbound messages.
-func Line(rwc io.ReadWriteCloser) jrpc2.Channel { return line{rwc: rwc, buf: bufio.NewReader(rwc)} }
+func Line(r io.Reader, wc io.WriteCloser) jrpc2.Channel {
+	return line{wc: wc, buf: bufio.NewReader(r)}
+}
 
 // line implements jrpc2.Channel. Messages sent on a raw channel are framed by
 // terminating newlines.
 type line struct {
-	rwc io.ReadWriteCloser
+	wc  io.WriteCloser
 	buf *bufio.Reader
 }
 
@@ -35,7 +37,7 @@ func (c line) Send(msg []byte) error {
 		j++
 	}
 	out[j] = '\n'
-	_, err := c.rwc.Write(out[:j+1])
+	_, err := c.wc.Write(out[:j+1])
 	return err
 }
 
@@ -60,4 +62,4 @@ func (c line) Recv() ([]byte, error) {
 }
 
 // Close implements part of jrpc2.Channel.
-func (c line) Close() error { return c.rwc.Close() }
+func (c line) Close() error { return c.wc.Close() }
