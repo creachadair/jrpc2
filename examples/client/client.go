@@ -53,7 +53,7 @@ func main() {
 	log.Printf("Connected to %v", conn.RemoteAddr())
 
 	// Start up the client, and enable logging to stderr.
-	cli := jrpc2.NewClient(channel.Line(conn), nil)
+	cli := jrpc2.NewClient(channel.Line(conn, conn), nil)
 	defer cli.Close()
 	ctx := context.Background()
 

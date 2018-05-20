@@ -51,7 +51,7 @@ func main() {
 		log.Fatalf("Dial %q: %v", addr, err)
 	}
 	defer conn.Close()
-	cli := jrpc2.NewClient(nc(conn), nil)
+	cli := jrpc2.NewClient(nc(conn, conn), nil)
 
 	// Handle notifications...
 	if *doNotify {
@@ -89,7 +89,7 @@ func main() {
 	}
 }
 
-func newChannel(fmt string) func(io.ReadWriteCloser) jrpc2.Channel {
+func newChannel(fmt string) func(io.Reader, io.WriteCloser) jrpc2.Channel {
 	switch fmt {
 	case "raw":
 		return channel.Raw
