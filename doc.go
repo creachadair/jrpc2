@@ -14,7 +14,8 @@ Call method:
 The server finds the Method for a request by looking up its name in a
 jrpc2.Assigner provided when the server is set up.
 
-Let's work an example. Suppose we have defined the following Add function:
+Let's work an example. Suppose we have defined the following Add function, and
+would like to export it via JSON-RPC:
 
    // Add returns the sum of a slice of integers.
    func Add(ctx context.Context, values []int) (int, error) {
@@ -25,12 +26,13 @@ Let's work an example. Suppose we have defined the following Add function:
       return sum, nil
    }
 
-To convert this into a jrpc2.Method, we can use the NewMethod function, which
-uses reflection to lift the function into the interface:
+To do this, we convert Add to a jrpc2.Method. The easiest way to do this is to
+call jrpc2.NewMethod, which uses reflection to lift the function into the
+jrpc2.Method interface exported by the server:
 
-   m := jrpc2.NewMethod(Add)  // m is a jrpc2.Method
+   m := jrpc2.NewMethod(Add)  // m is a jrpc2.Method that invokes Add
 
-Now let's advertise this function under the name "Math.Add".  For static
+Next, let's advertise this function under the name "Math.Add".  For static
 assignments, we can use a jrpc2.MapAssigner, which finds methods by looking
 them up in a Go map:
 
@@ -44,23 +46,20 @@ Equipped with an Assigner we can now construct a Server:
 
    srv := jrpc2.NewServer(assigner, nil)  // nil for default options
 
-To serve requests, we will next need a connection. The channel package's Raw
-function will adapt a net.Conn to a jrpc2.Channel for us:
+To serve requests, we will next need a connection. The channel package exports
+functions that can adapt various input and output streams to a jrpc2.Channel,
+for example:
 
-   import "net"
-
-   inc, err := net.Listen("tcp", ":8080")
-   ...
-   conn, err := inc.Accept()
-   ...
-   srv.Start(channel.Raw(conn))
+   srv.Start(channel.Line(os.Stdin, os.Stdout))
 
 The running server will handle incoming requests until the connection fails or
-until it is stopped (by calling srv.Stop()). To wait for the server to finish,
+until it is stopped explicitly by calling srv.Stop(). To wait for the server to
+finish, call:
 
    err := srv.Wait()
 
-This will report the error that led to the server exiting.
+This will report the error that led to the server exiting. A working
+implementation of this example can found in examples/adder/adder.go.
 
 Clients
 
