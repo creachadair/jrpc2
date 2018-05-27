@@ -74,7 +74,7 @@ To establish a client we first need a Channel:
 
    conn, err := net.Dial("tcp", "localhost:8080")
    ...
-   cli := jrpc2.NewClient(channel.Raw(conn), nil)
+   cli := jrpc2.NewClient(channel.Raw(conn, conn), nil)
 
 There are two parts to sending an RPC: First, we construct a request given the
 method name and parameters, and issue it to the server. This returns a pending
