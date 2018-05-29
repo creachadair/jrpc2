@@ -248,7 +248,7 @@ func TestClientCancellation(t *testing.T) {
 	// Wait till the method handler is running, then notify the server to
 	// cancel the running request.
 	<-started
-	if err := c.Notify(ctx, "rpc.cancel", []string{p.ID()}); err != nil {
+	if err := c.Cancel(ctx, p); err != nil {
 		t.Fatalf("Notify rpc.cancel for %q failed: %v", p.ID(), err)
 	}
 

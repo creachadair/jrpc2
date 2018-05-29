@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"strconv"
 	"sync"
 )
@@ -279,6 +280,18 @@ func (c *Client) Notify(ctx context.Context, method string, params interface{}) 
 		params: bits,
 	})
 	return err
+}
+
+// Cancel transmits an rpc.cancel notification for the specified requests to
+// the server.  Note that this is not a standard protocol, so not all server
+// implementations will obey the notification. A *jrcp2.Server will do so.
+func (c *Client) Cancel(ctx context.Context, reqs ...*Pending) error {
+	var ids []string
+	for _, req := range reqs {
+		ids = append(ids, req.ID())
+	}
+	sort.Strings(ids)
+	return c.Notify(ctx, "rpc.cancel", ids)
 }
 
 // Close shuts down the client, abandoning any pending in-flight requests.
