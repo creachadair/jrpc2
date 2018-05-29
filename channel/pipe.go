@@ -14,4 +14,3 @@ func Pipe() (client, server jrpc2.Channel) {
 	server = Raw(sr, sw)
 	return
 }
-
