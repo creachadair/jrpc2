@@ -401,6 +401,10 @@ func (ts tasks) responses() jresponses {
 		rsp := &jresponse{V: Version, ID: task.req.ID}
 		if task.err == nil {
 			rsp.R = task.val
+		} else if task.err == context.Canceled {
+			rsp.E = jerrorf(E_Cancelled, E_Cancelled.Error())
+		} else if task.err == context.DeadlineExceeded {
+			rsp.E = jerrorf(E_DeadlineExceeded, E_DeadlineExceeded.Error())
 		} else if e, ok := task.err.(*Error); ok {
 			rsp.E = e.tojerror()
 		} else if code, ok := task.err.(Code); ok {
