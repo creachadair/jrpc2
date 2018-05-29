@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"bitbucket.org/creachadair/stringset"
 	"bitbucket.org/creachadair/taskgroup"
 	"golang.org/x/sync/semaphore"
 )
@@ -31,7 +30,9 @@ type Server struct {
 	ch   Channel     // the channel to the client
 	info *ServerInfo // the current server info
 
-	used stringset.Set // IDs of requests being processed
+	// For each request ID currently in-flight, this map carries a cancel
+	// function attached to the context that was sent to the handler.
+	used map[string]context.CancelFunc
 }
 
 // NewServer returns a new unstarted server that will dispatch incoming
@@ -70,7 +71,7 @@ func (s *Server) Start(c Channel) *Server {
 	s.ch = c
 	s.work = sync.NewCond(s.mu)
 	s.inq = list.New()
-	s.used = stringset.New()
+	s.used = make(map[string]context.CancelFunc)
 
 	// Reset all the I/O structures and start up the workers.
 	s.err = nil
@@ -128,7 +129,7 @@ func (s *Server) nextRequest() (func() error, error) {
 		s.log("Checking request for %q: %s", req.M, string(req.P))
 		t := &task{req: req}
 		req.ID = fixID(req.ID)
-		if id := string(req.ID); id != "" && !s.used.Add(id) {
+		if id := string(req.ID); id != "" && s.used[id] != nil {
 			t.err = Errorf(E_InvalidRequest, "duplicate request id %q", id)
 		} else if !s.versionOK(req.V) {
 			t.err = Errorf(E_InvalidRequest, "incorrect version marker %q", req.V)
@@ -136,8 +137,14 @@ func (s *Server) nextRequest() (func() error, error) {
 			t.err = Errorf(E_InvalidRequest, "empty method name")
 		} else if m := s.assign(req.M); m == nil {
 			t.err = Errorf(E_MethodNotFound, "no such method %q", req.M)
+		} else if base, params, err := s.dectx(context.Background(), json.RawMessage(req.P)); err != nil {
+			t.err = Errorf(E_InternalError, "invalid request context: %v", err)
 		} else {
+			ctx, cancel := context.WithCancel(base)
+			s.used[id] = cancel
 			t.m = m
+			t.ctx = ctx
+			t.params = params
 		}
 		if t.err != nil {
 			s.log("Task error: %v", t.err)
@@ -155,10 +162,10 @@ func (s *Server) nextRequest() (func() error, error) {
 			}
 			t := t
 			g.Go(func() error {
-				t.val, t.err = s.dispatch(t.m, &Request{
+				t.val, t.err = s.dispatch(t.ctx, t.m, &Request{
 					id:     t.req.ID,
 					method: t.req.M,
-					params: json.RawMessage(t.req.P),
+					params: t.params,
 				})
 				return nil
 			})
@@ -172,6 +179,14 @@ func (s *Server) nextRequest() (func() error, error) {
 			s.log("Sending response: %v", rsps)
 			s.mu.Lock()
 			defer s.mu.Unlock()
+
+			// Ensure all the inflight requests get their contexts cancelled.
+			for _, rsp := range rsps {
+				if cancel, ok := s.used[string(rsp.ID)]; ok {
+					cancel()
+				}
+			}
+
 			nw, err := encode(ch, rsps)
 			s.info.BytesOut += int64(nw)
 			return err
@@ -182,12 +197,7 @@ func (s *Server) nextRequest() (func() error, error) {
 
 // dispatch invokes m for the specified request type, and marshals the return
 // value into JSON if there is one.
-func (s *Server) dispatch(m Method, req *Request) (json.RawMessage, error) {
-	base, params, err := s.dectx(context.Background(), req.params)
-	if err != nil {
-		return nil, err
-	}
-	req.params = params
+func (s *Server) dispatch(base context.Context, m Method, req *Request) (json.RawMessage, error) {
 	ctx := context.WithValue(base, inboundRequestKey, req)
 	if err := s.sem.Acquire(ctx, 1); err != nil {
 		return nil, err
@@ -236,9 +246,11 @@ func (s *Server) stop(err error) {
 	for cur := s.inq.Front(); cur != nil; cur = cur.Next() {
 		var keep jrequests
 		for _, req := range cur.Value.(jrequests) {
-			if req.ID != nil {
+			if req.ID == nil {
 				keep = append(keep, req)
 				s.log("Retaining notification %+v", req)
+			} else if cancel, ok := s.used[string(req.ID)]; ok {
+				cancel()
 			}
 		}
 		if len(keep) != 0 {
@@ -306,11 +318,37 @@ type ServerInfo struct {
 // The caller must hold s.mu.
 func (s *Server) assign(name string) Method {
 	const serverInfo = "rpc.serverInfo"
-	if s.info != nil && name == serverInfo {
-		info := *s.info
-		info.Methods = s.mux.Names()
-		return methodFunc(func(context.Context, *Request) (interface{}, error) {
-			return &info, nil
+	const rpcCancel = "rpc.cancel"
+	switch name {
+	case "rpc.serverInfo":
+		if s.info != nil {
+			info := *s.info
+			info.Methods = s.mux.Names()
+			return methodFunc(func(context.Context, *Request) (interface{}, error) {
+				return &info, nil
+			})
+		}
+
+	case "rpc.cancel":
+		// Handle client-requested cancellation of a pending method. This only
+		// works if issued as a notification.
+		return methodFunc(func(_ context.Context, req *Request) (interface{}, error) {
+			if !req.IsNotification() {
+				return nil, Errorf(E_MethodNotFound, "no such method: %q", name)
+			}
+			var ids []string
+			if err := req.UnmarshalParams(&ids); err != nil {
+				return nil, err
+			}
+			s.mu.Lock()
+			defer s.mu.Unlock()
+			for _, id := range ids {
+				if cancel, ok := s.used[id]; ok {
+					cancel()
+					s.log("Cancelled request %s by client order", id)
+				}
+			}
+			return nil, nil
 		})
 	}
 	return s.mux.Assign(name)
@@ -339,10 +377,12 @@ func (s *Server) versionOK(v string) bool {
 }
 
 type task struct {
-	m   Method
-	req *jrequest
-	val json.RawMessage
-	err error
+	m      Method
+	req    *jrequest
+	val    json.RawMessage
+	ctx    context.Context
+	params json.RawMessage
+	err    error
 }
 
 type tasks []*task
