@@ -153,6 +153,25 @@ want to do anything for a notification, it can query the request:
       return 0, nil  // ignore notifications
    }
 
+Cancellation
+
+The *Client and *Server types support a nonstandard cancellation protocol, that
+consists of a notification method "rpc.cancel" taking an array of request IDs
+to be cancelled. Upon receiving this notification, the server will cancel the
+context of each method handler whose ID is named.
+
+To transmit a cancellation from the client to the server, use the client's
+Cancel method, on the pending requests, e.g.:
+
+   p, err := cli.Call(ctx, "MethodName", params)
+   ...
+   if err := cli.Cancel(ctx, p); err != nil {
+      ...
+   }
+
+The "rpc.cancel" method is automatically handled by the *Server implementation
+from this package.
+
 Services with Multiple Methods
 
 The examples above show a server with only one method using NewMethod; you will
