@@ -191,14 +191,17 @@ func TestClientServer(t *testing.T) {
 	}
 }
 
-func TestCancellation(t *testing.T) {
+func TestTimeout(t *testing.T) {
 	_, c, cleanup := newServer(t, MapAssigner{
-		"Stall": NewMethod(func(context.Context) (bool, error) {
-			const pause = 10 * time.Second // in effect, "forever"
-			t.Logf("Stalling for %v...", pause)
-			time.Sleep(pause)
-			t.Log("Done stalling")
-			return true, nil
+		"Stall": NewMethod(func(ctx context.Context) (bool, error) {
+			t.Log("Stalling...")
+			select {
+			case <-ctx.Done():
+				t.Logf("Stall context done: err=%v", ctx.Err())
+				return true, nil
+			case <-time.After(10 * time.Second):
+				return false, errors.New("stall timed out")
+			}
 		}),
 	}, nil)
 	defer cleanup()
