@@ -161,7 +161,7 @@ to be cancelled. Upon receiving this notification, the server will cancel the
 context of each method handler whose ID is named.
 
 To transmit a cancellation from the client to the server, use the client's
-Cancel method, on the pending requests, e.g.:
+Cancel method on the pending requests, e.g.:
 
    p, err := cli.Call(ctx, "MethodName", params)
    ...
