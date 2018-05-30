@@ -313,6 +313,7 @@ func (s *Server) read(ch Channel) {
 		s.mu.Lock()
 		s.metrics.Count("rpc.requests", int64(len(in)))
 		s.metrics.Count("rpc.bytesRead", int64(len(bits)))
+		s.metrics.SetMaxValue("rpc.maxBytesRead", int64(len(bits)))
 		if isRecoverableJSONError(err) {
 			s.pushError(nil, jerrorf(E_ParseError, "invalid JSON request message"))
 		} else if err != nil {
