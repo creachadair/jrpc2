@@ -32,7 +32,9 @@ type ServerOptions struct {
 	// params are used as given.
 	DecodeContext func(context.Context, json.RawMessage) (context.Context, json.RawMessage, error)
 
-	// If set, use this value to record server metrics.
+	// If set, use this value to record server metrics. All servers created
+	// from the same options will share the same metrics collector.  If none is
+	// set, an empty collector will be created for each new server.
 	Metrics *Metrics
 }
 
