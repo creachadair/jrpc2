@@ -385,6 +385,7 @@ func TestServerInfo(t *testing.T) {
 		{info.Counter, "zero-sum", 0},
 		{info.Counter, "rpc.bytesRead", -1},
 		{info.Counter, "rpc.bytesWritten", -1},
+		{info.Counter, "rpc.errors", 0},
 		{info.MaxValue, "max-metric-value", 5},
 		{info.MaxValue, "does-not-exist", 0},
 		{info.MaxValue, "rpc.maxBytesRead", -1},

@@ -153,6 +153,7 @@ func (s *Server) nextRequest() (func() error, error) {
 		}
 		if t.err != nil {
 			s.log("Task error: %v", t.err)
+			s.metrics.Count("rpc.errors", 1)
 		}
 		tasks = append(tasks, t)
 	}
@@ -386,6 +387,7 @@ func (s *Server) pushError(id json.RawMessage, jerr *jerror) {
 		ID: id,
 		E:  jerr,
 	}})
+	s.metrics.Count("rpc.errors", 1)
 	s.metrics.Count("rpc.bytesWritten", int64(nw))
 	if err != nil {
 		s.log("Writing error response: %v", err)
