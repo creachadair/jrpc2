@@ -35,7 +35,7 @@ func testSendRecv(t *testing.T, s sender, r receiver, msg string) {
 		t.Errorf("Recv(): unexpected error: %v", recvErr)
 	}
 	if got := string(data); got != msg {
-		t.Errorf("Recv(): got %q, want %q", got, msg)
+		t.Errorf("Recv():\ngot  %#q\nwant %#q", got, msg)
 	}
 }
 
@@ -47,8 +47,8 @@ func TestPipe(t *testing.T) {
 	defer lhs.Close()
 	defer rhs.Close()
 
-	t.Logf("Testing lhs ⇒ rhs :: %q", message1)
+	t.Logf("Testing lhs ⇒ rhs :: %s", message1)
 	testSendRecv(t, lhs, rhs, message1)
-	t.Logf("Testing rhs ⇒ lhs :: %q", message2)
+	t.Logf("Testing rhs ⇒ lhs :: %s", message2)
 	testSendRecv(t, rhs, lhs, message2)
 }
