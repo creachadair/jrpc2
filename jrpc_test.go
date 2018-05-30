@@ -343,7 +343,7 @@ func TestErrorCode(t *testing.T) {
 func TestServerInfo(t *testing.T) {
 	s, c, cleanup := newServer(t, MapAssigner{
 		"Metricize": NewMethod(func(ctx context.Context) (bool, error) {
-			m := MetricsWriter(ctx)
+			m := ServerMetrics(ctx)
 			if m == nil {
 				t.Error("Request context does not contain a metrics writer")
 				return false, nil

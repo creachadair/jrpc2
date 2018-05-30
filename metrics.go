@@ -5,16 +5,16 @@ import (
 	"sync"
 )
 
-// MetricsWriter returns a metrics writer associated with the given context, or
-// nil if ctx doees not have a metrics writer.
-func MetricsWriter(ctx context.Context) *Metrics {
-	if v := ctx.Value(metricsWriterKey); v != nil {
+// ServerMetrics returns the server metrics collector associated with the given
+// context, or nil if ctx doees not have a collector attached.
+func ServerMetrics(ctx context.Context) *Metrics {
+	if v := ctx.Value(serverMetricsKey); v != nil {
 		return v.(*Metrics)
 	}
 	return nil
 }
 
-const metricsWriterKey = requestContextKey("metrics-writer")
+const serverMetricsKey = requestContextKey("server-metrics")
 
 // A Metrics value collects counters and maximum value trackers.  A nil
 // *Metrics is valid, and discards all metrics. A *Metrics value is safe for

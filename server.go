@@ -206,7 +206,7 @@ func (s *Server) nextRequest() (func() error, error) {
 // value into JSON if there is one.
 func (s *Server) dispatch(base context.Context, m Method, req *Request) (json.RawMessage, error) {
 	ctx := context.WithValue(base, inboundRequestKey, req)
-	ctx = context.WithValue(ctx, metricsWriterKey, s.metrics)
+	ctx = context.WithValue(ctx, serverMetricsKey, s.metrics)
 	if err := s.sem.Acquire(ctx, 1); err != nil {
 		return nil, err
 	}
