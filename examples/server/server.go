@@ -92,6 +92,7 @@ func main() {
 		ServerOptions: &jrpc2.ServerOptions{
 			LogWriter:   os.Stderr,
 			Concurrency: *maxTasks,
+			Metrics:     jrpc2.NewMetrics(),
 		},
 	})
 }
