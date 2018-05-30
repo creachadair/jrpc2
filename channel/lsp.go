@@ -2,7 +2,6 @@ package channel
 
 import (
 	"bufio"
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -20,14 +19,14 @@ import (
 //
 //    Content-Length: <nbytes>\r\n
 //    \r\n
-//    <payload>\r\n
+//    <payload>
 //
-// The trailing CRLF pair is appended if the payload does not already include it.
-// The length is encoded as decimal digits. For example:
+// The length (nbytes) is encoded as decimal digits. For example, the message
+// "123\n" is transmitted as:
 //
 //    Content-Length: 4\r\n
 //    \r\n
-//    {}\r\n
+//    123\n
 //
 func LSP(r io.Reader, wc io.WriteCloser) jrpc2.Channel {
 	return &lsp{wc: wc, rd: bufio.NewReader(r)}
@@ -43,18 +42,10 @@ type lsp struct {
 
 // Send implements part of jrpc2.Channel.
 func (c *lsp) Send(msg []byte) error {
-	n := len(msg)
-	needBreak := !bytes.HasSuffix(msg, []byte("\r\n"))
-	if needBreak {
-		n += 2
-	}
-	if _, err := fmt.Fprintf(c.wc, "Content-Length: %d\r\n\r\n", n); err != nil {
+	if _, err := fmt.Fprintf(c.wc, "Content-Length: %d\r\n\r\n", len(msg)); err != nil {
 		return err
 	}
 	_, err := c.wc.Write(msg)
-	if err == nil && needBreak {
-		_, err = c.wc.Write([]byte("\r\n"))
-	}
 	return err
 }
 
@@ -101,7 +92,7 @@ func (c *lsp) Recv() ([]byte, error) {
 	if _, err := io.ReadFull(c.rd, data); err != nil {
 		return nil, err
 	}
-	return bytes.TrimRight(data, "\r\n"), nil
+	return data, nil
 }
 
 // Close implements part of jrpc2.Channel.
