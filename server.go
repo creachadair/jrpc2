@@ -195,8 +195,7 @@ func (s *Server) nextRequest() (func() error, error) {
 			}
 
 			nw, err := encode(ch, rsps)
-			s.metrics.Count("rpc.bytesWritten", int64(nw))
-			s.metrics.SetMaxValue("rpc.maxBytesWritten", int64(nw))
+			s.metrics.CountAndSetMax("rpc.bytesWritten", int64(nw))
 			return err
 		}
 		return nil
@@ -314,8 +313,7 @@ func (s *Server) read(ch Channel) {
 
 		s.mu.Lock()
 		s.metrics.Count("rpc.requests", int64(len(in)))
-		s.metrics.Count("rpc.bytesRead", int64(len(bits)))
-		s.metrics.SetMaxValue("rpc.maxBytesRead", int64(len(bits)))
+		s.metrics.CountAndSetMax("rpc.bytesRead", int64(len(bits)))
 		if isRecoverableJSONError(err) {
 			s.pushError(nil, jerrorf(E_ParseError, "invalid JSON request message"))
 		} else if err != nil {
@@ -389,8 +387,7 @@ func (s *Server) pushError(id json.RawMessage, jerr *jerror) {
 		E:  jerr,
 	}})
 	s.metrics.Count("rpc.errors", 1)
-	s.metrics.Count("rpc.bytesWritten", int64(nw))
-	s.metrics.SetMaxValue("rpc.maxBytesWritten", int64(nw))
+	s.metrics.CountAndSetMax("rpc.bytesWritten", int64(nw))
 	if err != nil {
 		s.log("Writing error response: %v", err)
 	}
