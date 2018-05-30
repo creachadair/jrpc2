@@ -1,16 +1,13 @@
 package channel
 
-import (
-	"testing"
-)
+import "testing"
 
 func TestChannelTypes(t *testing.T) {
 	tests := []struct {
 		name    string
 		framing Framing
 	}{
-		// TODO(fromberger): Fix the implementation, then uncomment.
-		//{"LSP", LSP},
+		{"LSP", LSP},
 		{"Line", Line},
 		{"Raw", Raw},
 		{"Varint", Varint},

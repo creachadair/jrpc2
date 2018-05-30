@@ -101,7 +101,7 @@ func (c *lsp) Recv() ([]byte, error) {
 	if _, err := io.ReadFull(c.rd, data); err != nil {
 		return nil, err
 	}
-	return data, nil
+	return bytes.TrimRight(data, "\r\n"), nil
 }
 
 // Close implements part of jrpc2.Channel.
