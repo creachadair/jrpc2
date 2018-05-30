@@ -39,13 +39,13 @@ func testSendRecv(t *testing.T, s sender, r receiver, msg string) {
 	}
 }
 
+const message1 = `["Full plate and packing steel"]`
+const message2 = `{"slogan":"Jump on your sword, evil!"}`
+
 func TestPipe(t *testing.T) {
 	lhs, rhs := Pipe()
 	defer lhs.Close()
 	defer rhs.Close()
-
-	const message1 = `["Full plate and packing steel"]`
-	const message2 = `{"slogan":"Jump on your sword, evil!"}`
 
 	t.Logf("Testing lhs ⇒ rhs :: %q", message1)
 	testSendRecv(t, lhs, rhs, message1)
