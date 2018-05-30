@@ -389,6 +389,7 @@ func TestServerInfo(t *testing.T) {
 		{info.MaxValue, "max-metric-value", 5},
 		{info.MaxValue, "does-not-exist", 0},
 		{info.MaxValue, "rpc.maxBytesRead", -1},
+		{info.MaxValue, "rpc.maxBytesWritten", -1},
 	}
 	for _, test := range tests {
 		got, ok := test.input[test.name]

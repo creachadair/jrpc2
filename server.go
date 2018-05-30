@@ -196,6 +196,7 @@ func (s *Server) nextRequest() (func() error, error) {
 
 			nw, err := encode(ch, rsps)
 			s.metrics.Count("rpc.bytesWritten", int64(nw))
+			s.metrics.SetMaxValue("rpc.maxBytesWritten", int64(nw))
 			return err
 		}
 		return nil
@@ -389,6 +390,7 @@ func (s *Server) pushError(id json.RawMessage, jerr *jerror) {
 	}})
 	s.metrics.Count("rpc.errors", 1)
 	s.metrics.Count("rpc.bytesWritten", int64(nw))
+	s.metrics.SetMaxValue("rpc.maxBytesWritten", int64(nw))
 	if err != nil {
 		s.log("Writing error response: %v", err)
 	}
