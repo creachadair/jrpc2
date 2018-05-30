@@ -41,7 +41,7 @@ import (
 )
 
 // RPC_serverInfo calls the built-in rpc.serverInfo method exported by servers
-// in this package.
+// in the jrpc2 package.
 var RPC_serverInfo = New("rpc.serverInfo",
 	nil, (*jrpc2.ServerInfo)(nil)).(func(context.Context, *jrpc2.Client) (*jrpc2.ServerInfo, error))
 
