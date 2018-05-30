@@ -60,8 +60,9 @@ func (r *Response) Error() *Error {
 	return nil
 }
 
-// UnmarshalResult decodes the result message into v. If the request failed, an
-// error is reported with concrete type *Error, and v is unmodified.
+// UnmarshalResult decodes the result message into v. If the request failed,
+// UnmarshalResult returns the *Error value that would also be returned by
+// r.Error(), and v is unmodified.
 func (r *Response) UnmarshalResult(v interface{}) error {
 	if r.err != nil {
 		return r.err
