@@ -31,6 +31,9 @@ type ServerOptions struct {
 	// server to decode context metadata sent by the client. If unset, ctx and
 	// params are used as given.
 	DecodeContext func(context.Context, json.RawMessage) (context.Context, json.RawMessage, error)
+
+	// If set, use this value to record server metrics.
+	Metrics *Metrics
 }
 
 func (s *ServerOptions) logger() func(string, ...interface{}) {
@@ -57,6 +60,13 @@ func (s *ServerOptions) decodeContext() func(context.Context, json.RawMessage) (
 		}
 	}
 	return s.DecodeContext
+}
+
+func (s *ServerOptions) metrics() *Metrics {
+	if s == nil || s.Metrics == nil {
+		return NewMetrics()
+	}
+	return s.Metrics
 }
 
 // ClientOptions control the behaviour of a client created by NewClient.

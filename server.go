@@ -52,7 +52,7 @@ func NewServer(mux Assigner, opts *ServerOptions) *Server {
 		log:     opts.logger(),
 		dectx:   opts.decodeContext(),
 		mu:      new(sync.Mutex),
-		metrics: newMetrics(),
+		metrics: opts.metrics(),
 	}
 	return s
 }
@@ -238,7 +238,7 @@ func (s *Server) serverInfo() *ServerInfo {
 		Counter:  make(map[string]int64),
 		MaxValue: make(map[string]int64),
 	}
-	s.metrics.snapshot(info.Counter, info.MaxValue)
+	s.metrics.Snapshot(info.Counter, info.MaxValue)
 	return info
 }
 

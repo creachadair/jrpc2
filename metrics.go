@@ -16,7 +16,7 @@ func MetricsWriter(ctx context.Context) *Metrics {
 
 const metricsWriterKey = requestContextKey("metrics-writer")
 
-// A Metrics value captures counters and maximum value trackers.  A nil
+// A Metrics value collects counters and maximum value trackers.  A nil
 // *Metrics is valid, and discards all metrics. A *Metrics value is safe for
 // concurrent use by multiple goroutines.
 type Metrics struct {
@@ -25,7 +25,8 @@ type Metrics struct {
 	maxVal  map[string]int64
 }
 
-func newMetrics() *Metrics {
+// NewMetrics creates a new, empty metrics collector.
+func NewMetrics() *Metrics {
 	return &Metrics{counter: make(map[string]int64), maxVal: make(map[string]int64)}
 }
 
@@ -64,17 +65,17 @@ func (m *Metrics) CountAndSetMax(name string, n int64) {
 	}
 }
 
-// snapshot copies an atomic snapshot of the counters and max value trackers
+// Snapshot copies an atomic snapshot of the counters and max value trackers
 // into the provided non-nil maps.
-func (m *Metrics) snapshot(ctr, mval map[string]int64) {
+func (m *Metrics) Snapshot(counters, maxValues map[string]int64) {
 	if m != nil {
 		m.mu.Lock()
 		defer m.mu.Unlock()
 		for name, val := range m.counter {
-			ctr[name] = val
+			counters[name] = val
 		}
 		for name, val := range m.maxVal {
-			mval[name] = val
+			maxValues[name] = val
 		}
 	}
 }
