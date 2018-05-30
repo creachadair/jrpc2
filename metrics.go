@@ -6,7 +6,8 @@ import (
 )
 
 // ServerMetrics returns the server metrics collector associated with the given
-// context, or nil if ctx doees not have a collector attached.
+// context, or nil if ctx doees not have a collector attached.  The context
+// passed to a handler by *jrpc2.Server will include this value.
 func ServerMetrics(ctx context.Context) *Metrics {
 	if v := ctx.Value(serverMetricsKey); v != nil {
 		return v.(*Metrics)

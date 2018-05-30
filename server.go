@@ -442,11 +442,12 @@ func (ts tasks) responses() jresponses {
 }
 
 // InboundRequest returns the inbound request associated with the given
-// context, or nil if ctx does not have an inbound request.
+// context, or nil if ctx does not have an inbound request. The context passed
+// to the handler by *jrpc2.Server will include this value.
 //
-// This is mainly of interest to wrapped server methods that do not have the
-// request as an explicit parameter; for direct implementations of Method.Call
-// the request value returned by InboundRequest will be the same value as was
+// This is mainly useful to wrapped server methods that do not have the request
+// as an explicit parameter; for direct implementations of Method.Call the
+// request value returned by InboundRequest will be the same value as was
 // passed explicitly.
 func InboundRequest(ctx context.Context) *Request {
 	if v := ctx.Value(inboundRequestKey); v != nil {
