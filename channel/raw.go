@@ -7,8 +7,8 @@ import (
 	"bitbucket.org/creachadair/jrpc2"
 )
 
-// Raw constructs a jrpc2.Channel that transmits and receives messages on rwc
-// with no explicit framing.
+// Raw constructs a jrpc2.Channel that transmits and receives messages on r and
+// wc with no explicit framing.
 func Raw(r io.Reader, wc io.WriteCloser) jrpc2.Channel {
 	return raw{wc: wc, dec: json.NewDecoder(r)}
 }

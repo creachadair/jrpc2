@@ -12,8 +12,8 @@ import (
 	"bitbucket.org/creachadair/jrpc2"
 )
 
-// LSP constructs a jrpc2.Channel that transmits and receives messages on rwc
-// using the Language Server Protocol (LSP) framing, defined by the LSP
+// LSP constructs a jrpc2.Channel that transmits and receives messages on r and
+// wc using the Language Server Protocol (LSP) framing, defined by the LSP
 // specification at http://github.com/Microsoft/language-server-protocol.
 //
 // Specifically, each message is sent in the format:
