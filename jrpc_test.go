@@ -340,3 +340,65 @@ func TestErrorCode(t *testing.T) {
 	}
 }
 
+func TestServerInfo(t *testing.T) {
+	s, c, cleanup := newServer(t, MapAssigner{
+		"Metricize": NewMethod(func(ctx context.Context) (bool, error) {
+			m := MetricsWriter(ctx)
+			if m == nil {
+				t.Error("Request context does not contain a metrics writer")
+				return false, nil
+			}
+			m.Count("counters-written", 1)
+			m.Count("counters-written", 2)
+
+			// Max value trackers are not accumulative.
+			m.SetMaxValue("max-metric-value", 1)
+			m.SetMaxValue("max-metric-value", 5)
+			m.SetMaxValue("max-metric-value", 3)
+			m.SetMaxValue("max-metric-value", -30337)
+
+			// Counters are accumulative, and negative deltas subtract.
+			m.Count("zero-sum", 0)
+			m.Count("zero-sum", 15)
+			m.Count("zero-sum", -16)
+			m.Count("zero-sum", 1)
+			return true, nil
+		}),
+	}, nil)
+	defer cleanup()
+
+	ctx := context.Background()
+	if rsp, err := c.CallWait(ctx, "Metricize", nil); err != nil {
+		t.Fatalf("CallWait(Metricize) failed: %v", err)
+	} else if err := rsp.Error(); err != nil {
+		t.Errorf("Metricize unexpectedly reported an error: %v", err)
+	}
+
+	info := s.ServerInfo()
+	tests := []struct {
+		input map[string]int64
+		name  string
+		want  int64 // use < 0 to test for existence only
+	}{
+		{info.Counter, "rpc.requests", 1},
+		{info.Counter, "counters-written", 3},
+		{info.Counter, "zero-sum", 0},
+		{info.Counter, "rpc.bytesRead", -1},
+		{info.Counter, "rpc.bytesWritten", -1},
+		{info.MaxValue, "max-metric-value", 5},
+		{info.MaxValue, "does-not-exist", 0},
+		{info.MaxValue, "rpc.maxBytesRead", -1},
+	}
+	for _, test := range tests {
+		got, ok := test.input[test.name]
+		if test.want < 0 {
+			if ok {
+				t.Logf("Metric %q is defined with value %d", test.name, got)
+			} else {
+				t.Errorf("Metric %q is not defined, but was expected", test.name)
+			}
+		} else if got != test.want {
+			t.Errorf("Counter %q: got %d, want %d", test.name, got, test.want)
+		}
+	}
+}
