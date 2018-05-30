@@ -458,68 +458,8 @@ func InboundRequest(ctx context.Context) *Request {
 	return nil
 }
 
-// MetricsWriter returns a metrics writer associated with the given context, or
-// nil if ctx doees not have a metrics writer.
-func MetricsWriter(ctx context.Context) *Metrics {
-	if v := ctx.Value(metricsWriterKey); v != nil {
-		return v.(*Metrics)
-	}
-	return nil
-}
-
 // requestContextKey is the concrete type of the context key used to dispatch
 // the request context in to handlers.
 type requestContextKey string
 
 const inboundRequestKey = requestContextKey("inbound-request")
-const metricsWriterKey = requestContextKey("metrics-writer")
-
-// A Metrics value captures counters and maximum value trackers.  A nil
-// *Metrics is valid, and discards all metrics. A *Metrics value is safe for
-// concurrent use by multiple goroutines.
-type Metrics struct {
-	mu      sync.Mutex
-	counter map[string]int64
-	maxVal  map[string]int64
-}
-
-func newMetrics() *Metrics {
-	return &Metrics{counter: make(map[string]int64), maxVal: make(map[string]int64)}
-}
-
-// Count adds n to the current value of the counter named, defining the counter
-// if it does not already exist.
-func (m *Metrics) Count(name string, n int64) {
-	if m != nil {
-		m.mu.Lock()
-		defer m.mu.Unlock()
-		m.counter[name] += n
-	}
-}
-
-// SetMaxValue sets the maximum value metric named to the greater of n and its
-// current value, defining the value if it does not already exist.
-func (m *Metrics) SetMaxValue(name string, n int64) {
-	if m != nil {
-		m.mu.Lock()
-		defer m.mu.Unlock()
-		if n > m.maxVal[name] {
-			m.maxVal[name] = n
-		}
-	}
-}
-
-// snapshot copies an atomic snapshot of the counters and max value trackers
-// into the provided non-nil maps.
-func (m *Metrics) snapshot(ctr, mval map[string]int64) {
-	if m != nil {
-		m.mu.Lock()
-		defer m.mu.Unlock()
-		for name, val := range m.counter {
-			ctr[name] = val
-		}
-		for name, val := range m.maxVal {
-			mval[name] = val
-		}
-	}
-}
