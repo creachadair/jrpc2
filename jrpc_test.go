@@ -219,14 +219,17 @@ func TestCancellation(t *testing.T) {
 
 func TestClientCancellation(t *testing.T) {
 	started := make(chan struct{})
+	stopped := make(chan bool, 1)
 	_, c, cleanup := newServer(t, MapAssigner{
 		"Hang": NewMethod(func(ctx context.Context) (bool, error) {
 			close(started) // signal that the method handler is running
+			defer close(stopped)
 
 			t.Log("Waiting for context completion...")
 			select {
 			case <-ctx.Done():
-				t.Logf("Context is complete: err=%v", ctx.Err())
+				t.Logf("Server context cancelled: err=%v", ctx.Err())
+				stopped <- true
 				return true, ctx.Err()
 			case <-time.After(10 * time.Second):
 				return false, nil
@@ -237,27 +240,30 @@ func TestClientCancellation(t *testing.T) {
 
 	// Start a call that will hang around until a timer expires or an explicit
 	// cancellation is received.
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
 	p, err := c.Call(ctx, "Hang", nil)
 	if err != nil {
 		t.Fatalf("Call failed: %v", err)
 	}
-	rspc := make(chan *Response, 1)
-	go func() { rspc <- p.Wait(); close(rspc) }()
 
-	// Wait till the method handler is running, then notify the server to
-	// cancel the running request.
+	// Wait for the handler to start so that we don't race with calling the
+	// handler on the server side, then cancel the context client-side.
 	<-started
-	if err := c.Cancel(ctx, p); err != nil {
-		t.Fatalf("Notify rpc.cancel for %q failed: %v", p.ID(), err)
+	cancel()
+
+	// The call should fail client side, in the usual way for a cancellation.
+	rsp := p.Wait()
+	if err := rsp.Error(); err != nil {
+		if err.Code != E_Cancelled {
+			t.Errorf("Response error for %q: got %v, want %v", rsp.ID(), err, E_Cancelled)
+		}
+	} else {
+		t.Errorf("Response for %q: unexpectedly succeeded", rsp.ID())
 	}
 
-	// The request should report that it was cancelled.
-	rsp := <-rspc
-	if err := rsp.Error(); err == nil {
-		t.Errorf("Response for %q: unexpectedly succeeded", rsp.ID())
-	} else {
-		t.Logf("Got expected failure: %v", err)
+	// The server handler should have reported a cancellation.
+	if ok := <-stopped; !ok {
+		t.Error("Server context was not cancelled")
 	}
 }
 

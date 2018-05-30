@@ -160,14 +160,14 @@ consists of a notification method "rpc.cancel" taking an array of request IDs
 to be cancelled. Upon receiving this notification, the server will cancel the
 context of each method handler whose ID is named.
 
-To transmit a cancellation from the client to the server, use the client's
-Cancel method on the pending requests, e.g.:
+When the context associated with a client request is cancelled, the client will
+send an "rpc.cancel" notification to the server for that request's ID:
 
+   ctx, cancel := context.WithCancel(ctx)
    p, err := cli.Call(ctx, "MethodName", params)
    ...
-   if err := cli.Cancel(ctx, p); err != nil {
-      ...
-   }
+   cancel()
+   rsp := p.Wait()
 
 The "rpc.cancel" method is automatically handled by the *Server implementation
 from this package.

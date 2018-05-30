@@ -140,11 +140,14 @@ func (s *Server) nextRequest() (func() error, error) {
 		} else if base, params, err := s.dectx(context.Background(), json.RawMessage(req.P)); err != nil {
 			t.err = Errorf(E_InternalError, "invalid request context: %v", err)
 		} else {
-			ctx, cancel := context.WithCancel(base)
-			s.used[id] = cancel
 			t.m = m
-			t.ctx = ctx
 			t.params = params
+			t.ctx = base
+			if id != "" {
+				ctx, cancel := context.WithCancel(base)
+				s.used[id] = cancel
+				t.ctx = ctx
+			}
 		}
 		if t.err != nil {
 			s.log("Task error: %v", t.err)
@@ -317,8 +320,6 @@ type ServerInfo struct {
 // assign returns a Method to handle the specified name, or nil.
 // The caller must hold s.mu.
 func (s *Server) assign(name string) Method {
-	const serverInfo = "rpc.serverInfo"
-	const rpcCancel = "rpc.cancel"
 	switch name {
 	case "rpc.serverInfo":
 		if s.info != nil {
@@ -336,13 +337,14 @@ func (s *Server) assign(name string) Method {
 			if !req.IsNotification() {
 				return nil, Errorf(E_MethodNotFound, "no such method: %q", name)
 			}
-			var ids []string
+			var ids []json.RawMessage
 			if err := req.UnmarshalParams(&ids); err != nil {
 				return nil, err
 			}
 			s.mu.Lock()
 			defer s.mu.Unlock()
-			for _, id := range ids {
+			for _, raw := range ids {
+				id := string(raw)
 				if cancel, ok := s.used[id]; ok {
 					cancel()
 					s.log("Cancelled request %s by client order", id)

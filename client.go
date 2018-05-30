@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"sort"
 	"strconv"
 	"sync"
 )
@@ -129,6 +128,9 @@ func (c *Client) send(ctx context.Context, reqs ...*Request) ([]*Pending, error)
 	batch := make(jrequests, len(reqs))
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if c.err != nil {
+		return nil, c.err
+	}
 	for i, req := range reqs {
 		if id := req.ID(); id != "" && c.pending[id] != nil {
 			return nil, fmt.Errorf("duplicate request ID %q", id)
@@ -167,8 +169,12 @@ func (c *Client) send(ctx context.Context, reqs ...*Request) ([]*Pending, error)
 			// Otherwise, the cancellation is a no-op ("too late").
 			go func() {
 				<-pctx.Done()
+				cleanup := func() {}
 				c.mu.Lock()
-				defer c.mu.Unlock()
+				defer func() {
+					c.mu.Unlock()
+					cleanup() // N.B. outside the lock
+				}()
 				if _, ok := c.pending[id]; ok {
 					c.log("Context ended for id %q, err=%v", id, pctx.Err())
 					delete(c.pending, id)
@@ -180,6 +186,12 @@ func (c *Client) send(ctx context.Context, reqs ...*Request) ([]*Pending, error)
 					p.ch <- &jresponse{
 						ID: json.RawMessage(id),
 						E:  jerrorf(code, pctx.Err().Error()),
+					}
+
+					// Inform the server, best effort only.
+					cleanup = func() {
+						c.log("Sending rpc.cancel for id %q to the server", id)
+						c.Notify(context.Background(), "rpc.cancel", []json.RawMessage{json.RawMessage(id)})
 					}
 				}
 			}()
@@ -274,24 +286,11 @@ func (c *Client) Notify(ctx context.Context, method string, params interface{}) 
 	if err != nil {
 		return err
 	}
-	c.log("Notification params: %+v", params)
 	_, err = c.send(ctx, &Request{
 		method: method,
 		params: bits,
 	})
 	return err
-}
-
-// Cancel transmits an rpc.cancel notification for the specified requests to
-// the server.  Note that this is not a standard protocol, so not all server
-// implementations will obey the notification. A *jrcp2.Server will do so.
-func (c *Client) Cancel(ctx context.Context, reqs ...*Pending) error {
-	var ids []string
-	for _, req := range reqs {
-		ids = append(ids, req.ID())
-	}
-	sort.Strings(ids)
-	return c.Notify(ctx, "rpc.cancel", ids)
 }
 
 // Close shuts down the client, abandoning any pending in-flight requests.
