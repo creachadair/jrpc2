@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"bitbucket.org/creachadair/taskgroup"
 	"golang.org/x/sync/semaphore"
 )
 
@@ -81,7 +80,6 @@ func (s *Server) Start(c Channel) *Server {
 	// The task group carries goroutines dispatched to handle individual
 	// request messages; the waitgroup maintains the persistent goroutines for
 	// receiving input and processing the request queue.
-	g := taskgroup.New(nil)
 	s.wg.Add(2)
 
 	// Accept requests from the client and enqueue them for processing.
@@ -97,7 +95,11 @@ func (s *Server) Start(c Channel) *Server {
 				s.log("Reading next request: %v", err)
 				return
 			}
-			g.Go(next)
+			s.wg.Add(1)
+			go func() {
+				defer s.wg.Done()
+				next()
+			}()
 		}
 	}()
 	return s
@@ -158,22 +160,23 @@ func (s *Server) nextRequest() (func() error, error) {
 	// Invoke the handlers outside the lock.
 	return func() error {
 		start := time.Now()
-		g := taskgroup.New(nil)
+		var wg sync.WaitGroup
 		for _, t := range tasks {
 			if t.err != nil {
 				continue // nothing to do here; this was a bogus one
 			}
 			t := t
-			g.Go(func() error {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
 				t.val, t.err = s.dispatch(t.ctx, t.m, &Request{
 					id:     t.req.ID,
 					method: t.req.M,
 					params: t.params,
 				})
-				return nil
-			})
+			}()
 		}
-		g.Wait()
+		wg.Wait()
 		rsps := tasks.responses()
 		s.log("Completed %d responses [%v elapsed]", len(rsps), time.Since(start))
 
