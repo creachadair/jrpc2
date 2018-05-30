@@ -31,9 +31,6 @@ type ServerOptions struct {
 	// server to decode context metadata sent by the client. If unset, ctx and
 	// params are used as given.
 	DecodeContext func(context.Context, json.RawMessage) (context.Context, json.RawMessage, error)
-
-	// If not nil, this value is used to capture server statistics.
-	ServerInfo *ServerInfo
 }
 
 func (s *ServerOptions) logger() func(string, ...interface{}) {
@@ -51,13 +48,6 @@ func (s *ServerOptions) concurrency() int64 {
 		return int64(runtime.NumCPU())
 	}
 	return int64(s.Concurrency)
-}
-
-func (s *ServerOptions) serverInfo() *ServerInfo {
-	if s == nil || s.ServerInfo == nil {
-		return new(ServerInfo)
-	}
-	return s.ServerInfo
 }
 
 func (s *ServerOptions) decodeContext() func(context.Context, json.RawMessage) (context.Context, json.RawMessage, error) {

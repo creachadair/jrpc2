@@ -22,12 +22,12 @@ type Server struct {
 	log    func(string, ...interface{}) // write debug logs here
 	dectx  func(context.Context, json.RawMessage) (context.Context, json.RawMessage, error)
 
-	mu   *sync.Mutex // protects the fields below
-	err  error       // error from a previous operation
-	work *sync.Cond  // for signaling message availability
-	inq  *list.List  // inbound requests awaiting processing
-	ch   Channel     // the channel to the client
-	info *ServerInfo // the current server info
+	mu      *sync.Mutex // protects the fields below
+	err     error       // error from a previous operation
+	work    *sync.Cond  // for signaling message availability
+	inq     *list.List  // inbound requests awaiting processing
+	ch      Channel     // the channel to the client
+	metrics *Metrics    // metrics collected during execution
 
 	// For each request ID currently in-flight, this map carries a cancel
 	// function attached to the context that was sent to the handler.
@@ -46,13 +46,13 @@ func NewServer(mux Assigner, opts *ServerOptions) *Server {
 		panic("nil assigner")
 	}
 	s := &Server{
-		mux:    mux,
-		sem:    semaphore.NewWeighted(opts.concurrency()),
-		allow1: opts.allowV1(),
-		log:    opts.logger(),
-		dectx:  opts.decodeContext(),
-		mu:     new(sync.Mutex),
-		info:   opts.serverInfo(),
+		mux:     mux,
+		sem:     semaphore.NewWeighted(opts.concurrency()),
+		allow1:  opts.allowV1(),
+		log:     opts.logger(),
+		dectx:   opts.decodeContext(),
+		mu:      new(sync.Mutex),
+		metrics: newMetrics(),
 	}
 	return s
 }
@@ -194,7 +194,7 @@ func (s *Server) nextRequest() (func() error, error) {
 			}
 
 			nw, err := encode(ch, rsps)
-			s.info.BytesOut += int64(nw)
+			s.metrics.Count("rpc.bytesWritten", int64(nw))
 			return err
 		}
 		return nil
@@ -205,6 +205,7 @@ func (s *Server) nextRequest() (func() error, error) {
 // value into JSON if there is one.
 func (s *Server) dispatch(base context.Context, m Method, req *Request) (json.RawMessage, error) {
 	ctx := context.WithValue(base, inboundRequestKey, req)
+	ctx = context.WithValue(ctx, metricsWriterKey, s.metrics)
 	if err := s.sem.Acquire(ctx, 1); err != nil {
 		return nil, err
 	}
@@ -219,6 +220,25 @@ func (s *Server) dispatch(base context.Context, m Method, req *Request) (json.Ra
 		return nil, err // a call reporting an error
 	}
 	return json.Marshal(v)
+}
+
+// ServerInfo returns an atomic snapshot of the current server info for s.
+func (s *Server) ServerInfo() *ServerInfo {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.serverInfo()
+}
+
+// serverInfo returns a snapshot of the current server info for s. It requires
+// the caller hold s.mu.
+func (s *Server) serverInfo() *ServerInfo {
+	info := &ServerInfo{
+		Methods:  s.mux.Names(),
+		Counter:  make(map[string]int64),
+		MaxValue: make(map[string]int64),
+	}
+	s.metrics.snapshot(info.Counter, info.MaxValue)
+	return info
 }
 
 // Stop shuts down the server. It is safe to call this method multiple times or
@@ -291,8 +311,8 @@ func (s *Server) read(ch Channel) {
 		}
 
 		s.mu.Lock()
-		s.info.Requests += int64(len(in))
-		s.info.BytesIn += int64(len(bits))
+		s.metrics.Count("rpc.requests", int64(len(in)))
+		s.metrics.Count("rpc.bytesRead", int64(len(bits)))
 		if isRecoverableJSONError(err) {
 			s.pushError(nil, jerrorf(E_ParseError, "invalid JSON request message"))
 		} else if err != nil {
@@ -315,9 +335,9 @@ type ServerInfo struct {
 	// The list of method names exported by this server.
 	Methods []string `json:"methods,omitempty"`
 
-	Requests int64 `json:"requests"` // number of requests received
-	BytesIn  int64 `json:"bytesIn"`  // number of request bytes received
-	BytesOut int64 `json:"bytesOut"` // number of response bytes written
+	// Metric values defined by the evaluation of methods.
+	Counter  map[string]int64 `json:"counters,omitempty"`
+	MaxValue map[string]int64 `json:"maxValue,omitempty"`
 }
 
 // assign returns a Method to handle the specified name, or nil.
@@ -325,13 +345,10 @@ type ServerInfo struct {
 func (s *Server) assign(name string) Method {
 	switch name {
 	case "rpc.serverInfo":
-		if s.info != nil {
-			info := *s.info
-			info.Methods = s.mux.Names()
-			return methodFunc(func(context.Context, *Request) (interface{}, error) {
-				return &info, nil
-			})
-		}
+		info := s.serverInfo()
+		return methodFunc(func(context.Context, *Request) (interface{}, error) {
+			return info, nil
+		})
 
 	case "rpc.cancel":
 		// Handle client-requested cancellation of a pending method. This only
@@ -368,7 +385,7 @@ func (s *Server) pushError(id json.RawMessage, jerr *jerror) {
 		ID: id,
 		E:  jerr,
 	}})
-	s.info.BytesOut += int64(nw)
+	s.metrics.Count("rpc.bytesWritten", int64(nw))
 	if err != nil {
 		s.log("Writing error response: %v", err)
 	}
@@ -436,8 +453,68 @@ func InboundRequest(ctx context.Context) *Request {
 	return nil
 }
 
+// MetricsWriter returns a metrics writer associated with the given context, or
+// nil if ctx doees not have a metrics writer.
+func MetricsWriter(ctx context.Context) *Metrics {
+	if v := ctx.Value(metricsWriterKey); v != nil {
+		return v.(*Metrics)
+	}
+	return nil
+}
+
 // requestContextKey is the concrete type of the context key used to dispatch
 // the request context in to handlers.
 type requestContextKey string
 
 const inboundRequestKey = requestContextKey("inbound-request")
+const metricsWriterKey = requestContextKey("metrics-writer")
+
+// A Metrics value captures counters and maximum value trackers.  A nil
+// *Metrics is valid, and discards all metrics. A *Metrics value is safe for
+// concurrent use by multiple goroutines.
+type Metrics struct {
+	mu      sync.Mutex
+	counter map[string]int64
+	maxVal  map[string]int64
+}
+
+func newMetrics() *Metrics {
+	return &Metrics{counter: make(map[string]int64), maxVal: make(map[string]int64)}
+}
+
+// Count adds n to the current value of the counter named, defining the counter
+// if it does not already exist.
+func (m *Metrics) Count(name string, n int64) {
+	if m != nil {
+		m.mu.Lock()
+		defer m.mu.Unlock()
+		m.counter[name] += n
+	}
+}
+
+// SetMaxValue sets the maximum value metric named to the greater of n and its
+// current value, defining the value if it does not already exist.
+func (m *Metrics) SetMaxValue(name string, n int64) {
+	if m != nil {
+		m.mu.Lock()
+		defer m.mu.Unlock()
+		if n > m.maxVal[name] {
+			m.maxVal[name] = n
+		}
+	}
+}
+
+// snapshot copies an atomic snapshot of the counters and max value trackers
+// into the provided non-nil maps.
+func (m *Metrics) snapshot(ctr, mval map[string]int64) {
+	if m != nil {
+		m.mu.Lock()
+		defer m.mu.Unlock()
+		for name, val := range m.counter {
+			ctr[name] = val
+		}
+		for name, val := range m.maxVal {
+			mval[name] = val
+		}
+	}
+}
