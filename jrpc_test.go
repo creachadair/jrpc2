@@ -385,22 +385,19 @@ func TestServerInfo(t *testing.T) {
 		{info.Counter, "zero-sum", 0},
 		{info.Counter, "rpc.bytesRead", -1},
 		{info.Counter, "rpc.bytesWritten", -1},
-		{info.Counter, "rpc.errors", 0},
 		{info.MaxValue, "max-metric-value", 5},
-		{info.MaxValue, "does-not-exist", 0},
 		{info.MaxValue, "rpc.maxBytesRead", -1},
 		{info.MaxValue, "rpc.maxBytesWritten", -1},
 	}
 	for _, test := range tests {
 		got, ok := test.input[test.name]
-		if test.want < 0 {
-			if ok {
-				t.Logf("Metric %q is defined with value %d", test.name, got)
-			} else {
-				t.Errorf("Metric %q is not defined, but was expected", test.name)
-			}
-		} else if got != test.want {
-			t.Errorf("Counter %q: got %d, want %d", test.name, got, test.want)
+		if !ok {
+			t.Errorf("Metric %q is not defined, but was expected", test.name)
+			continue
+		}
+		t.Logf("Metric %q is defined with value %d", test.name, got)
+		if test.want >= 0 && got != test.want {
+			t.Errorf("Wrong value for %q: want %d", test.name, test.want)
 		}
 	}
 }
