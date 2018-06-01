@@ -3,13 +3,11 @@ package channel
 import (
 	"encoding/json"
 	"io"
-
-	"bitbucket.org/creachadair/jrpc2"
 )
 
-// Raw constructs a jrpc2.Channel that transmits and receives messages on r and
-// wc with no explicit framing.
-func Raw(r io.Reader, wc io.WriteCloser) jrpc2.Channel {
+// Raw constructs a Channel that transmits and receives messages on r and wc
+// with no explicit framing.
+func Raw(r io.Reader, wc io.WriteCloser) Channel {
 	return raw{wc: wc, dec: json.NewDecoder(r)}
 }
 
@@ -20,15 +18,15 @@ type raw struct {
 	dec *json.Decoder
 }
 
-// Send implements part of jrpc2.Channel.
+// Send implements part of the Channel interface.
 func (r raw) Send(msg []byte) error { _, err := r.wc.Write(msg); return err }
 
-// Recv implements part of jrpc2.Channel.
+// Recv implements part of the Channel interface.
 func (r raw) Recv() ([]byte, error) {
 	var msg json.RawMessage
 	err := r.dec.Decode(&msg)
 	return msg, err
 }
 
-// Close implements part of jrpc2.Channel.
+// Close implements part of the Channel interface.
 func (r raw) Close() error { return r.wc.Close() }

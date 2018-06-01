@@ -4,25 +4,23 @@ import (
 	"bufio"
 	"bytes"
 	"io"
-
-	"bitbucket.org/creachadair/jrpc2"
 )
 
 // Line constructs a jrpc2.Channel that transmits and receives messages on r
 // and wc with line framing. Each message is terminated by a Unicode LF (10)
 // and LF are stripped from outbound messages.
-func Line(r io.Reader, wc io.WriteCloser) jrpc2.Channel {
+func Line(r io.Reader, wc io.WriteCloser) Channel {
 	return line{wc: wc, buf: bufio.NewReader(r)}
 }
 
-// line implements jrpc2.Channel. Messages sent on a raw channel are framed by
+// line implements Channel. Messages sent on a raw channel are framed by
 // terminating newlines.
 type line struct {
 	wc  io.WriteCloser
 	buf *bufio.Reader
 }
 
-// Send implements part of jrpc2.Channel.
+// Send implements part of the Channel interface.
 func (c line) Send(msg []byte) error {
 	out := make([]byte, len(msg)+1)
 	j := 0
@@ -41,7 +39,7 @@ func (c line) Send(msg []byte) error {
 	return err
 }
 
-// Recv implements part of jrpc2.Channel.
+// Recv implements part of the Channel interface.
 func (c line) Recv() ([]byte, error) {
 	var buf bytes.Buffer
 	for {
@@ -61,5 +59,5 @@ func (c line) Recv() ([]byte, error) {
 	}
 }
 
-// Close implements part of jrpc2.Channel.
+// Close implements part of the Channel interface.
 func (c line) Close() error { return c.wc.Close() }
