@@ -19,7 +19,7 @@ import (
 var (
 	dialTimeout = flag.Duration("dial", 5*time.Second, "Timeout on dialing the server (0 for no timeout)")
 	doNotify    = flag.Bool("notify", false, "Send a notification")
-	chanFormat  = flag.String("channel", "raw", `Channel format ("line", "lsp", "raw")`)
+	chanFormat  = flag.String("channel", "raw", `Channel format ("line", "lsp", "raw", "varint")`)
 )
 
 // TODO(fromberger): Allow Unix-domain socket connections.
@@ -97,6 +97,8 @@ func newChannel(fmt string) func(io.Reader, io.WriteCloser) jrpc2.Channel {
 		return channel.LSP
 	case "line":
 		return channel.Line
+	case "varint":
+		return channel.Varint
 	}
 	log.Fatalf("Unknown channel format %q", fmt)
 	panic("unreachable")
