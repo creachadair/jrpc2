@@ -1,6 +1,7 @@
 package jrpc2
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -76,7 +77,14 @@ func ErrorCode(err error) Code {
 	case Code:
 		return t
 	default:
-		return E_SystemError
+		switch err {
+		case context.Canceled:
+			return E_Cancelled
+		case context.DeadlineExceeded:
+			return E_DeadlineExceeded
+		default:
+			return E_SystemError
+		}
 	}
 }
 

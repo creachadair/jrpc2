@@ -180,11 +180,7 @@ func (c *Client) send(ctx context.Context, reqs ...*Request) ([]*Pending, error)
 				if _, ok := c.pending[id]; ok {
 					c.log("Context ended for id %q, err=%v", id, pctx.Err())
 					delete(c.pending, id)
-					code := E_Cancelled
-					if pctx.Err() == context.DeadlineExceeded {
-						code = E_DeadlineExceeded
-					}
-
+					code := ErrorCode(pctx.Err())
 					p.ch <- &jresponse{
 						ID: json.RawMessage(id),
 						E:  jerrorf(code, pctx.Err().Error()),
