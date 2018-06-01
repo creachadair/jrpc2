@@ -8,12 +8,13 @@ import (
 	"sync"
 	"time"
 
+	"bitbucket.org/creachadair/jrpc2/channel"
 	"golang.org/x/sync/semaphore"
 )
 
 // A Server is a JSON-RPC 2.0 server. The server receives requests and sends
-// responses on a Channel provided by the caller, and dispatches requests to
-// user-defined Method handlers.
+// responses on a channel.Channel provided by the caller, and dispatches
+// requests to user-defined Method handlers.
 type Server struct {
 	wg     sync.WaitGroup               // ready when workers are done at shutdown time
 	mux    Assigner                     // associates method names with handlers
@@ -22,12 +23,12 @@ type Server struct {
 	log    func(string, ...interface{}) // write debug logs here
 	dectx  func(context.Context, json.RawMessage) (context.Context, json.RawMessage, error)
 
-	mu      *sync.Mutex // protects the fields below
-	err     error       // error from a previous operation
-	work    *sync.Cond  // for signaling message availability
-	inq     *list.List  // inbound requests awaiting processing
-	ch      Channel     // the channel to the client
-	metrics *Metrics    // metrics collected during execution
+	mu      *sync.Mutex     // protects the fields below
+	err     error           // error from a previous operation
+	work    *sync.Cond      // for signaling message availability
+	inq     *list.List      // inbound requests awaiting processing
+	ch      channel.Channel // the channel to the client
+	metrics *Metrics        // metrics collected during execution
 
 	// For each request ID currently in-flight, this map carries a cancel
 	// function attached to the context that was sent to the handler.
@@ -59,7 +60,7 @@ func NewServer(mux Assigner, opts *ServerOptions) *Server {
 
 // Start enables processing of requests from c. This function will panic if the
 // server is already running.
-func (s *Server) Start(c Channel) *Server {
+func (s *Server) Start(c channel.Channel) *Server {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.ch != nil {
@@ -301,7 +302,7 @@ func isRecoverableJSONError(err error) bool {
 	}
 }
 
-func (s *Server) read(ch Channel) {
+func (s *Server) read(ch channel.Channel) {
 	for {
 		// If the message is not sensible, report an error; otherwise enqueue
 		// it for processing.

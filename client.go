@@ -7,10 +7,12 @@ import (
 	"fmt"
 	"strconv"
 	"sync"
+
+	"bitbucket.org/creachadair/jrpc2/channel"
 )
 
 // A Client is a JSON-RPC 2.0 client. The client sends requests and receives
-// responses on a Channel provided by the caller.
+// responses on a channel.Channel provided by the caller.
 type Client struct {
 	wg sync.WaitGroup // ready when the reader is done at shutdown time
 
@@ -19,14 +21,14 @@ type Client struct {
 	enctx  func(context.Context, json.RawMessage) (json.RawMessage, error)
 
 	mu      sync.Mutex          // protects the fields below
-	ch      Channel             // channel to the server
+	ch      channel.Channel     // channel to the server
 	err     error               // error from a previous operation
 	pending map[string]*Pending // requests pending completion, by ID
 	nextID  int64               // next unused request ID
 }
 
 // NewClient returns a new client that communicates with the server via ch.
-func NewClient(ch Channel, opts *ClientOptions) *Client {
+func NewClient(ch channel.Channel, opts *ClientOptions) *Client {
 	c := &Client{
 		log:    opts.logger(),
 		allow1: opts.allowV1(),

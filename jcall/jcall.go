@@ -89,7 +89,7 @@ func main() {
 	}
 }
 
-func newChannel(fmt string) func(io.Reader, io.WriteCloser) jrpc2.Channel {
+func newChannel(fmt string) func(io.Reader, io.WriteCloser) channel.Channel {
 	switch fmt {
 	case "raw":
 		return channel.Raw

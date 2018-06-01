@@ -5,9 +5,9 @@ defined by http://www.jsonrpc.org/specification.
 Servers
 
 The *Server type implements a JSON-RPC server. A server communicates with a
-client over a Channel, and dispatches client requests to user-defined method
-handlers.  These handlers satisfy the jrpc2.Method interface by exporting a
-Call method:
+client over a channel.Channel, and dispatches client requests to user-defined
+method handlers.  These handlers satisfy the jrpc2.Method interface by
+exporting a Call method:
 
    Call(ctx Context.Context, req *jrpc2.Request) (interface{}, error)
 
@@ -47,7 +47,7 @@ Equipped with an Assigner we can now construct a Server:
    srv := jrpc2.NewServer(assigner, nil)  // nil for default options
 
 To serve requests, we will next need a connection. The channel package exports
-functions that can adapt various input and output streams to a jrpc2.Channel,
+functions that can adapt various input and output streams to a channel.Channel,
 for example:
 
    srv.Start(channel.Line(os.Stdin, os.Stdout))
@@ -64,11 +64,11 @@ implementation of this example can found in examples/adder/adder.go.
 Clients
 
 The *Client type implements a JSON-RPC client. A client communicates with a
-server over a Channel, and is safe for concurrent use by multiple
+server over a channel.Channel, and is safe for concurrent use by multiple
 goroutines. It supports batched requests and may have arbitrarily many pending
 requests in flight simultaneously.
 
-To establish a client we first need a Channel:
+To establish a client we first need a channel.Channel:
 
    import "net"
 
