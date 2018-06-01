@@ -59,7 +59,7 @@ func main() {
 	log.Printf("Connected to %s...", conn.RemoteAddr())
 	defer conn.Close()
 
-	cli := jrpc2.NewClient(channel.Raw(conn, conn), &jrpc2.ClientOptions{
+	cli := jrpc2.NewClient(channel.JSON(conn, conn), &jrpc2.ClientOptions{
 		EncodeContext: jcontext.Encode,
 	})
 	in := bufio.NewScanner(os.Stdin)

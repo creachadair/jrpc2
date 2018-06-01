@@ -7,14 +7,14 @@ func TestChannelTypes(t *testing.T) {
 		name    string
 		framing Framing
 	}{
+		{"JSON", JSON},
 		{"LSP", LSP},
 		{"Line", Line},
-		{"Raw", Raw},
 		{"Varint", Varint},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			lhs, rhs := FramedPipe(test.framing)
+			lhs, rhs := Pipe(test.framing)
 			defer lhs.Close()
 			defer rhs.Close()
 

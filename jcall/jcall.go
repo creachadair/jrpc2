@@ -19,7 +19,7 @@ import (
 var (
 	dialTimeout = flag.Duration("dial", 5*time.Second, "Timeout on dialing the server (0 for no timeout)")
 	doNotify    = flag.Bool("notify", false, "Send a notification")
-	chanFormat  = flag.String("channel", "raw", `Channel format ("line", "lsp", "raw", "varint")`)
+	chanFormat  = flag.String("channel", "json", `Channel format ("Json", "line", "lsp", "varint")`)
 )
 
 // TODO(fromberger): Allow Unix-domain socket connections.
@@ -91,8 +91,8 @@ func main() {
 
 func newChannel(fmt string) func(io.Reader, io.WriteCloser) channel.Channel {
 	switch fmt {
-	case "raw":
-		return channel.Raw
+	case "json":
+		return channel.JSON
 	case "lsp":
 		return channel.LSP
 	case "line":

@@ -18,7 +18,7 @@ func newServer(t *testing.T, assigner jrpc2.Assigner, opts *jrpc2.ServerOptions)
 		opts = &jrpc2.ServerOptions{LogWriter: os.Stderr}
 	}
 
-	cpipe, spipe := channel.Pipe()
+	cpipe, spipe := channel.Pipe(channel.JSON)
 	srv := jrpc2.NewServer(assigner, opts).Start(spipe)
 	t.Logf("Server running on pipe %+v", spipe)
 
