@@ -90,6 +90,7 @@ You can check whether a response contains an error using its Error method:
 
    if rsp.Error() != nil {
       log.Printf("Error from server: %v", rsp.Error())
+      // N.B. This includes context errors such as cancellations and timeouts.
    }
 
 The separation of call and response allows requests to be issued serially and
