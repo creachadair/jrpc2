@@ -1,4 +1,8 @@
 // Program jcall issues RPC calls to a JSON-RPC server.
+//
+// Usage:
+//    jcall [options] <address> {<method> <params>}...
+//
 package main
 
 import (
