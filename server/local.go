@@ -7,14 +7,15 @@ import (
 
 // Local constructs a jrpc2.Server from the specified assigner and options.
 // If opts == nil, it behaves as if the client and server options are also nil.
-// When the client is closed, the server is also stopped.
-func Local(assigner jrpc2.Assigner, opts *LocalOptions) *jrpc2.Client {
+// When the client is closed, the server is also stopped; the caller may invoke
+// wait to wait for the server to complete.
+func Local(assigner jrpc2.Assigner, opts *LocalOptions) (client *jrpc2.Client, wait func() error) {
 	if opts == nil {
 		opts = new(LocalOptions)
 	}
 	cpipe, spipe := channel.Pipe(channel.Line)
-	jrpc2.NewServer(assigner, opts.ServerOptions).Start(spipe)
-	return jrpc2.NewClient(cpipe, opts.ClientOptions)
+	srv := jrpc2.NewServer(assigner, opts.ServerOptions).Start(spipe)
+	return jrpc2.NewClient(cpipe, opts.ClientOptions), srv.Wait
 }
 
 // LocalOptions control the behaviour of the server and client constructed by
