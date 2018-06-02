@@ -22,7 +22,9 @@ type jsonc struct {
 // Send implements part of the Channel interface.
 func (c jsonc) Send(msg []byte) error { _, err := c.wc.Write(msg); return err }
 
-// Recv implements part of the Channel interface.
+// Recv implements part of the Channel interface. It reports an error if the
+// message is not a structurally valid JSON value. It is safe for the caller to
+// treat any record returned as a json.RawMessage.
 func (c jsonc) Recv() ([]byte, error) {
 	var msg json.RawMessage
 	err := c.dec.Decode(&msg)
