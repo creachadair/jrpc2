@@ -17,7 +17,6 @@ import (
 	"os"
 
 	"bitbucket.org/creachadair/jrpc2"
-	"bitbucket.org/creachadair/jrpc2/channel"
 	"bitbucket.org/creachadair/jrpc2/server"
 )
 
@@ -88,7 +87,6 @@ func main() {
 	}
 	log.Printf("Listening at %v...", lst.Addr())
 	server.Loop(lst, mux, &server.LoopOptions{
-		Framing: channel.Line,
 		ServerOptions: &jrpc2.ServerOptions{
 			LogWriter:   os.Stderr,
 			Concurrency: *maxTasks,
