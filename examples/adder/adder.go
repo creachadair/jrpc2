@@ -2,7 +2,8 @@
 // the process's stdin and stdout.
 //
 // Usage:
-//    $ go run adder.go
+//    $ go build bitbucket.org/creachadair/jrpc2/examples/adder
+//    $ ./adder
 //
 // Queries to try (copy and paste):
 //    {"jsonrpc":"2.0", "id":1, "method":"Add", "params":[1,2,3]}
