@@ -17,6 +17,7 @@ import (
 // servers currently active have returned.
 func Loop(lst net.Listener, assigner jrpc2.Assigner, opts *LoopOptions) error {
 	newChannel := opts.framing()
+	serverOpts := opts.serverOpts()
 	var wg sync.WaitGroup
 	for {
 		conn, err := lst.Accept()
@@ -29,7 +30,7 @@ func Loop(lst net.Listener, assigner jrpc2.Assigner, opts *LoopOptions) error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			srv := jrpc2.NewServer(assigner, opts.serverOpts()).Start(ch)
+			srv := jrpc2.NewServer(assigner, serverOpts).Start(ch)
 			if err := srv.Wait(); err != nil && err != io.EOF {
 				log.Printf("Server exit: %v", err)
 			}
