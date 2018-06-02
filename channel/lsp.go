@@ -10,9 +10,9 @@ import (
 	"strings"
 )
 
-// LSP constructs a Channel that transmits and receives messages on r and wc
-// using the Language Server Protocol (LSP) framing, defined by the LSP
-// specification at http://github.com/Microsoft/language-server-protocol.
+// LSP is a framing that transmits and receives messages on r and wc using the
+// Language Server Protocol (LSP) framing, defined by the LSP specification at
+// http://github.com/Microsoft/language-server-protocol.
 //
 // Specifically, each message is sent in the format:
 //

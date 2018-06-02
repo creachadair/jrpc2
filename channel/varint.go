@@ -8,9 +8,9 @@ import (
 	"math/bits"
 )
 
-// Varint constructs a Channel that transmits and receives messages on r and
-// wc, each message prefixed by its length encoded in a varint as defined by
-// the encoding/binary package.
+// Varint is a framing that transmits and receives messages on r and wc, with
+// each message prefixed by its length encoded in a varint as defined by the
+// encoding/binary package.
 func Varint(r io.Reader, wc io.WriteCloser) Channel {
 	return &varint{wc: wc, rd: bufio.NewReader(r), buf: bytes.NewBuffer(nil)}
 }

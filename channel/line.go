@@ -6,9 +6,9 @@ import (
 	"io"
 )
 
-// Line constructs a jrpc2.Channel that transmits and receives messages on r
-// and wc with line framing. Each message is terminated by a Unicode LF (10)
-// and LF are stripped from outbound messages.
+// Line is a framing that transmits and receives messages on r and wc with line
+// framing. Each message is terminated by a Unicode LF (10) and LF are stripped
+// from outbound messages.
 func Line(r io.Reader, wc io.WriteCloser) Channel {
 	return line{wc: wc, buf: bufio.NewReader(r)}
 }
