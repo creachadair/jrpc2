@@ -221,12 +221,11 @@ func newMethod(fn interface{}) (Method, error) {
 	f := reflect.ValueOf(fn)
 
 	return methodFunc(func(ctx context.Context, req *Request) (interface{}, error) {
-		args := []reflect.Value{reflect.ValueOf(ctx)}
-		if rest, ierr := newinput(req); ierr != nil {
+		rest, ierr := newinput(req)
+		if ierr != nil {
 			return nil, ierr
-		} else {
-			args = append(args, rest...)
 		}
+		args := append([]reflect.Value{reflect.ValueOf(ctx)}, rest...)
 		vals := f.Call(args)
 		out, oerr := vals[0].Interface(), vals[1].Interface()
 		if oerr != nil {
