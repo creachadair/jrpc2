@@ -429,7 +429,7 @@ func (ts tasks) responses() jresponses {
 		} else if e, ok := task.err.(*Error); ok {
 			rsp.E = e.tojerror()
 		} else if code := ErrorCode(task.err); code != E_NoError {
-			rsp.E = jerrorf(code, code.Error())
+			rsp.E = jerrorf(code, "%v: %v", code.Error(), task.err)
 		} else {
 			rsp.E = jerrorf(E_InternalError, "internal error: %v", task.err)
 		}
