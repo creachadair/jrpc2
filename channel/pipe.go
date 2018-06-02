@@ -12,6 +12,6 @@ func Pipe(framing Framing) (client, server Channel) {
 	return
 }
 
-// A Framing represents a rule that converts a reader and a writer into a
-// jrpc2.Channel with a particular message-framing discipline.
+// A Framing converts a reader and a writer into a Channel with a particular
+// message-framing discipline.
 type Framing func(io.Reader, io.WriteCloser) Channel
