@@ -212,19 +212,18 @@ func (c *Client) Call(ctx context.Context, method string, params interface{}) (*
 }
 
 // CallWait initiates a single request and blocks until the response returns.
-// It is shorthand for Call + Wait. If err != nil then rsp == nil: Any error
-// returned is either from the initial Call, or represents a cancelled request
-// context (such as a timeout or exceeded deadline). Errors from the server
-// must be checked by the caller, since they may contain payloads.
+// It is shorthand for Call + Wait. If err != nil then rsp == nil. Errors from
+// the server have concrete type *jrpc2.Error.
 //
 //    rsp, err := c.CallWait(ctx, method, params)
 //    if err != nil {
-//       log.Fatalf("Call failed: %v", err)
-//    } else if err := rsp.Error(); err != nil {
-//       log.Printf("Error from server: %v", err)
-//    } else {
-//       handleValidResponse(rsp)
+//       if e, ok := err.(*jrpc2.Error); ok {
+//          log.Fatalf("Error from server: %v", err)
+//       } else {
+//          log.Fatalf("Call failed: %v", err)
+//       }
 //    }
+//    handleValidResponse(rsp)
 //
 func (c *Client) CallWait(ctx context.Context, method string, params interface{}) (*Response, error) {
 	p, err := c.Call(ctx, method, params)
@@ -238,6 +237,8 @@ func (c *Client) CallWait(ctx context.Context, method string, params interface{}
 			return nil, context.Canceled
 		case E_DeadlineExceeded:
 			return nil, context.DeadlineExceeded
+		default:
+			return nil, err
 		}
 	}
 	return rsp, nil

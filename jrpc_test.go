@@ -249,21 +249,21 @@ func TestErrors(t *testing.T) {
 	defer cleanup()
 
 	got, err := c.CallWait(context.Background(), "Err", nil)
-	if err != nil {
-		t.Fatalf("CallWait(Err): unexpected error: %v", err)
-	} else if e := got.Error(); e == nil {
-		t.Fatalf("CallWait(Err): expected error, got %v", got)
-	} else {
-		t.Logf("Response error is %#v", e)
+	if err == nil {
+		t.Errorf("CallWait: got %#v, wanted error", got)
+	} else if e, ok := err.(*Error); ok {
+		t.Logf("Response error is %+v", e)
 		if e.Code != errCode {
-			t.Errorf("Err code: got %d, want %d", e.Code, errCode)
+			t.Errorf("Error code: got %d, want %d", e.Code, errCode)
 		}
 		if e.Message != errMessage {
-			t.Errorf("Err message: got %q, want %q", e.Message, errMessage)
+			t.Errorf("Error message: got %q, want %q", e.Message, errMessage)
 		}
 		if s := string(e.data); s != errData {
-			t.Errorf("Err data: got %q, want %q", s, errData)
+			t.Errorf("Error data: got %q, want %q", s, errData)
 		}
+	} else {
+		t.Fatalf("CallWait(Err): unexpected error: %v", err)
 	}
 }
 
@@ -333,10 +333,8 @@ func TestServerInfo(t *testing.T) {
 	defer cleanup()
 
 	ctx := context.Background()
-	if rsp, err := c.CallWait(ctx, "Metricize", nil); err != nil {
+	if _, err := c.CallWait(ctx, "Metricize", nil); err != nil {
 		t.Fatalf("CallWait(Metricize) failed: %v", err)
-	} else if err := rsp.Error(); err != nil {
-		t.Errorf("Metricize unexpectedly reported an error: %v", err)
 	}
 
 	info := s.ServerInfo()
