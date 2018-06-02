@@ -23,7 +23,7 @@ import (
 var (
 	dialTimeout = flag.Duration("dial", 5*time.Second, "Timeout on dialing the server (0 for no timeout)")
 	doNotify    = flag.Bool("notify", false, "Send a notification")
-	chanFormat  = flag.String("channel", "json", `Channel format ("Json", "line", "lsp", "varint")`)
+	chanFormat  = flag.String("channel", "json", `Channel format ("json", "line", "lsp", "varint")`)
 )
 
 // TODO(fromberger): Allow Unix-domain socket connections.
