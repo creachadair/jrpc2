@@ -9,7 +9,8 @@ import (
 )
 
 // Varint constructs a Channel that transmits and receives messages on r and
-// wc, each message prefixed by a varint defined by encoding/binary.BigEndian.
+// wc, each message prefixed by its length encoded in a varint as defined by
+// the encoding/binary package.
 func Varint(r io.Reader, wc io.WriteCloser) Channel {
 	return &varint{wc: wc, rd: bufio.NewReader(r), buf: bytes.NewBuffer(nil)}
 }
