@@ -4,18 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"runtime"
 )
 
-const logFlags = log.LstdFlags | log.Lshortfile
-
 // ServerOptions control the behaviour of a server created by NewServer.
 // A nil *ServerOptions provides sensible defaults.
 type ServerOptions struct {
-	// If not nil, send debug logs to this writer.
-	LogWriter io.Writer
+	// If not nil, send debug logs here.
+	Logger *log.Logger
 
 	// Instructs the server to tolerate requests that do not include the
 	// required "jsonrpc" version marker.
@@ -39,10 +36,10 @@ type ServerOptions struct {
 }
 
 func (s *ServerOptions) logger() func(string, ...interface{}) {
-	if s == nil || s.LogWriter == nil {
+	if s == nil || s.Logger == nil {
 		return func(string, ...interface{}) {}
 	}
-	logger := log.New(s.LogWriter, "[jrpc2.Server] ", logFlags)
+	logger := s.Logger
 	return func(msg string, args ...interface{}) { logger.Output(2, fmt.Sprintf(msg, args...)) }
 }
 
@@ -74,8 +71,8 @@ func (s *ServerOptions) metrics() *Metrics {
 // ClientOptions control the behaviour of a client created by NewClient.
 // A nil *ClientOptions provides sensible defaults.
 type ClientOptions struct {
-	// If not nil, send debug logs to this writer.
-	LogWriter io.Writer
+	// If not nil, send debug logs here.
+	Logger *log.Logger
 
 	// Instructs the client to tolerate responses that do not include the
 	// required "jsonrpc" version marker.
@@ -90,10 +87,10 @@ type ClientOptions struct {
 
 // ClientLog enables debug logging to the specified writer.
 func (c *ClientOptions) logger() func(string, ...interface{}) {
-	if c == nil || c.LogWriter == nil {
+	if c == nil || c.Logger == nil {
 		return func(string, ...interface{}) {}
 	}
-	logger := log.New(c.LogWriter, "[jrpc2.Client] ", logFlags)
+	logger := c.Logger
 	return func(msg string, args ...interface{}) { logger.Output(2, fmt.Sprintf(msg, args...)) }
 }
 

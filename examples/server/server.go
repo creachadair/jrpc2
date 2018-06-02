@@ -88,7 +88,7 @@ func main() {
 	log.Printf("Listening at %v...", lst.Addr())
 	server.Loop(lst, mux, &server.LoopOptions{
 		ServerOptions: &jrpc2.ServerOptions{
-			LogWriter:   os.Stderr,
+			Logger:      log.New(os.Stderr, "[jrpc2.Server] ", log.LstdFlags|log.Lshortfile),
 			Concurrency: *maxTasks,
 			Metrics:     jrpc2.NewMetrics(),
 		},

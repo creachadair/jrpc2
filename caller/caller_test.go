@@ -3,6 +3,7 @@ package caller
 import (
 	"context"
 	"errors"
+	"log"
 	"os"
 	"reflect"
 	"strings"
@@ -15,14 +16,18 @@ import (
 func newServer(t *testing.T, assigner jrpc2.Assigner, opts *jrpc2.ServerOptions) (*jrpc2.Server, *jrpc2.Client, func()) {
 	t.Helper()
 	if opts == nil {
-		opts = &jrpc2.ServerOptions{LogWriter: os.Stderr}
+		opts = &jrpc2.ServerOptions{
+			Logger: log.New(os.Stderr, "[test client] ", log.LstdFlags|log.Lshortfile),
+		}
 	}
 
 	cpipe, spipe := channel.Pipe(channel.JSON)
 	srv := jrpc2.NewServer(assigner, opts).Start(spipe)
 	t.Logf("Server running on pipe %+v", spipe)
 
-	cli := jrpc2.NewClient(cpipe, &jrpc2.ClientOptions{LogWriter: os.Stderr})
+	cli := jrpc2.NewClient(cpipe, &jrpc2.ClientOptions{
+		Logger: log.New(os.Stderr, "[test server] ", log.LstdFlags|log.Lshortfile),
+	})
 	t.Logf("Client running on pipe %v", cpipe)
 
 	return srv, cli, func() {

@@ -13,7 +13,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"io"
 	"log"
 	"net"
 	"os"
@@ -81,7 +80,7 @@ var (
 	port    = flag.Int("port", 0, "Service port")
 	logging = flag.Bool("log", false, "Enable verbose logging")
 
-	lw io.Writer
+	lw *log.Logger
 )
 
 func main() {
@@ -89,7 +88,7 @@ func main() {
 	if *port <= 0 {
 		log.Fatal("You must specify a positive --port value")
 	} else if *logging {
-		lw = os.Stdout
+		lw = log.New(os.Stdout, "", log.LstdFlags|log.Lshortfile)
 	}
 
 	lst, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
@@ -103,7 +102,7 @@ func main() {
 	}, &server.LoopOptions{
 		ServerOptions: &jrpc2.ServerOptions{
 			AllowV1:       true,
-			LogWriter:     lw,
+			Logger:        lw,
 			DecodeContext: jcontext.Decode,
 		},
 	})
