@@ -2,16 +2,17 @@ package channel
 
 import "testing"
 
+var tests = []struct {
+	name    string
+	framing Framing
+}{
+	{"JSON", JSON},
+	{"LSP", LSP},
+	{"Line", Line},
+	{"Varint", Varint},
+}
+
 func TestChannelTypes(t *testing.T) {
-	tests := []struct {
-		name    string
-		framing Framing
-	}{
-		{"JSON", JSON},
-		{"LSP", LSP},
-		{"Line", Line},
-		{"Varint", Varint},
-	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			lhs, rhs := Pipe(test.framing)
@@ -27,15 +28,10 @@ func TestChannelTypes(t *testing.T) {
 }
 
 func TestEmptyMessage(t *testing.T) {
-	tests := []struct {
-		name    string
-		framing Framing
-	}{
-		{"LSP", LSP},
-		{"Line", Line},
-		{"Varint", Varint},
-	}
 	for _, test := range tests {
+		if test.name == "JSON" {
+			continue // this framing can't handle empty messages
+		}
 		t.Run(test.name, func(t *testing.T) {
 			lhs, rhs := Pipe(test.framing)
 			defer lhs.Close()
