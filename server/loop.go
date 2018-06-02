@@ -16,6 +16,7 @@ import (
 // error, the loop will terminate and the error will be reported once all the
 // servers currently active have returned.
 func Loop(lst net.Listener, assigner jrpc2.Assigner, opts *LoopOptions) error {
+	newChannel := opts.framing()
 	var wg sync.WaitGroup
 	for {
 		conn, err := lst.Accept()
@@ -24,7 +25,7 @@ func Loop(lst net.Listener, assigner jrpc2.Assigner, opts *LoopOptions) error {
 			wg.Wait()
 			return err
 		}
-		ch := opts.newChannel(conn)
+		ch := newChannel(conn, conn)
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -55,9 +56,9 @@ func (o *LoopOptions) serverOpts() *jrpc2.ServerOptions {
 	return o.ServerOptions
 }
 
-func (o *LoopOptions) newChannel(conn net.Conn) channel.Channel {
+func (o *LoopOptions) framing() channel.Framing {
 	if o == nil || o.Framing == nil {
-		return channel.JSON(conn, conn)
+		return channel.JSON
 	}
-	return o.Framing(conn, conn)
+	return o.Framing
 }
