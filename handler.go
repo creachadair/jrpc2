@@ -136,6 +136,12 @@ func NewService(obj interface{}) MapAssigner {
 	return out
 }
 
+var (
+	ctxType = reflect.TypeOf((*context.Context)(nil)).Elem() // type context.Context
+	errType = reflect.TypeOf((*error)(nil)).Elem()           // type error
+	reqType = reflect.TypeOf((*Request)(nil))                // type *Request
+)
+
 func newMethod(fn interface{}) (Method, error) {
 	// Special case: If fn has the exact signature of the Call method, don't do
 	// any (additional) reflection at all.
@@ -151,21 +157,25 @@ func newMethod(fn interface{}) (Method, error) {
 		return nil, errors.New("wrong number of parameters")
 	} else if typ.NumOut() != 2 {
 		return nil, errors.New("wrong number of results")
-	} else if a, b := typ.In(0), reflect.TypeOf((*context.Context)(nil)).Elem(); a != b {
+	} else if a := typ.In(0); a != ctxType {
 		return nil, errors.New("first parameter is not context.Context")
-	} else if a, b := typ.Out(1), reflect.TypeOf((*error)(nil)).Elem(); a != b {
+	} else if a := typ.Out(1); a != errType {
 		return nil, errors.New("second result is not error")
 	}
 
-	// Case 1: The function wants the plain request.
-	newinput := func(req *Request) ([]reflect.Value, error) {
-		return []reflect.Value{reflect.ValueOf(req)}, nil
-	}
+	// Construct a function to unpack the request values from the request
+	// message, based on the signature of the user's callback.
+	var newinput func(req *Request) ([]reflect.Value, error)
 
 	if typ.NumIn() == 1 {
-		// Case 2: The function does not want any request parameters.
+		// Case 1: The function does not want any request parameters.
 		newinput = func(req *Request) ([]reflect.Value, error) { return nil, nil }
-	} else if a, b := typ.In(1), reflect.TypeOf((*Request)(nil)); a != b {
+	} else if a := typ.In(1); a == reqType {
+		// Case 2: The function wants the underlying *Request value.
+		newinput = func(req *Request) ([]reflect.Value, error) {
+			return []reflect.Value{reflect.ValueOf(req)}, nil
+		}
+	} else {
 		// Case 3: The function wants us to unpack the request parameters.
 		argType := typ.In(1)
 		if typ.IsVariadic() {
