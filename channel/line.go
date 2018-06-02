@@ -3,12 +3,13 @@ package channel
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"io"
 )
 
 // Line is a framing that transmits and receives messages on r and wc with line
-// framing. Each message is terminated by a Unicode LF (10) and LF are stripped
-// from outbound messages.
+// framing.  Each message is terminated by a Unicode LF (10). This framing has
+// the constraint that outbound records may not contain any LF characters.
 func Line(r io.Reader, wc io.WriteCloser) Channel {
 	return line{wc: wc, buf: bufio.NewReader(r)}
 }
@@ -20,22 +21,16 @@ type line struct {
 	buf *bufio.Reader
 }
 
-// Send implements part of the Channel interface.
+// Send implements part of the Channel interface.  It reports an error if msg
+// contains a Unicode LF (10).
 func (c line) Send(msg []byte) error {
-	out := make([]byte, len(msg)+1)
-	j := 0
-	multi := false
-	for _, b := range msg {
-		if multi {
-			multi = b&0xC0 == 0x80
-		} else if b == '\n' {
-			continue
-		}
-		out[j] = b
-		j++
+	if bytes.ContainsAny(msg, "\n") {
+		return errors.New("message contains LF")
 	}
-	out[j] = '\n'
-	_, err := c.wc.Write(out[:j+1])
+	out := make([]byte, len(msg)+1)
+	copy(out, msg)
+	out[len(msg)] = '\n'
+	_, err := c.wc.Write(out)
 	return err
 }
 
