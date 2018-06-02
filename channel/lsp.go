@@ -2,6 +2,7 @@ package channel
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -27,7 +28,7 @@ import (
 //    123\n
 //
 func LSP(r io.Reader, wc io.WriteCloser) Channel {
-	return &lsp{wc: wc, rd: bufio.NewReader(r)}
+	return &lsp{wc: wc, rd: bufio.NewReader(r), buf: bytes.NewBuffer(nil)}
 }
 
 // An lsp implements Channel. Messages sent on a LSP channel are framed as a
@@ -35,15 +36,15 @@ func LSP(r io.Reader, wc io.WriteCloser) Channel {
 type lsp struct {
 	wc  io.WriteCloser
 	rd  *bufio.Reader
-	buf []byte
+	buf *bytes.Buffer
 }
 
 // Send implements part of the Channel interface.
 func (c *lsp) Send(msg []byte) error {
-	if _, err := fmt.Fprintf(c.wc, "Content-Length: %d\r\n\r\n", len(msg)); err != nil {
-		return err
-	}
-	_, err := c.wc.Write(msg)
+	c.buf.Reset()
+	fmt.Fprintf(c.buf, "Content-Length: %d\r\n\r\n", len(msg))
+	c.buf.Write(msg)
+	_, err := c.wc.Write(c.buf.Next(c.buf.Len()))
 	return err
 }
 

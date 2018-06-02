@@ -47,9 +47,6 @@ func (c line) Recv() ([]byte, error) {
 		buf.Write(chunk)
 		if err == bufio.ErrBufferFull {
 			continue // incomplete line
-		} else if err == nil && buf.Len() <= 1 {
-			buf.Reset()
-			continue // empty line
 		}
 		line := buf.Bytes()
 		if n := len(line) - 1; n >= 0 {
