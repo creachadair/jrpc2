@@ -18,12 +18,14 @@ import (
 
 	"bitbucket.org/creachadair/jrpc2"
 	"bitbucket.org/creachadair/jrpc2/channel"
+	"bitbucket.org/creachadair/jrpc2/jcontext"
 )
 
 var (
 	dialTimeout = flag.Duration("dial", 5*time.Second, "Timeout on dialing the server (0 for no timeout)")
 	doNotify    = flag.Bool("notify", false, "Send a notification")
-	chanFormat  = flag.String("channel", "json", `Channel format ("json", "line", "lsp", "varint")`)
+	withContext = flag.Bool("c", false, "Send context with request")
+	chanFraming = flag.String("f", "json", `Channel framing ("json", "line", "lsp", "varint")`)
 )
 
 // TODO(fromberger): Allow Unix-domain socket connections.
@@ -36,7 +38,7 @@ func main() {
 	if flag.NArg() < 3 || flag.NArg()%2 == 0 {
 		log.Fatal("Arguments are <address> {<method> <params>}...")
 	}
-	nc := newChannel(*chanFormat)
+	nc := newChannel(*chanFraming)
 	ctx := context.Background()
 
 	addr := flag.Arg(0)
@@ -55,7 +57,12 @@ func main() {
 		log.Fatalf("Dial %q: %v", addr, err)
 	}
 	defer conn.Close()
-	cli := jrpc2.NewClient(nc(conn, conn), nil)
+
+	var opts *jrpc2.ClientOptions
+	if *withContext {
+		opts = &jrpc2.ClientOptions{EncodeContext: jcontext.Encode}
+	}
+	cli := jrpc2.NewClient(nc(conn, conn), opts)
 
 	// Handle notifications...
 	if *doNotify {
