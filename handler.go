@@ -194,30 +194,27 @@ func newMethod(fn interface{}) (Method, error) {
 				}
 				return vals, nil
 			}
-		} else if argType.Kind() == reflect.Ptr {
+		} else {
 			// Check whether the function wants a pointer to its argument.  We
 			// need to create one either way to support unmarshaling, but we
 			// need to indirect it back off if the callee didn't want it.
 
-			// Case 3b: The function wants a pointer.
-			argType = argType.Elem()
-			newinput = func(req *Request) ([]reflect.Value, error) {
-				in := reflect.New(argType).Interface()
-				if err := req.UnmarshalParams(in); err != nil {
-					return nil, Errorf(E_InvalidParams, "wrong argument type: %v", err)
-				}
-				arg := reflect.ValueOf(in)
-				return []reflect.Value{arg}, nil
+			// Case 3b: The function wants a bare value, not a pointer.
+			undo := reflect.Value.Elem
+
+			if argType.Kind() == reflect.Ptr {
+				// Case 3c: The function wants a pointer.
+				undo = func(v reflect.Value) reflect.Value { return v }
+				argType = argType.Elem()
 			}
-		} else {
-			// Case 3c: The function wants a bare value, not a pointer.
+
 			newinput = func(req *Request) ([]reflect.Value, error) {
 				in := reflect.New(argType).Interface()
 				if err := req.UnmarshalParams(in); err != nil {
 					return nil, Errorf(E_InvalidParams, "wrong argument type: %v", err)
 				}
 				arg := reflect.ValueOf(in)
-				return []reflect.Value{arg.Elem()}, nil
+				return []reflect.Value{undo(arg)}, nil
 			}
 		}
 	}
