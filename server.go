@@ -127,37 +127,7 @@ func (s *Server) nextRequest() (func() error, error) {
 	s.log("Processing %d requests", len(next))
 
 	// Resolve all the task handlers or record errors.
-	var tasks tasks
-	for _, req := range next {
-		s.log("Checking request for %q: %s", req.M, string(req.P))
-		t := &task{req: req}
-		req.ID = fixID(req.ID)
-		if id := string(req.ID); id != "" && s.used[id] != nil {
-			t.err = Errorf(E_InvalidRequest, "duplicate request id %q", id)
-		} else if !s.versionOK(req.V) {
-			t.err = Errorf(E_InvalidRequest, "incorrect version marker %q", req.V)
-		} else if req.M == "" {
-			t.err = Errorf(E_InvalidRequest, "empty method name")
-		} else if m := s.assign(req.M); m == nil {
-			t.err = Errorf(E_MethodNotFound, "no such method %q", req.M)
-		} else if base, params, err := s.dectx(context.Background(), json.RawMessage(req.P)); err != nil {
-			t.err = Errorf(E_InternalError, "invalid request context: %v", err)
-		} else {
-			t.m = m
-			t.params = params
-			t.ctx = base
-			if id != "" {
-				ctx, cancel := context.WithCancel(base)
-				s.used[id] = cancel
-				t.ctx = ctx
-			}
-		}
-		if t.err != nil {
-			s.log("Task error: %v", t.err)
-			s.metrics.Count("rpc.errors", 1)
-		}
-		tasks = append(tasks, t)
-	}
+	tasks := s.checkTasks(next)
 
 	// Invoke the handlers outside the lock.
 	return func() error {
@@ -201,6 +171,43 @@ func (s *Server) nextRequest() (func() error, error) {
 		}
 		return nil
 	}, nil
+}
+
+// checkTasks resolves all the task handlers for the given batch, or records
+// errors for them as appropriate. The caller must hold s.mu.
+func (s *Server) checkTasks(next jrequests) tasks {
+	var tasks tasks
+	for _, req := range next {
+		s.log("Checking request for %q: %s", req.M, string(req.P))
+		t := &task{req: req}
+		req.ID = fixID(req.ID)
+		if id := string(req.ID); id != "" && s.used[id] != nil {
+			t.err = Errorf(E_InvalidRequest, "duplicate request id %q", id)
+		} else if !s.versionOK(req.V) {
+			t.err = Errorf(E_InvalidRequest, "incorrect version marker %q", req.V)
+		} else if req.M == "" {
+			t.err = Errorf(E_InvalidRequest, "empty method name")
+		} else if m := s.assign(req.M); m == nil {
+			t.err = Errorf(E_MethodNotFound, "no such method %q", req.M)
+		} else if base, params, err := s.dectx(context.Background(), json.RawMessage(req.P)); err != nil {
+			t.err = Errorf(E_InternalError, "invalid request context: %v", err)
+		} else {
+			t.m = m
+			t.params = params
+			t.ctx = base
+			if id != "" {
+				ctx, cancel := context.WithCancel(base)
+				s.used[id] = cancel
+				t.ctx = ctx
+			}
+		}
+		if t.err != nil {
+			s.log("Task error: %v", t.err)
+			s.metrics.Count("rpc.errors", 1)
+		}
+		tasks = append(tasks, t)
+	}
+	return tasks
 }
 
 // dispatch invokes m for the specified request type, and marshals the return
