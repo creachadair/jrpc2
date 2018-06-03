@@ -106,22 +106,9 @@ type RunResult struct {
 
 func readCommand(in *bufio.Scanner) (*RunReq, error) {
 	for {
-		// Read a command line, allowing continuations.
-		fmt.Fprint(os.Stderr, "> ")
-		var cmd []string
-		for in.Scan() {
-			line := in.Text()
-			trim := strings.TrimSuffix(line, "\\")
-			cmd = append(cmd, trim)
-			if trim == line {
-				break
-			}
-			fmt.Fprint(os.Stderr, "+ ")
-		}
-		if err := in.Err(); err != nil {
+		cmd, err := readArgs(in)
+		if err != nil {
 			return nil, err
-		} else if len(cmd) == 0 {
-			return nil, io.EOF
 		}
 
 		// Burst the line into tokens.
@@ -139,36 +126,9 @@ func readCommand(in *bufio.Scanner) (*RunReq, error) {
 		}
 
 		// Check for an input marker, e.g., "<<" or "<<filename".
-		var input []byte
-		n := len(args) - 1
-		if trim := strings.TrimPrefix(args[n], "<<"); trim != args[n] {
-			args = args[:n]
-			if trim != "" {
-				data, err := ioutil.ReadFile(trim)
-				if err != nil {
-					log.Fatalf("Error reading: %v", err)
-				}
-				input = data
-			} else {
-				var buf bytes.Buffer
-				fmt.Fprint(os.Stderr, "* ")
-			moreInput:
-				for in.Scan() {
-					switch in.Text() {
-					case ".":
-						break moreInput
-					case "..":
-						buf.WriteString(".\n")
-					default:
-						fmt.Fprintln(&buf, in.Text())
-					}
-					fmt.Fprint(os.Stderr, "* ")
-				}
-				if err := in.Err(); err != nil {
-					log.Fatalf("Error reading: %v", err)
-				}
-				input = buf.Bytes()
-			}
+		args, input, err := readInput(in, args)
+		if err != nil {
+			log.Fatalf("Error: %v", err)
 		}
 		return &RunReq{
 			Args:   args,
@@ -176,4 +136,59 @@ func readCommand(in *bufio.Scanner) (*RunReq, error) {
 			Stderr: *wantStderr,
 		}, nil
 	}
+}
+
+func readArgs(in *bufio.Scanner) ([]string, error) {
+	// Read a command line, allowing continuations.
+	fmt.Fprint(os.Stderr, "> ")
+	var cmd []string
+	for in.Scan() {
+		line := in.Text()
+		trim := strings.TrimSuffix(line, "\\")
+		cmd = append(cmd, trim)
+		if trim == line {
+			break
+		}
+		fmt.Fprint(os.Stderr, "+ ")
+	}
+	if err := in.Err(); err != nil {
+		return nil, err
+	} else if len(cmd) == 0 {
+		return nil, io.EOF
+	}
+	return cmd, nil
+}
+
+func readInput(in *bufio.Scanner, args []string) ([]string, []byte, error) {
+	n := len(args) - 1
+	if trim := strings.TrimPrefix(args[n], "<<"); trim != args[n] {
+		args = args[:n]
+		if trim != "" {
+			data, err := ioutil.ReadFile(trim)
+			if err != nil {
+				log.Fatalf("Error reading: %v", err)
+			}
+			return args, data, nil
+		} else {
+			var buf bytes.Buffer
+			fmt.Fprint(os.Stderr, "* ")
+		moreInput:
+			for in.Scan() {
+				switch in.Text() {
+				case ".":
+					break moreInput
+				case "..":
+					buf.WriteString(".\n")
+				default:
+					fmt.Fprintln(&buf, in.Text())
+				}
+				fmt.Fprint(os.Stderr, "* ")
+			}
+			if err := in.Err(); err != nil {
+				return nil, nil, fmt.Errorf("reading input: %v", err)
+			}
+			return args, buf.Bytes(), nil
+		}
+	}
+	return args, nil, nil
 }
