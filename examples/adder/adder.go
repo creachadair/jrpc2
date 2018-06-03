@@ -20,7 +20,7 @@ import (
 	"bitbucket.org/creachadair/jrpc2/channel"
 )
 
-// This function will be exported as a method named "Add".
+// Add will be exported as a method named "Add".
 func Add(ctx context.Context, vs ...int) (int, error) {
 	sum := 0
 	for _, v := range vs {

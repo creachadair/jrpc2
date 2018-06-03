@@ -59,6 +59,7 @@ type alert struct {
 	Msg string
 }
 
+// Alert implements a notification handler that logs its argument.
 func Alert(ctx context.Context, a alert) (bool, error) {
 	log.Printf("[ALERT]: %s", a.Msg)
 	return false, nil // return values are ignored for notifications
