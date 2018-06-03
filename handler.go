@@ -55,8 +55,10 @@ func (m methodFunc) Call(ctx context.Context, req *Request) (interface{}, error)
 // looks up literal method names in a map of static Methods.
 type MapAssigner map[string]Method
 
+// Assign implements part of the Assigner interface.
 func (m MapAssigner) Assign(method string) Method { return m[method] }
 
+// Names implements part of the Assigner interface.
 func (m MapAssigner) Names() []string { return stringset.FromKeys(m).Elements() }
 
 // A ServiceMapper combines multiple assigners into one, permitting a server to
