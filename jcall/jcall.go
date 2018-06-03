@@ -14,6 +14,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"strings"
 	"time"
 
 	"bitbucket.org/creachadair/jrpc2"
@@ -27,8 +28,6 @@ var (
 	withContext = flag.Bool("c", false, "Send context with request")
 	chanFraming = flag.String("f", "json", `Channel framing ("json", "line", "lsp", "varint")`)
 )
-
-// TODO(fromberger): Allow Unix-domain socket connections.
 
 func main() {
 	flag.Parse()
@@ -52,7 +51,8 @@ func main() {
 	}
 
 	// Connect to the server and establish a client.
-	conn, err := net.DialTimeout("tcp", addr, *dialTimeout)
+	ntype, addr := parseAddress(addr)
+	conn, err := net.DialTimeout(ntype, addr, *dialTimeout)
 	if err != nil {
 		log.Fatalf("Dial %q: %v", addr, err)
 	}
@@ -113,4 +113,13 @@ func newChannel(fmt string) func(io.Reader, io.WriteCloser) channel.Channel {
 	}
 	log.Fatalf("Unknown channel format %q", fmt)
 	panic("unreachable")
+}
+
+func parseAddress(s string) (ntype, addr string) {
+	// A TCP address has the form [host]:port, so there must be a colon in it.
+	// If we don't find that, assume it's a unix-domain socket.
+	if strings.Contains(s, ":") {
+		return "tcp", s
+	}
+	return "unix", s
 }
