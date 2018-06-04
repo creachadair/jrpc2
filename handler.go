@@ -152,17 +152,9 @@ func newMethod(fn interface{}) (Method, error) {
 	}
 
 	// Check that fn is a function of one of the correct forms.
-	typ := reflect.TypeOf(fn)
-	if typ.Kind() != reflect.Func {
-		return nil, errors.New("not a function")
-	} else if np := typ.NumIn(); np == 0 || np > 2 {
-		return nil, errors.New("wrong number of parameters")
-	} else if typ.NumOut() != 2 {
-		return nil, errors.New("wrong number of results")
-	} else if a := typ.In(0); a != ctxType {
-		return nil, errors.New("first parameter is not context.Context")
-	} else if a := typ.Out(1); a != errType {
-		return nil, errors.New("second result is not error")
+	typ, err := checkMethodType(fn)
+	if err != nil {
+		return nil, err
 	}
 
 	// Construct a function to unpack the request values from the request
@@ -235,4 +227,20 @@ func newMethod(fn interface{}) (Method, error) {
 		}
 		return out, nil
 	}), nil
+}
+
+func checkMethodType(fn interface{}) (reflect.Type, error) {
+	typ := reflect.TypeOf(fn)
+	if typ.Kind() != reflect.Func {
+		return nil, errors.New("not a function")
+	} else if np := typ.NumIn(); np == 0 || np > 2 {
+		return nil, errors.New("wrong number of parameters")
+	} else if typ.NumOut() != 2 {
+		return nil, errors.New("wrong number of results")
+	} else if a := typ.In(0); a != ctxType {
+		return nil, errors.New("first parameter is not context.Context")
+	} else if a := typ.Out(1); a != errType {
+		return nil, errors.New("second result is not error")
+	}
+	return typ, nil
 }
