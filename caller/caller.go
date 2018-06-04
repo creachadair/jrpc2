@@ -13,11 +13,9 @@ return type Y, and returns a function having the signature:
 
 The result can be asserted to this type and used as a normal function:
 
-   // Request type: []int
-   // Result type:  int
    Add := caller.New("Math.Add", caller.Options{
-      Params: []int(nil),
-      Result: int(0),
+      Params: []int(nil),  // parameter type []int
+      Result: int(0),      // result type int
    }).(func(context.Context, *jrpc2.Client, []int) (int, error))
    ...
    sum, err := Add(ctx, cli, []int{1, 3, 5, 7})
@@ -36,7 +34,9 @@ NewCaller can also optionally generate a variadic function:
 
 It can also generate a function with no request parameter (with X == nil):
 
-   Status := jrpc.NewCaller("Status", nil, string("")).(func(context.Context, *jrpc2.Client) (string, error))
+   Status := jrpc.NewCaller("Status", caller.Options{
+      Result: string(""),  // result type string, no request parameters
+   }).(func(context.Context, *jrpc2.Client) (string, error))
 */
 package caller
 
@@ -82,7 +82,7 @@ var (
 //    type Req struct{ A, B int }
 //
 //    // Suppose Math.Add is a method taking *Req to int.
-//    F := caller.New("Math.Add", &caller.Options{
+//    F := caller.New("Math.Add", caller.Options{
 //       Params: (*Req)(nil),
 //       Result: int(0),
 //    }).(func(context.Context, *jrpc2.Client, *Req) (int, error))
