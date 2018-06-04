@@ -37,7 +37,7 @@ func newServer(t *testing.T, assigner jrpc2.Assigner, opts *jrpc2.ServerOptions)
 	}
 }
 
-func TestNewCaller(t *testing.T) {
+func TestNew(t *testing.T) {
 	// A dummy method that returns the length of its argument slice.
 	ass := jrpc2.MapAssigner{
 		"F": jrpc2.NewMethod(func(_ context.Context, req []string) (int, error) {
@@ -59,20 +59,24 @@ func TestNewCaller(t *testing.T) {
 	defer cleanup()
 	ctx := context.Background()
 
-	caller := New("F", []string(nil), int(0))
+	caller := New("F", Options{Params: []string(nil), Result: int(0)})
 	F, ok := caller.(func(context.Context, *jrpc2.Client, []string) (int, error))
 	if !ok {
-		t.Fatalf("NewCaller (plain): wrong type: %T", caller)
+		t.Fatalf("New (plain): wrong type: %T", caller)
 	}
-	vcaller := New("F", string(""), int(0), Variadic())
+	vcaller := New("F", Options{
+		Params:   "",
+		Result:   0,
+		Variadic: true,
+	})
 	V, ok := vcaller.(func(context.Context, *jrpc2.Client, ...string) (int, error))
 	if !ok {
-		t.Fatalf("NewCaller (variadic): wrong type: %T", vcaller)
+		t.Fatalf("New (variadic): wrong type: %T", vcaller)
 	}
-	okcaller := New("OK", nil, "")
+	okcaller := New("OK", Options{Result: ""})
 	OK, ok := okcaller.(func(context.Context, *jrpc2.Client) (string, error))
 	if !ok {
-		t.Fatalf("NewCaller (niladic): wrong type: %T", okcaller)
+		t.Fatalf("New (niladic): wrong type: %T", okcaller)
 	}
 
 	// Verify that various success cases do indeed.

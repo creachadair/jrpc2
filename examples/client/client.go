@@ -25,9 +25,18 @@ var serverAddr = flag.String("server", "", "Server address")
 
 var (
 	// Reflective call wrappers for the remote methods.
-	add  = caller.New("Math.Add", int(0), int(0), caller.Variadic()).(func(context.Context, *jrpc2.Client, ...int) (int, error))
-	div  = caller.New("Math.Div", binarg{}, float64(0)).(func(context.Context, *jrpc2.Client, binarg) (float64, error))
-	stat = caller.New("Math.Status", nil, "").(func(context.Context, *jrpc2.Client) (string, error))
+	add = caller.New("Math.Add", caller.Options{
+		Params:   int(0),
+		Result:   int(0),
+		Variadic: true,
+	}).(func(context.Context, *jrpc2.Client, ...int) (int, error))
+	div = caller.New("Math.Div", caller.Options{
+		Params: binarg{},
+		Result: float64(0),
+	}).(func(context.Context, *jrpc2.Client, binarg) (float64, error))
+	stat = caller.New("Math.Status", caller.Options{
+		Result: "",
+	}).(func(context.Context, *jrpc2.Client) (string, error))
 )
 
 type binarg struct{ X, Y int }
