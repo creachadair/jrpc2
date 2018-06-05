@@ -62,7 +62,7 @@ var (
 
 // New reflectively constructs a function of type:
 //
-//     func(context.Context, *Client, X) (Y, error)
+//     func(context.Context, *jrpc2.Client, X) (Y, error)
 //
 // that invokes the designated method via the client given, encoding the
 // provided request and decoding the response automatically. This supports
@@ -72,7 +72,7 @@ var (
 // As a special case, if X == nil, the returned function will omit the request
 // argument and have the signature:
 //
-//     func(context.Context, *Client) (Y, error)
+//     func(context.Context, *jrpc2.Client) (Y, error)
 //
 // New will panic if Y == nil.
 //
