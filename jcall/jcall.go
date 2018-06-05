@@ -14,6 +14,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -28,6 +29,20 @@ var (
 	withContext = flag.Bool("c", false, "Send context with request")
 	chanFraming = flag.String("f", "json", `Channel framing ("json", "line", "lsp", "varint")`)
 )
+
+func init() {
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, `Usage: [options] %s <address> {<method> <params>}...
+
+Connect to the specified address and transmit the specified JSON-RPC method
+calls (as a batch, if more than one is provided).  The resulting response
+values are printed to stdout.
+
+Options:
+`, filepath.Base(os.Args[0]))
+		flag.PrintDefaults()
+	}
+}
 
 func main() {
 	flag.Parse()
