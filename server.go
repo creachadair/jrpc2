@@ -184,7 +184,7 @@ func (s *Server) checkTasks(next jrequests) tasks {
 		if id := string(req.ID); id != "" && s.used[id] != nil {
 			t.err = Errorf(E_InvalidRequest, "duplicate request id %q", id)
 		} else if !s.versionOK(req.V) {
-			t.err = Errorf(E_InvalidRequest, "incorrect version marker %q", req.V)
+			t.err = Errorf(E_InvalidRequest, "incorrect version marker")
 		} else if req.M == "" {
 			t.err = Errorf(E_InvalidRequest, "empty method name")
 		} else if m := s.assign(req.M); m == nil {
@@ -322,12 +322,16 @@ func (s *Server) read(ch channel.Channel) {
 		s.mu.Lock()
 		s.metrics.Count("rpc.requests", int64(len(in)))
 		s.metrics.CountAndSetMax("rpc.bytesRead", int64(len(bits)))
-		if isRecoverableJSONError(err) {
-			s.pushError(nil, jerrorf(E_ParseError, "invalid JSON request message"))
-		} else if err != nil {
-			s.stop(err)
-			s.mu.Unlock()
-			return
+		if err != nil {
+			if e, ok := err.(*Error); ok {
+				s.pushError(e.data, jerrorf(e.Code, e.Message))
+			} else if isRecoverableJSONError(err) {
+				s.pushError(nil, jerrorf(E_ParseError, "invalid JSON request message"))
+			} else {
+				s.stop(err)
+				s.mu.Unlock()
+				return
+			}
 		} else if len(in) == 0 {
 			s.pushError(nil, jerrorf(E_InvalidRequest, "empty request batch"))
 		} else {
