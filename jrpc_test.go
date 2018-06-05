@@ -434,8 +434,11 @@ func TestOtherClient(t *testing.T) {
 }
 
 func TestServerNotify(t *testing.T) {
-	srv, cli := channel.Pipe(channel.Line)
-	s := NewServer(MapAssigner{
+	// Set up a server and client with server-side notification support.  Here
+	// we're just capturing the name of the notification method, as a sign we
+	// got the right thing.
+	var notes []string
+	s, c, cleanup := newServer(t, MapAssigner{
 		"NoteMe": NewMethod(func(ctx context.Context) (bool, error) {
 			// When this method is called, it posts a notification back to the
 			// client before returning.
@@ -447,15 +450,15 @@ func TestServerNotify(t *testing.T) {
 			}
 			return true, nil
 		}),
-	}, &ServerOptions{AllowNotify: true}).Start(srv)
-
-	// Set up a client with a notification handler.  Here we're just capturing
-	// the name of the method, as a sign we got the right thing.
-	var notes []string
-	c := NewClient(cli, &ClientOptions{
-		OnNotify: func(req *Request) {
-			notes = append(notes, req.method)
-			t.Logf("OnNotify handler saw method %q", req.method)
+	}, &testOptions{
+		server: &ServerOptions{
+			AllowNotify: true,
+		},
+		client: &ClientOptions{
+			OnNotify: func(req *Request) {
+				notes = append(notes, req.method)
+				t.Logf("OnNotify handler saw method %q", req.method)
+			},
 		},
 	})
 
@@ -472,10 +475,7 @@ func TestServerNotify(t *testing.T) {
 	}
 
 	// Shut everything down to be sure the callbacks have settled.
-	c.Close()
-	if err := s.Wait(); err != io.EOF {
-		t.Errorf("Server wait faile: %v", err)
-	}
+	cleanup()
 
 	want := []string{"explicit", "method"}
 	if !reflect.DeepEqual(notes, want) {
