@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"reflect"
 	"testing"
 	"time"
@@ -361,6 +362,63 @@ func TestServerInfo(t *testing.T) {
 		t.Logf("Metric %q is defined with value %d", test.name, got)
 		if test.want >= 0 && got != test.want {
 			t.Errorf("Wrong value for %q: want %d", test.name, test.want)
+		}
+	}
+}
+
+func TestOtherClient(t *testing.T) {
+	// Ensure that a correct request not sent via the *Client type will still
+	// elicit a correct response.
+	srv, cli := channel.Pipe(channel.Line)
+	s := NewServer(MapAssigner{
+		"X": NewMethod(func(ctx context.Context) (string, error) {
+			return "OK", nil
+		}),
+	}, nil).Start(srv)
+	defer func() {
+		cli.Close()
+		if err := s.Wait(); err != io.EOF {
+			t.Errorf("Server wait: unexpected error %v", err)
+		}
+	}()
+
+	tests := []struct {
+		input, want string
+	}{
+		// Missing version marker (and therefore wrong).
+		{`{"id":0}`,
+			`{"jsonrpc":"2.0","id":0,"error":{"code":-32600,"message":"incorrect version marker"}}`},
+
+		// Version marker is present, but wrong.
+		{`{"jsonrpc":"1.5","id":1}`,
+			`{"jsonrpc":"2.0","id":1,"error":{"code":-32600,"message":"incorrect version marker"}}`},
+
+		// No method was specified.
+		{`{"jsonrpc":"2.0","id":2}`,
+			`{"jsonrpc":"2.0","id":2,"error":{"code":-32600,"message":"empty method name"}}`},
+
+		// The method specified doesn't exist.
+		{`{"jsonrpc":"2.0", "id": 3, "method": "NoneSuch"}`,
+			`{"jsonrpc":"2.0","id":3,"error":{"code":-32601,"message":"no such method \"NoneSuch\""}}`},
+
+		// The parameters are of the wrong form.
+		{`{"jsonrpc":"2.0", "id": 4, "method": "X", "params": "bogus"}`,
+			`{"jsonrpc":"2.0","id":4,"error":{"code":-32600,"message":"parameters must be list or object"}}`},
+
+		// A correct request.
+		{`{"jsonrpc":"2.0","id": 5, "method": "X"}`,
+			`{"jsonrpc":"2.0","id":5,"result":"OK"}`},
+	}
+	for _, test := range tests {
+		if err := cli.Send([]byte(test.input)); err != nil {
+			t.Fatalf("Send %#q failed: %v", test.input, err)
+		}
+		raw, err := cli.Recv()
+		if err != nil {
+			t.Fatalf("Recv failed: %v", err)
+		}
+		if got := string(raw); got != test.want {
+			t.Errorf("Call %#q: got %#q, want %#q", test.input, got, test.want)
 		}
 	}
 }
