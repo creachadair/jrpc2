@@ -13,13 +13,21 @@ import (
 	"bitbucket.org/creachadair/jrpc2/channel"
 )
 
-func newServer(t *testing.T, assigner Assigner, opts *ServerOptions) (*Server, *Client, func()) {
+type testOptions struct {
+	server *ServerOptions
+	client *ClientOptions
+}
+
+func newServer(t *testing.T, assigner Assigner, opts *testOptions) (*Server, *Client, func()) {
 	t.Helper()
+	if opts == nil {
+		opts = new(testOptions)
+	}
 	cpipe, spipe := channel.Pipe(channel.JSON)
-	srv := NewServer(assigner, opts).Start(spipe)
+	srv := NewServer(assigner, opts.server).Start(spipe)
 	t.Logf("Server running on pipe %+v", spipe)
 
-	cli := NewClient(cpipe, nil)
+	cli := NewClient(cpipe, opts.client)
 	t.Logf("Client running on pipe %v", cpipe)
 
 	return srv, cli, func() {
@@ -83,9 +91,11 @@ func (dummy) Unrelated() string { return "ceci n'est pas une méthode" }
 func TestClientServer(t *testing.T) {
 	s, c, cleanup := newServer(t, ServiceMapper{
 		"Test": NewService(dummy{}),
-	}, &ServerOptions{
-		AllowV1:     true,
-		Concurrency: 16,
+	}, &testOptions{
+		server: &ServerOptions{
+			AllowV1:     true,
+			Concurrency: 16,
+		},
 	})
 	defer cleanup()
 	ctx := context.Background()
