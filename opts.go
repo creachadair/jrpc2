@@ -19,7 +19,8 @@ type ServerOptions struct {
 	AllowV1 bool
 
 	// Instructs the server to allow server notifications, a non-standard
-	// extension to the JSON-RPC protocol.
+	// extension to the JSON-RPC protocol. If AllowNotify is false, the Notify
+	// method of the server will report an error when called.
 	AllowNotify bool
 
 	// Allows up to the specified number of concurrent goroutines to execute

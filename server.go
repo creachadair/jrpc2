@@ -246,6 +246,8 @@ func (s *Server) ServerInfo() *ServerInfo {
 
 // Notify posts a server-side notification to the client.  This is a
 // non-standard extension of JSON-RPC, and may not be supported by all clients.
+// Unless s was constructed with the AllowNotify option set true, this method
+// will always report an error without sending anything.
 func (s *Server) Notify(ctx context.Context, method string, params interface{}) error {
 	if !s.allowN {
 		return errors.New("server notifications are disabled")
