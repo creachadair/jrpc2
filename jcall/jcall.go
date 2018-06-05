@@ -29,6 +29,7 @@ var (
 	doNotify    = flag.Bool("notify", false, "Send a notification")
 	withContext = flag.Bool("c", false, "Send context with request")
 	chanFraming = flag.String("f", "json", `Channel framing ("json", "line", "lsp", "varint")`)
+	withLogging = flag.Bool("v", false, "Enable verbose logging")
 )
 
 func init() {
@@ -74,9 +75,12 @@ func main() {
 	}
 	defer conn.Close()
 
-	var opts *jrpc2.ClientOptions
+	opts := new(jrpc2.ClientOptions)
 	if *withContext {
-		opts = &jrpc2.ClientOptions{EncodeContext: jcontext.Encode}
+		opts.EncodeContext = jcontext.Encode
+	}
+	if *withLogging {
+		opts.Logger = log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile)
 	}
 	cli := jrpc2.NewClient(nc(conn, conn), opts)
 
