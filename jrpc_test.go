@@ -165,7 +165,7 @@ func TestTimeout(t *testing.T) {
 			case <-ctx.Done():
 				t.Logf("Stall context done: err=%v", ctx.Err())
 				return true, nil
-			case <-time.After(10 * time.Second):
+			case <-time.After(5 * time.Second):
 				return false, errors.New("stall timed out")
 			}
 		}),
@@ -420,5 +420,55 @@ func TestOtherClient(t *testing.T) {
 		if got := string(raw); got != test.want {
 			t.Errorf("Call %#q: got %#q, want %#q", test.input, got, test.want)
 		}
+	}
+}
+
+func TestServerNotify(t *testing.T) {
+	srv, cli := channel.Pipe(channel.Line)
+	s := NewServer(MapAssigner{
+		"NoteMe": NewMethod(func(ctx context.Context) (bool, error) {
+			// When this method is called, it posts a notification back to the
+			// client before returning.
+			note := ServerNotify(ctx)
+			if note == nil {
+				t.Error("ServerNotify returned nil in the method handler")
+			} else if err := note(ctx, "method", nil); err != nil {
+				return false, err
+			}
+			return true, nil
+		}),
+	}, &ServerOptions{AllowNotify: true}).Start(srv)
+
+	// Set up a client with a notification handler.  Here we're just capturing
+	// the name of the method, as a sign we got the right thing.
+	var notes []string
+	c := NewClient(cli, &ClientOptions{
+		OnNotify: func(req *Request) {
+			notes = append(notes, req.method)
+			t.Logf("OnNotify handler saw method %q", req.method)
+		},
+	})
+
+	ctx := context.Background()
+
+	// Post an explicit notification.
+	if err := s.Notify(ctx, "explicit", nil); err != nil {
+		t.Errorf("Notify explicit: unexpected error: %v", err)
+	}
+
+	// Call the method that posts a notification.
+	if _, err := c.CallWait(ctx, "NoteMe", nil); err != nil {
+		t.Errorf("Call NoteMe: unexpected error: %v", err)
+	}
+
+	// Shut everything down to be sure the callbacks have settled.
+	c.Close()
+	if err := s.Wait(); err != io.EOF {
+		t.Errorf("Server wait faile: %v", err)
+	}
+
+	want := []string{"explicit", "method"}
+	if !reflect.DeepEqual(notes, want) {
+		t.Errorf("Server notifications: got %+q, want %+q", notes, want)
 	}
 }
