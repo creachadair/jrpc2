@@ -25,6 +25,7 @@ import (
 
 var (
 	dialTimeout = flag.Duration("dial", 5*time.Second, "Timeout on dialing the server (0 for no timeout)")
+	callTimeout = flag.Duration("timeout", 0, "Timeout on each call (0 for no timeout)")
 	doNotify    = flag.Bool("notify", false, "Send a notification")
 	withContext = flag.Bool("c", false, "Send context with request")
 	chanFraming = flag.String("f", "json", `Channel framing ("json", "line", "lsp", "varint")`)
@@ -90,6 +91,11 @@ func main() {
 	}
 
 	// Handle a batch of requests.
+	if *callTimeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, *callTimeout)
+		defer cancel()
+	}
 	batch, err := cli.Batch(ctx, specs)
 	if err != nil {
 		log.Fatalf("Call failed: %v", err)
