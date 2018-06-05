@@ -105,7 +105,6 @@ func (c *Client) req(ctx context.Context, method string, params interface{}) (*R
 	if err != nil {
 		return nil, err
 	}
-	c.log("Request params: %+v", params)
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
