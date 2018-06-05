@@ -141,7 +141,7 @@ func (c *Client) send(ctx context.Context, reqs ...*Request) ([]*Pending, error)
 			V:  Version,
 			ID: req.id,
 			M:  req.method,
-			P:  jparams(req.params),
+			P:  req.params,
 		}
 	}
 

@@ -82,20 +82,16 @@ type jrequest struct {
 	V  string          `json:"jsonrpc"`      // must be Version
 	ID json.RawMessage `json:"id,omitempty"` // rendered by the constructor, may be nil
 	M  string          `json:"method"`
-	P  jparams         `json:"params,omitempty"` // rendered by the constructor
+	P  json.RawMessage `json:"params,omitempty"` // rendered by the constructor
 }
 
-// jparams is a raw parameters message, including a check that the value is
-// either an array or an object.
-type jparams json.RawMessage
-
-func (j jparams) MarshalJSON() ([]byte, error) { return []byte(j), nil }
-
-func (j *jparams) UnmarshalJSON(data []byte) error {
-	if len(data) == 0 || (data[0] != '[' && data[0] != '{') {
-		return errors.New("parameters must be list or object")
+func (j *jrequest) UnmarshalJSON(data []byte) error {
+	type stub jrequest
+	if err := json.Unmarshal(data, (*stub)(j)); err != nil {
+		return err
+	} else if len(j.P) != 0 && j.P[0] != '[' && j.P[0] != '{' {
+		return DataErrorf(E_InvalidRequest, j.ID, "parameters must be list or object")
 	}
-	*j = append((*j)[:0], data...)
 	return nil
 }
 
