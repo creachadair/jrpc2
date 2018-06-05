@@ -19,6 +19,7 @@ type Client struct {
 	log    func(string, ...interface{}) // write debug logs here
 	allow1 bool                         // tolerate v1 replies with no version marker
 	enctx  func(context.Context, json.RawMessage) (json.RawMessage, error)
+	snote  func(*jresponse) bool
 
 	mu      sync.Mutex          // protects the fields below
 	ch      channel.Channel     // channel to the server
@@ -33,6 +34,7 @@ func NewClient(ch channel.Channel, opts *ClientOptions) *Client {
 		log:    opts.logger(),
 		allow1: opts.allowV1(),
 		enctx:  opts.encodeContext(),
+		snote:  opts.handleNotification(),
 
 		// Lock-protected fields
 		ch:      ch,
@@ -70,7 +72,9 @@ func NewClient(ch channel.Channel, opts *ClientOptions) *Client {
 			c.log("Received %d responses", len(in))
 			for _, rsp := range in {
 				if id := string(fixID(rsp.ID)); id == "" {
-					c.log("Discarding response without ID: %v", rsp)
+					if !c.snote(rsp) {
+						c.log("Discarding response without ID: %v", rsp)
+					}
 				} else if p := c.pending[id]; p == nil {
 					c.log("Discarding response for unknown ID %q", id)
 				} else if !c.versionOK(rsp.V) {

@@ -83,6 +83,12 @@ type ClientOptions struct {
 	// replaces the request parameters. This allows the client to send context
 	// metadata along with the request. If unset, the parameters are unchanged.
 	EncodeContext func(context.Context, json.RawMessage) (json.RawMessage, error)
+
+	// If set, this function is called if a notification is received from the
+	// server. If unset, server notifications are logged and discarded.  At
+	// most one invocation of the callback will be active at a time.
+	// Server notifications are a non-standard extension of JSON-RPC.
+	OnNotify func(*Request)
 }
 
 // ClientLog enables debug logging to the specified writer.
@@ -101,4 +107,18 @@ func (c *ClientOptions) encodeContext() func(context.Context, json.RawMessage) (
 		return func(_ context.Context, params json.RawMessage) (json.RawMessage, error) { return params, nil }
 	}
 	return c.EncodeContext
+}
+
+func (c *ClientOptions) handleNotification() func(*jresponse) bool {
+	if c == nil || c.OnNotify == nil {
+		return func(*jresponse) bool { return false }
+	}
+	h := c.OnNotify
+	return func(req *jresponse) bool {
+		if req.isServerRequest() {
+			h(&Request{method: req.M, params: req.P})
+			return true
+		}
+		return false
+	}
 }

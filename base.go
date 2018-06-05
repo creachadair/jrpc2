@@ -122,7 +122,14 @@ type jresponse struct {
 	ID json.RawMessage `json:"id,omitempty"`     // set if request had an ID
 	E  *jerror         `json:"error,omitempty"`  // set on error
 	R  json.RawMessage `json:"result,omitempty"` // set on success
+
+	// Allow the server to send a response that looks like a notification.
+	// This is an extension of JSON-RPC 2.0.
+	M string          `json:"method,omitempty"`
+	P json.RawMessage `json:"params,omitempty"`
 }
+
+func (j jresponse) isServerRequest() bool { return j.E == nil && j.R == nil && j.M != "" }
 
 // jerror is the transmission format of an error object.
 type jerror struct {
