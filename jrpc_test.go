@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"bitbucket.org/creachadair/jrpc2/channel"
+	"bitbucket.org/creachadair/jrpc2/jcontext"
 )
 
 type testOptions struct {
@@ -480,5 +481,32 @@ func TestServerNotify(t *testing.T) {
 	want := []string{"explicit", "method"}
 	if !reflect.DeepEqual(notes, want) {
 		t.Errorf("Server notifications: got %+q, want %+q", notes, want)
+	}
+}
+
+func TestContextPlumbing(t *testing.T) {
+	want := time.Now().Add(10 * time.Second)
+	ctx, cancel := context.WithDeadline(context.Background(), want)
+	defer cancel()
+
+	_, c, cleanup := newServer(t, MapAssigner{
+		"X": NewMethod(func(ctx context.Context) (bool, error) {
+			got, ok := ctx.Deadline()
+			if !ok {
+				return false, errors.New("no deadline was set")
+			} else if !got.Equal(want) {
+				return false, fmt.Errorf("deadline: got %v, want %v", got, want)
+			}
+			t.Logf("Got expected deadline: %v", got)
+			return true, nil
+		}),
+	}, &testOptions{
+		server: &ServerOptions{DecodeContext: jcontext.Decode},
+		client: &ClientOptions{EncodeContext: jcontext.Encode},
+	})
+	defer cleanup()
+
+	if _, err := c.CallWait(ctx, "X", nil); err != nil {
+		t.Errorf("Call X failed: %v", err)
 	}
 }
