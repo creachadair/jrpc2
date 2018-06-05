@@ -193,7 +193,7 @@ func (c *Client) send(ctx context.Context, reqs ...*Request) ([]*Pending, error)
 					// Inform the server, best effort only.
 					cleanup = func() {
 						c.log("Sending rpc.cancel for id %q to the server", id)
-						c.Notify(context.Background(), "rpc.cancel", []json.RawMessage{json.RawMessage(id)})
+						c.Notify(ctx, "rpc.cancel", []json.RawMessage{json.RawMessage(id)})
 					}
 				}
 			}()
@@ -338,14 +338,14 @@ func (c *Client) marshalParams(ctx context.Context, params interface{}) (json.Ra
 	if err != nil {
 		return nil, err
 	}
-	bits, err := c.enctx(ctx, pbits)
-	if err != nil {
-		return nil, err
-	}
-	if len(bits) != 0 && bits[0] != '[' && bits[0] != '{' {
+	if len(pbits) == 0 || (pbits[0] != '[' && pbits[0] != '{') {
 		// JSON-RPC requires that if parameters are provided at all, they are
 		// an array or an object
 		return nil, Errorf(E_InvalidRequest, "invalid parameters: array or object required")
+	}
+	bits, err := c.enctx(ctx, pbits)
+	if err != nil {
+		return nil, err
 	}
 	return bits, err
 }
