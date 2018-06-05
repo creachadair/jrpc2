@@ -18,6 +18,10 @@ type ServerOptions struct {
 	// required "jsonrpc" version marker.
 	AllowV1 bool
 
+	// Instructs the server to allow server notifications, a non-standard
+	// extension to the JSON-RPC protocol.
+	AllowNotify bool
+
 	// Allows up to the specified number of concurrent goroutines to execute
 	// when processing requests. A value less than 1 uses runtime.NumCPU().
 	Concurrency int
@@ -43,7 +47,8 @@ func (s *ServerOptions) logger() func(string, ...interface{}) {
 	return func(msg string, args ...interface{}) { logger.Output(2, fmt.Sprintf(msg, args...)) }
 }
 
-func (s *ServerOptions) allowV1() bool { return s != nil && s.AllowV1 }
+func (s *ServerOptions) allowV1() bool     { return s != nil && s.AllowV1 }
+func (s *ServerOptions) allowNotify() bool { return s != nil && s.AllowNotify }
 
 func (s *ServerOptions) concurrency() int64 {
 	if s == nil || s.Concurrency < 1 {

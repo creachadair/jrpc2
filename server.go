@@ -4,6 +4,7 @@ import (
 	"container/list"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"sync"
 	"time"
@@ -20,6 +21,7 @@ type Server struct {
 	mux    Assigner                     // associates method names with handlers
 	sem    *semaphore.Weighted          // bounds concurrent execution (default 1)
 	allow1 bool                         // allow v1 requests with no version marker
+	allowN bool                         // allow server notifications to the client
 	log    func(string, ...interface{}) // write debug logs here
 	dectx  func(context.Context, json.RawMessage) (context.Context, json.RawMessage, error)
 
@@ -50,6 +52,7 @@ func NewServer(mux Assigner, opts *ServerOptions) *Server {
 		mux:     mux,
 		sem:     semaphore.NewWeighted(opts.concurrency()),
 		allow1:  opts.allowV1(),
+		allowN:  opts.allowNotify(),
 		log:     opts.logger(),
 		dectx:   opts.decodeContext(),
 		mu:      new(sync.Mutex),
@@ -215,6 +218,9 @@ func (s *Server) checkTasks(next jrequests) tasks {
 func (s *Server) dispatch(base context.Context, m Method, req *Request) (json.RawMessage, error) {
 	ctx := context.WithValue(base, inboundRequestKey, req)
 	ctx = context.WithValue(ctx, serverMetricsKey, s.metrics)
+	if s.allowN {
+		ctx = context.WithValue(ctx, serverNotifyKey, s.Notify)
+	}
 	if err := s.sem.Acquire(ctx, 1); err != nil {
 		return nil, err
 	}
@@ -236,6 +242,33 @@ func (s *Server) ServerInfo() *ServerInfo {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.serverInfo()
+}
+
+// Notify posts a server-side notification to the client.  This is a
+// non-standard extension of JSON-RPC, and may not be supported by all clients.
+func (s *Server) Notify(ctx context.Context, method string, params interface{}) error {
+	if !s.allowN {
+		return errors.New("server notifications are disabled")
+	}
+	var bits []byte
+	if params != nil {
+		v, err := json.Marshal(params)
+		if err != nil {
+			return err
+		}
+		bits = v
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.log("Posting server notification %q %s", method, string(bits))
+	nw, err := encode(s.ch, jresponses{{
+		V: Version,
+		M: method,
+		P: bits,
+	}})
+	s.metrics.CountAndSetMax("rpc.bytesWritten", int64(nw))
+	s.metrics.Count("rpc.notifications", 1)
+	return err
 }
 
 // serverInfo returns a snapshot of the current server info for s. It requires
@@ -464,8 +497,20 @@ func InboundRequest(ctx context.Context) *Request {
 	return nil
 }
 
+// ServerNotify returns the server notifier associated with the given context,
+// or nil if ctx does not have a server notifier. The context passed to the
+// handler by *jrpc2.Server will include this value if the server was
+// constructed with the AllowNotify option set true.
+func ServerNotify(ctx context.Context) func(context.Context, string, interface{}) error {
+	if v := ctx.Value(serverNotifyKey); v != nil {
+		return v.(func(context.Context, string, interface{}) error)
+	}
+	return nil
+}
+
 // requestContextKey is the concrete type of the context key used to dispatch
 // the request context in to handlers.
 type requestContextKey string
 
 const inboundRequestKey = requestContextKey("inbound-request")
+const serverNotifyKey = requestContextKey("server-notify")
