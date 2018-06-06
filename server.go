@@ -89,24 +89,27 @@ func (s *Server) Start(c channel.Channel) *Server {
 	// Accept requests from the client and enqueue them for processing.
 	go func() { defer s.wg.Done(); s.read(c) }()
 
-	// Remove requests from the queue and dispatch them to handlers.  The
-	// responses are written back by the handler goroutines.
-	go func() {
-		defer s.wg.Done()
-		for {
-			next, err := s.nextRequest()
-			if err != nil {
-				s.log("Reading next request: %v", err)
-				return
-			}
-			s.wg.Add(1)
-			go func() {
-				defer s.wg.Done()
-				next()
-			}()
-		}
-	}()
+	// Remove requests from the queue and dispatch them to handlers.
+	go func() { defer s.wg.Done(); s.serve() }()
+
 	return s
+}
+
+// serve processes requests from the queue and dispatches them to handlers.
+// The responses are written back by the handler goroutines.
+func (s *Server) serve() {
+	for {
+		next, err := s.nextRequest()
+		if err != nil {
+			s.log("Reading next request: %v", err)
+			return
+		}
+		s.wg.Add(1)
+		go func() {
+			defer s.wg.Done()
+			next()
+		}()
+	}
 }
 
 // nextRequest blocks until a request batch is available and returns a function
