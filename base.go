@@ -168,7 +168,7 @@ func fixID(id json.RawMessage) json.RawMessage {
 }
 
 // encode marshals v as JSON and forwards it to the channel.
-func encode(ch channel.Channel, v interface{}) (int, error) {
+func encode(ch channel.Sender, v interface{}) (int, error) {
 	bits, err := json.Marshal(v)
 	if err != nil {
 		return 0, err
@@ -177,7 +177,7 @@ func encode(ch channel.Channel, v interface{}) (int, error) {
 }
 
 // decode receives a message from the channel and unmarshals it as JSON to v.
-func decode(ch channel.Channel, v interface{}) error {
+func decode(ch channel.Receiver, v interface{}) error {
 	bits, err := ch.Recv()
 	if err != nil {
 		return err
