@@ -97,6 +97,20 @@ func (s *Server) Start(c channel.Channel) *Server {
 
 // serve processes requests from the queue and dispatches them to handlers.
 // The responses are written back by the handler goroutines.
+//
+// The flow of an inbound request is:
+//
+//   serve             -- main serving loop
+//   * nextRequest     -- process the next request batch
+//     * dispatch
+//       * assign      -- assign handlers to requests
+//       | ...
+//       |
+//       * invoke      -- invoke handlers
+//       | \ handler   -- handle an individual request
+//       |   ...
+//       * deliver     -- send responses to the client
+//
 func (s *Server) serve() {
 	for {
 		next, err := s.nextRequest()
@@ -132,58 +146,62 @@ func (s *Server) nextRequest() (func() error, error) {
 	next := s.inq.Remove(s.inq.Front()).(jrequests)
 	s.log("Processing %d requests", len(next))
 
-	// Resolve all the task handlers or record errors.
-	tasks := s.checkTasks(next)
-
 	// Construct a dispatcher to run the handlers outside the lock.
-	return s.dispatch(tasks, ch), nil
+	return s.dispatch(next, ch), nil
 }
 
 // dispatch constructs a function that invokes each of the specified tasks.
 // The caller must hold s.mu when calling dispatch, but the returned function
-// should be executed outside the lock.
-func (s *Server) dispatch(tasks tasks, ch channel.Channel) func() error {
+// should be executed outside the lock to wait for the handlers to return.
+func (s *Server) dispatch(next jrequests, ch channel.Sender) func() error {
+	// Resolve all the task handlers or record errors.
+	tasks := s.checkTasks(next)
+	start := time.Now()
+	var wg sync.WaitGroup
+	for _, t := range tasks {
+		if t.err != nil {
+			continue // nothing to do here; this was a bogus one
+		}
+		t := t
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			t.val, t.err = s.invoke(t.ctx, t.m, &Request{
+				id:     t.req.ID,
+				method: t.req.M,
+				params: t.params,
+			})
+		}()
+	}
+
+	// Wait for all the handlers to return, then deliver any responses.
 	return func() error {
-		start := time.Now()
-		var wg sync.WaitGroup
-		for _, t := range tasks {
-			if t.err != nil {
-				continue // nothing to do here; this was a bogus one
-			}
-			t := t
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				t.val, t.err = s.invoke(t.ctx, t.m, &Request{
-					id:     t.req.ID,
-					method: t.req.M,
-					params: t.params,
-				})
-			}()
-		}
 		wg.Wait()
-		rsps := tasks.responses()
-		s.log("Completed %d responses [%v elapsed]", len(rsps), time.Since(start))
+		return s.deliver(tasks.responses(), ch, time.Since(start))
+	}
+}
 
-		// Deliver any responses (or errors) we owe.
-		if len(rsps) != 0 {
-			s.log("Sending response: %v", rsps)
-			s.mu.Lock()
-			defer s.mu.Unlock()
-
-			// Ensure all the inflight requests get their contexts cancelled.
-			for _, rsp := range rsps {
-				if cancel, ok := s.used[string(rsp.ID)]; ok {
-					cancel()
-				}
-			}
-
-			nw, err := encode(ch, rsps)
-			s.metrics.CountAndSetMax("rpc.bytesWritten", int64(nw))
-			return err
-		}
+// deliver cleans up completed responses and arranges their replies (if any) to
+// be sent back to the client.
+func (s *Server) deliver(rsps jresponses, ch channel.Sender, elapsed time.Duration) error {
+	if len(rsps) == 0 {
 		return nil
 	}
+	s.log("Completed %d requests [%v elapsed]", len(rsps), elapsed)
+	s.log("Sending responses: %v", rsps)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Ensure all the inflight requests get their contexts cancelled.
+	for _, rsp := range rsps {
+		if cancel, ok := s.used[string(rsp.ID)]; ok {
+			cancel()
+		}
+	}
+
+	nw, err := encode(ch, rsps)
+	s.metrics.CountAndSetMax("rpc.bytesWritten", int64(nw))
+	return err
 }
 
 // checkTasks resolves all the task handlers for the given batch, or records
