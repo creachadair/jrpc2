@@ -456,8 +456,9 @@ func (s *Server) assign(name string) Method {
 	return s.mux.Assign(name)
 }
 
-// pushError reports an error for the given request ID.
-// Requires that the caller hold s.mu.
+// pushError reports an error for the given request ID directly back to the
+// client, bypassing the normal request handling mechanism.  The caller must
+// hold s.mu when calling this method.
 func (s *Server) pushError(id json.RawMessage, jerr *jerror) {
 	s.log("Error for request %q: %v", string(id), jerr)
 	nw, err := encode(s.ch, jresponses{{
