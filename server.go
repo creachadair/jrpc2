@@ -135,14 +135,14 @@ func (s *Server) nextRequest() (func() error, error) {
 	// Resolve all the task handlers or record errors.
 	tasks := s.checkTasks(next)
 
-	// Construct an invoker to run the handlers outside the lock.
-	return s.invoke(tasks, ch), nil
+	// Construct a dispatcher to run the handlers outside the lock.
+	return s.dispatch(tasks, ch), nil
 }
 
-// invoke constructs a function that invokes each of the specified tasks.  The
-// caller must hold s.mu when calling invoke, but the returned function should
-// be executed outside the lock.
-func (s *Server) invoke(tasks tasks, ch channel.Channel) func() error {
+// dispatch constructs a function that invokes each of the specified tasks.
+// The caller must hold s.mu when calling dispatch, but the returned function
+// should be executed outside the lock.
+func (s *Server) dispatch(tasks tasks, ch channel.Channel) func() error {
 	return func() error {
 		start := time.Now()
 		var wg sync.WaitGroup
@@ -154,7 +154,7 @@ func (s *Server) invoke(tasks tasks, ch channel.Channel) func() error {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				t.val, t.err = s.dispatch(t.ctx, t.m, &Request{
+				t.val, t.err = s.invoke(t.ctx, t.m, &Request{
 					id:     t.req.ID,
 					method: t.req.M,
 					params: t.params,
@@ -223,9 +223,9 @@ func (s *Server) checkTasks(next jrequests) tasks {
 	return tasks
 }
 
-// dispatch invokes m for the specified request type, and marshals the return
-// value into JSON if there is one.
-func (s *Server) dispatch(base context.Context, m Method, req *Request) (json.RawMessage, error) {
+// invoke invokes the handler m for the specified request type, and marshals
+// the return value into JSON if there is one.
+func (s *Server) invoke(base context.Context, m Method, req *Request) (json.RawMessage, error) {
 	ctx := context.WithValue(base, inboundRequestKey, req)
 	ctx = context.WithValue(ctx, serverMetricsKey, s.metrics)
 	if s.allowN {
