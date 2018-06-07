@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"bitbucket.org/creachadair/jrpc2/channel"
+	"bitbucket.org/creachadair/jrpc2/metrics"
 	"golang.org/x/sync/semaphore"
 )
 
@@ -30,7 +31,7 @@ type Server struct {
 	work    *sync.Cond      // for signaling message availability
 	inq     *list.List      // inbound requests awaiting processing
 	ch      channel.Channel // the channel to the client
-	metrics *Metrics        // metrics collected during execution
+	metrics *metrics.M      // metrics collected during execution
 
 	// For each request ID currently in-flight, this map carries a cancel
 	// function attached to the context that was sent to the handler.

@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 	"runtime"
+
+	"bitbucket.org/creachadair/jrpc2/metrics"
 )
 
 // ServerOptions control the behaviour of a server created by NewServer.
@@ -37,7 +39,7 @@ type ServerOptions struct {
 	// If set, use this value to record server metrics. All servers created
 	// from the same options will share the same metrics collector.  If none is
 	// set, an empty collector will be created for each new server.
-	Metrics *Metrics
+	Metrics *metrics.M
 }
 
 func (s *ServerOptions) logger() func(string, ...interface{}) {
@@ -67,9 +69,9 @@ func (s *ServerOptions) decodeContext() func(context.Context, json.RawMessage) (
 	return s.DecodeContext
 }
 
-func (s *ServerOptions) metrics() *Metrics {
+func (s *ServerOptions) metrics() *metrics.M {
 	if s == nil || s.Metrics == nil {
-		return NewMetrics()
+		return metrics.New()
 	}
 	return s.Metrics
 }

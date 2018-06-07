@@ -17,6 +17,7 @@ import (
 	"os"
 
 	"bitbucket.org/creachadair/jrpc2"
+	"bitbucket.org/creachadair/jrpc2/metrics"
 	"bitbucket.org/creachadair/jrpc2/server"
 )
 
@@ -91,7 +92,7 @@ func main() {
 		ServerOptions: &jrpc2.ServerOptions{
 			Logger:      log.New(os.Stderr, "[jrpc2.Server] ", log.LstdFlags|log.Lshortfile),
 			Concurrency: *maxTasks,
-			Metrics:     jrpc2.NewMetrics(),
+			Metrics:     metrics.New(),
 		},
 	})
 }
