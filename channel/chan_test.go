@@ -8,6 +8,7 @@ var tests = []struct {
 }{
 	{"JSON", JSON},
 	{"LSP", LSP},
+	{"Header", Header("application/json")},
 	{"Line", Line},
 	{"Varint", Varint},
 }
