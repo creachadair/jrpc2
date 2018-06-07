@@ -154,8 +154,8 @@ func (s *Server) nextRequest() (func() error, error) {
 // should be executed outside the lock to wait for the handlers to return.
 func (s *Server) dispatch(next jrequests, ch channel.Sender) func() error {
 	// Resolve all the task handlers or record errors.
-	tasks := s.checkTasks(next)
 	start := time.Now()
+	tasks := s.checkAndAssign(next)
 	var wg sync.WaitGroup
 	for _, t := range tasks {
 		if t.err != nil {
@@ -203,9 +203,9 @@ func (s *Server) deliver(rsps jresponses, ch channel.Sender, elapsed time.Durati
 	return err
 }
 
-// checkTasks resolves all the task handlers for the given batch, or records
-// errors for them as appropriate. The caller must hold s.mu.
-func (s *Server) checkTasks(next jrequests) tasks {
+// checkAndAssign resolves all the task handlers for the given batch, or
+// records errors for them as appropriate. The caller must hold s.mu.
+func (s *Server) checkAndAssign(next jrequests) tasks {
 	var tasks tasks
 	for _, req := range next {
 		s.log("Checking request for %q: %s", req.M, string(req.P))
