@@ -79,11 +79,10 @@ func (s *Server) Start(c channel.Channel) *Server {
 	// Reset all the I/O structures and start up the workers.
 	s.err = nil
 
-	// TODO(fromberger): Disallow extra fields once 1.10 lands.
-
-	// The task group carries goroutines dispatched to handle individual
-	// request messages; the waitgroup maintains the persistent goroutines for
-	// receiving input and processing the request queue.
+	// s.wg waits for the maintenance goroutines for receiving input and
+	// processing the request queue. In addition, each request in flight adds a
+	// goroutine to s.wg. At server shutdown, s.wg completes when the
+	// maintenance goroutines and all pending requests are finished.
 	s.wg.Add(2)
 
 	// Accept requests from the client and enqueue them for processing.
