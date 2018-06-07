@@ -377,6 +377,8 @@ func isRecoverableJSONError(err error) bool {
 // into the request queue is structurally valid.
 func (s *Server) read(ch channel.Receiver) {
 	for {
+		// TODO(fromberger): Disallow extra fields once 1.10 lands.
+
 		// If the message is not sensible, report an error; otherwise enqueue
 		// it for processing.
 		var in jrequests
