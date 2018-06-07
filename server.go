@@ -399,9 +399,9 @@ func (s *Server) read(ch channel.Receiver) {
 			err = json.Unmarshal(bits, &in)
 		}
 
-		s.mu.Lock()
 		s.metrics.Count("rpc.requests", int64(len(in)))
 		s.metrics.CountAndSetMax("rpc.bytesRead", int64(len(bits)))
+		s.mu.Lock()
 		if err != nil {
 			if e, ok := err.(*Error); ok {
 				s.pushError(e.data, jerrorf(e.Code, e.Message))
