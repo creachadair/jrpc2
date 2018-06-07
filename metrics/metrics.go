@@ -56,17 +56,29 @@ func (m *M) CountAndSetMax(name string, n int64) {
 	}
 }
 
-// Snapshot copies an atomic snapshot of the counters and max value trackers
-// into the provided non-nil maps.
-func (m *M) Snapshot(counters, maxValues map[string]int64) {
+// Snapshot copies an atomic snapshot of the collected metrics into the non-nil
+// fields of the provided snapshot value. Only the fields of snap that are not
+// nil are snapshotted.
+func (m *M) Snapshot(snap Snapshot) {
 	if m != nil {
 		m.mu.Lock()
 		defer m.mu.Unlock()
-		for name, val := range m.counter {
-			counters[name] = val
+		if c := snap.Counter; c != nil {
+			for name, val := range m.counter {
+				c[name] = val
+			}
 		}
-		for name, val := range m.maxVal {
-			maxValues[name] = val
+		if v := snap.MaxValue; v != nil {
+			for name, val := range m.maxVal {
+				v[name] = val
+			}
 		}
 	}
+}
+
+// A Snapshot represents a point-in-time snapshot of a metrics collector.  The
+// fields of this type are filled in by the Snapshot method of *M.
+type Snapshot struct {
+	Counter  map[string]int64
+	MaxValue map[string]int64
 }

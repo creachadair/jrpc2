@@ -317,7 +317,10 @@ func (s *Server) serverInfo() *ServerInfo {
 		Counter:  make(map[string]int64),
 		MaxValue: make(map[string]int64),
 	}
-	s.metrics.Snapshot(info.Counter, info.MaxValue)
+	s.metrics.Snapshot(metrics.Snapshot{
+		Counter:  info.Counter,
+		MaxValue: info.MaxValue,
+	})
 	return info
 }
 
