@@ -372,6 +372,10 @@ func isRecoverableJSONError(err error) bool {
 	}
 }
 
+// read is the main receiver loop, decoding requests from the client and adding
+// them to the queue. Decoding errors and message-format problems are handled
+// and reported back to the client directly, so that any message that survives
+// into the request queue is structurally valid.
 func (s *Server) read(ch channel.Receiver) {
 	for {
 		// If the message is not sensible, report an error; otherwise enqueue
