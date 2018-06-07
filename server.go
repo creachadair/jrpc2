@@ -219,8 +219,8 @@ func (s *Server) checkAndAssign(next jrequests) tasks {
 			t.err = Errorf(E_InvalidRequest, "empty method name")
 		} else if m := s.assign(req.M); m == nil {
 			t.err = Errorf(E_MethodNotFound, "no such method %q", req.M)
-		} else {
-			s.setContext(t, id, req, m)
+		} else if s.setContext(t, id, req.P) {
+			t.m = m
 		}
 		if t.err != nil {
 			s.log("Task error: %v", t.err)
@@ -231,14 +231,13 @@ func (s *Server) checkAndAssign(next jrequests) tasks {
 	return tasks
 }
 
-// setContext constructs and attaches a request context to t.
-func (s *Server) setContext(t *task, id string, req *jrequest, m Method) {
-	base, params, err := s.dectx(context.Background(), json.RawMessage(req.P))
+// setContext constructs and attaches a request context to t, and reports
+// whether this succeeded.
+func (s *Server) setContext(t *task, id string, rawParams json.RawMessage) bool {
+	base, params, err := s.dectx(context.Background(), rawParams)
 	if err != nil {
 		t.err = Errorf(E_InternalError, "invalid request context: %v", err)
-		return
 	}
-	t.m = m
 	t.params = params
 	t.ctx = base
 	if id != "" {
@@ -246,6 +245,7 @@ func (s *Server) setContext(t *task, id string, req *jrequest, m Method) {
 		s.used[id] = cancel
 		t.ctx = ctx
 	}
+	return err == nil
 }
 
 // invoke invokes the handler m for the specified request type, and marshals
