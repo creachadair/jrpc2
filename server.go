@@ -135,7 +135,14 @@ func (s *Server) nextRequest() (func() error, error) {
 	// Resolve all the task handlers or record errors.
 	tasks := s.checkTasks(next)
 
-	// Invoke the handlers outside the lock.
+	// Construct an invoker to run the handlers outside the lock.
+	return s.invoke(tasks, ch), nil
+}
+
+// invoke constructs a function that invokes each of the specified tasks.  The
+// caller must hold s.mu when calling invoke, but the returned function should
+// be executed outside the lock.
+func (s *Server) invoke(tasks tasks, ch channel.Channel) func() error {
 	return func() error {
 		start := time.Now()
 		var wg sync.WaitGroup
@@ -176,7 +183,7 @@ func (s *Server) nextRequest() (func() error, error) {
 			return err
 		}
 		return nil
-	}, nil
+	}
 }
 
 // checkTasks resolves all the task handlers for the given batch, or records
