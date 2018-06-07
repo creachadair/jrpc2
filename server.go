@@ -372,7 +372,7 @@ func isRecoverableJSONError(err error) bool {
 	}
 }
 
-func (s *Server) read(ch channel.Channel) {
+func (s *Server) read(ch channel.Receiver) {
 	for {
 		// If the message is not sensible, report an error; otherwise enqueue
 		// it for processing.
