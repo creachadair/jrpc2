@@ -123,7 +123,7 @@ func TestNew(t *testing.T) {
 	}
 
 	// Verify that we can list the methods via the server hook.
-	info, err := RPC_serverInfo(ctx, c)
+	info, err := RPCServerInfo(ctx, c)
 	if err != nil {
 		t.Errorf("rpc.serverInfo: unexpected error: %v", err)
 	} else if want := []string{"F", "OK"}; !reflect.DeepEqual(info.Methods, want) {

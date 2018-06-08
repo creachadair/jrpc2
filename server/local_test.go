@@ -13,7 +13,7 @@ func TestLocal(t *testing.T) {
 	cli, wait := Local(make(jrpc2.MapAssigner), nil)
 
 	ctx := context.Background()
-	si, err := caller.RPC_serverInfo(ctx, cli)
+	si, err := caller.RPCServerInfo(ctx, cli)
 	if err != nil {
 		t.Fatalf("rpc.serverInfo failed: %v", err)
 	}
