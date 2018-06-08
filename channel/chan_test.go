@@ -6,9 +6,10 @@ var tests = []struct {
 	name    string
 	framing Framing
 }{
+	{"RawJSON", RawJSON},
 	{"JSON", JSON},
 	{"LSP", LSP},
-	{"Header", Header("application/json")},
+	{"Header", Header("binary/octet-stream")},
 	{"Line", Line},
 	{"Varint", Varint},
 }
@@ -30,7 +31,7 @@ func TestChannelTypes(t *testing.T) {
 
 func TestEmptyMessage(t *testing.T) {
 	for _, test := range tests {
-		if test.name == "JSON" {
+		if test.name == "RawJSON" {
 			continue // this framing can't handle empty messages
 		}
 		t.Run(test.name, func(t *testing.T) {

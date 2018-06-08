@@ -5,10 +5,10 @@ import (
 	"io"
 )
 
-// JSON is a framing that transmits and receives records on r and wc, in which
+// RawJSON is a framing that transmits and receives records on r and wc, in which
 // each record is defined by being a complete JSON value. No padding or other
 // separation is added.
-func JSON(r io.Reader, wc io.WriteCloser) Channel {
+func RawJSON(r io.Reader, wc io.WriteCloser) Channel {
 	return jsonc{wc: wc, dec: json.NewDecoder(r)}
 }
 

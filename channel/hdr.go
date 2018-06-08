@@ -112,3 +112,11 @@ func (h *hdr) Recv() ([]byte, error) {
 
 // Close implements part of the Channel interface.
 func (h *hdr) Close() error { return h.wc.Close() }
+
+// LSP is a framing that transmits and receives messages on r and wc using the
+// Language Server Protocol (LSP) framing, defined by the LSP specification at
+// https://microsoft.github.io/language-server-protocol
+var LSP = Header("application/vscode-jsonrpc; charset=utf-8")
+
+// JSON is a header framing with content type application/json.
+var JSON = Header("application/json")
