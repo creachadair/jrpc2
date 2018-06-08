@@ -59,7 +59,7 @@ func (o *LoopOptions) serverOpts() *jrpc2.ServerOptions {
 
 func (o *LoopOptions) framing() channel.Framing {
 	if o == nil || o.Framing == nil {
-		return channel.JSON
+		return channel.RawJSON
 	}
 	return o.Framing
 }
