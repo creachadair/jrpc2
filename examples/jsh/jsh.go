@@ -19,6 +19,7 @@ import (
 	"os/exec"
 
 	"bitbucket.org/creachadair/jrpc2"
+	"bitbucket.org/creachadair/jrpc2/code"
 	"bitbucket.org/creachadair/jrpc2/jcontext"
 	"bitbucket.org/creachadair/jrpc2/server"
 )
@@ -41,11 +42,11 @@ type RunResult struct {
 // to start at all.
 func Run(ctx context.Context, req *RunReq) (*RunResult, error) {
 	if len(req.Args) == 0 || req.Args[0] == "" {
-		return nil, jrpc2.Errorf(jrpc2.E_InvalidParams, "missing command name")
+		return nil, jrpc2.Errorf(code.InvalidParams, "missing command name")
 	}
 	if req.Args[0] == "cd" {
 		if len(req.Args) != 2 {
-			return nil, jrpc2.Errorf(jrpc2.E_InvalidParams, "wrong arguments for cd")
+			return nil, jrpc2.Errorf(code.InvalidParams, "wrong arguments for cd")
 		}
 		return &RunResult{
 			Success: os.Chdir(req.Args[1]) == nil,

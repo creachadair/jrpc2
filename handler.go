@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"strings"
 
+	"bitbucket.org/creachadair/jrpc2/code"
 	"bitbucket.org/creachadair/stringset"
 )
 
@@ -179,7 +180,7 @@ func newMethod(fn interface{}) (Method, error) {
 			newinput = func(req *Request) ([]reflect.Value, error) {
 				in := reflect.New(argType).Interface()
 				if err := req.UnmarshalParams(in); err != nil {
-					return nil, Errorf(E_InvalidParams, "wrong argument type: %v", err)
+					return nil, Errorf(code.InvalidParams, "wrong argument type: %v", err)
 				}
 				args := reflect.ValueOf(in).Elem()
 				vals := make([]reflect.Value, args.Len())
@@ -205,7 +206,7 @@ func newMethod(fn interface{}) (Method, error) {
 			newinput = func(req *Request) ([]reflect.Value, error) {
 				in := reflect.New(argType).Interface()
 				if err := req.UnmarshalParams(in); err != nil {
-					return nil, Errorf(E_InvalidParams, "wrong argument type: %v", err)
+					return nil, Errorf(code.InvalidParams, "wrong argument type: %v", err)
 				}
 				arg := reflect.ValueOf(in)
 				return []reflect.Value{undo(arg)}, nil

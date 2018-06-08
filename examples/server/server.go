@@ -17,6 +17,7 @@ import (
 	"os"
 
 	"bitbucket.org/creachadair/jrpc2"
+	"bitbucket.org/creachadair/jrpc2/code"
 	"bitbucket.org/creachadair/jrpc2/metrics"
 	"bitbucket.org/creachadair/jrpc2/server"
 )
@@ -49,7 +50,7 @@ func (math) Mul(ctx context.Context, arg binop) (int, error) {
 
 func (math) Div(ctx context.Context, arg binop) (float64, error) {
 	if arg.Y == 0 {
-		return 0, jrpc2.Errorf(jrpc2.E_InvalidParams, "zero divisor")
+		return 0, jrpc2.Errorf(code.InvalidParams, "zero divisor")
 	}
 	return float64(arg.X) / float64(arg.Y), nil
 }

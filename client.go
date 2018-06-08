@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"bitbucket.org/creachadair/jrpc2/channel"
+	"bitbucket.org/creachadair/jrpc2/code"
 )
 
 // A Client is a JSON-RPC 2.0 client. The client sends requests and receives
@@ -81,7 +82,7 @@ func NewClient(ch channel.Channel, opts *ClientOptions) *Client {
 					delete(c.pending, id)
 					p.ch <- &jresponse{
 						ID: rsp.ID,
-						E:  jerrorf(E_InvalidRequest, "incorrect version marker %q", rsp.V),
+						E:  jerrorf(code.InvalidRequest, "incorrect version marker %q", rsp.V),
 					}
 					c.log("Invalid response for ID %q", id)
 				} else {
@@ -236,9 +237,9 @@ func (c *Client) CallWait(ctx context.Context, method string, params interface{}
 	rsp := p.Wait()
 	if err := rsp.Error(); err != nil {
 		switch err.Code {
-		case E_Cancelled:
+		case code.Cancelled:
 			return nil, context.Canceled
-		case E_DeadlineExceeded:
+		case code.DeadlineExceeded:
 			return nil, context.DeadlineExceeded
 		default:
 			return nil, err
@@ -340,7 +341,7 @@ func (c *Client) marshalParams(ctx context.Context, params interface{}) (json.Ra
 	if len(pbits) == 0 || (pbits[0] != '[' && pbits[0] != '{') {
 		// JSON-RPC requires that if parameters are provided at all, they are
 		// an array or an object
-		return nil, Errorf(E_InvalidRequest, "invalid parameters: array or object required")
+		return nil, Errorf(code.InvalidRequest, "invalid parameters: array or object required")
 	}
 	bits, err := c.enctx(ctx, pbits)
 	if err != nil {

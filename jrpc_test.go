@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"bitbucket.org/creachadair/jrpc2/channel"
+	"bitbucket.org/creachadair/jrpc2/code"
 	"bitbucket.org/creachadair/jrpc2/jcontext"
 )
 
@@ -64,7 +65,7 @@ func (dummy) Mul(_ context.Context, req struct{ X, Y int }) (int, error) {
 // Max has a variadic signature.
 func (dummy) Max(_ context.Context, vs ...int) (int, error) {
 	if len(vs) == 0 {
-		return 0, Errorf(E_InvalidParams, "cannot compute max of no elements")
+		return 0, Errorf(code.InvalidParams, "cannot compute max of no elements")
 	}
 	max := vs[0]
 	for _, v := range vs[1:] {
@@ -234,8 +235,8 @@ func TestClientCancellation(t *testing.T) {
 	// The call should fail client side, in the usual way for a cancellation.
 	rsp := p.Wait()
 	if err := rsp.Error(); err != nil {
-		if err.Code != E_Cancelled {
-			t.Errorf("Response error for %q: got %v, want %v", rsp.ID(), err, E_Cancelled)
+		if err.Code != code.Cancelled {
+			t.Errorf("Response error for %q: got %v, want %v", rsp.ID(), err, code.Cancelled)
 		}
 	} else {
 		t.Errorf("Response for %q: unexpectedly succeeded", rsp.ID())
@@ -279,36 +280,15 @@ func TestErrors(t *testing.T) {
 	}
 }
 
-func TestRegistration(t *testing.T) {
-	const message = "fun for the whole family"
-	c := RegisterCode(-100, message)
-	if got := c.Error(); got != message {
-		t.Errorf("RegisterCode(-100): got %q, want %q", got, message)
-	} else if c != -100 {
-		t.Errorf("RegisterCode(-100): got %d instead", c)
-	}
-}
-
-func TestRegistrationError(t *testing.T) {
-	defer func() {
-		if v := recover(); v != nil {
-			t.Logf("RegisterCode correctly panicked: %v", v)
-		} else {
-			t.Fatalf("RegisterCode should have panicked on input %d, but did not", E_ParseError)
-		}
-	}()
-	RegisterCode(int32(E_ParseError), "bogus")
-}
-
 func TestErrorCode(t *testing.T) {
 	tests := []struct {
 		err  error
-		want Code
+		want code.Code
 	}{
-		{nil, E_NoError},                            // no error (success)
-		{errors.New("bad"), E_SystemError},          // an unrelated error
-		{Errorf(E_ParseError, "bad"), E_ParseError}, // a package error
-		{E_InvalidParams, E_InvalidParams},          // a naked code
+		{nil, code.NoError},                               // no error (success)
+		{errors.New("bad"), code.SystemError},             // an unrelated error
+		{Errorf(code.ParseError, "bad"), code.ParseError}, // a package error
+		{code.InvalidParams, code.InvalidParams},          // a naked code
 	}
 	for _, test := range tests {
 		if got := ErrorCode(test.err); got != test.want {

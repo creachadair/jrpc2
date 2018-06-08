@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"bitbucket.org/creachadair/jrpc2/channel"
+	"bitbucket.org/creachadair/jrpc2/code"
 	"bitbucket.org/creachadair/jrpc2/metrics"
 	"golang.org/x/sync/semaphore"
 )
@@ -213,13 +214,13 @@ func (s *Server) checkAndAssign(next jrequests) tasks {
 		t := &task{req: req}
 		req.ID = fixID(req.ID)
 		if id := string(req.ID); id != "" && s.used[id] != nil {
-			t.err = Errorf(E_InvalidRequest, "duplicate request id %q", id)
+			t.err = Errorf(code.InvalidRequest, "duplicate request id %q", id)
 		} else if !s.versionOK(req.V) {
-			t.err = Errorf(E_InvalidRequest, "incorrect version marker")
+			t.err = Errorf(code.InvalidRequest, "incorrect version marker")
 		} else if req.M == "" {
-			t.err = Errorf(E_InvalidRequest, "empty method name")
+			t.err = Errorf(code.InvalidRequest, "empty method name")
 		} else if m := s.assign(req.M); m == nil {
-			t.err = Errorf(E_MethodNotFound, "no such method %q", req.M)
+			t.err = Errorf(code.MethodNotFound, "no such method %q", req.M)
 		} else if s.setContext(t, id, req.P) {
 			t.m = m
 		}
@@ -237,7 +238,7 @@ func (s *Server) checkAndAssign(next jrequests) tasks {
 func (s *Server) setContext(t *task, id string, rawParams json.RawMessage) bool {
 	base, params, err := s.dectx(context.Background(), rawParams)
 	if err != nil {
-		t.err = Errorf(E_InternalError, "invalid request context: %v", err)
+		t.err = Errorf(code.InternalError, "invalid request context: %v", err)
 	}
 	t.params = params
 	t.ctx = base
@@ -406,14 +407,14 @@ func (s *Server) read(ch channel.Receiver) {
 			if e, ok := err.(*Error); ok {
 				s.pushError(e.data, jerrorf(e.Code, e.Message))
 			} else if isRecoverableJSONError(err) {
-				s.pushError(nil, jerrorf(E_ParseError, "invalid JSON request message"))
+				s.pushError(nil, jerrorf(code.ParseError, "invalid JSON request message"))
 			} else {
 				s.stop(err)
 				s.mu.Unlock()
 				return
 			}
 		} else if len(in) == 0 {
-			s.pushError(nil, jerrorf(E_InvalidRequest, "empty request batch"))
+			s.pushError(nil, jerrorf(code.InvalidRequest, "empty request batch"))
 		} else {
 			s.log("Received %d new requests", len(in))
 			s.inq.PushBack(in)
@@ -448,7 +449,7 @@ func (s *Server) assign(name string) Method {
 		// works if issued as a notification.
 		return methodFunc(func(_ context.Context, req *Request) (interface{}, error) {
 			if !req.IsNotification() {
-				return nil, Errorf(E_MethodNotFound, "no such method: %q", name)
+				return nil, Errorf(code.MethodNotFound, "no such method: %q", name)
 			}
 			var ids []json.RawMessage
 			if err := req.UnmarshalParams(&ids); err != nil {
@@ -520,10 +521,10 @@ func (ts tasks) responses() jresponses {
 			rsp.R = task.val
 		} else if e, ok := task.err.(*Error); ok {
 			rsp.E = e.tojerror()
-		} else if code := ErrorCode(task.err); code != E_NoError {
-			rsp.E = jerrorf(code, "%v: %v", code.Error(), task.err)
+		} else if c := ErrorCode(task.err); c != code.NoError {
+			rsp.E = jerrorf(c, "%v: %v", c.Error(), task.err)
 		} else {
-			rsp.E = jerrorf(E_InternalError, "internal error: %v", task.err)
+			rsp.E = jerrorf(code.InternalError, "internal error: %v", task.err)
 		}
 		rsps = append(rsps, rsp)
 	}

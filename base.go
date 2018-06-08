@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"bitbucket.org/creachadair/jrpc2/channel"
+	"bitbucket.org/creachadair/jrpc2/code"
 )
 
 // A Request is a request message from a client to a server.
@@ -90,7 +91,7 @@ func (j *jrequest) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, (*stub)(j)); err != nil {
 		return err
 	} else if len(j.P) != 0 && j.P[0] != '[' && j.P[0] != '{' {
-		return DataErrorf(E_InvalidRequest, j.ID, "parameters must be list or object")
+		return DataErrorf(code.InvalidRequest, j.ID, "parameters must be list or object")
 	}
 	return nil
 }
@@ -144,13 +145,13 @@ func (e *jerror) toError() *Error {
 		return nil
 	}
 	return &Error{
-		Code:    Code(e.Code),
+		Code:    code.Code(e.Code),
 		Message: e.Msg,
 		data:    e.Data,
 	}
 }
 
-func jerrorf(code Code, msg string, args ...interface{}) *jerror {
+func jerrorf(code code.Code, msg string, args ...interface{}) *jerror {
 	return &jerror{
 		Code: int32(code),
 		Msg:  fmt.Sprintf(msg, args...),
