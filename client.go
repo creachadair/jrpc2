@@ -192,7 +192,7 @@ func (c *Client) send(ctx context.Context, reqs ...*Request) ([]*Pending, error)
 					// Inform the server, best effort only.
 					cleanup = func() {
 						c.log("Sending rpc.cancel for id %q to the server", id)
-						c.Notify(ctx, "rpc.cancel", []json.RawMessage{json.RawMessage(id)})
+						c.Notify(context.Background(), "rpc.cancel", []json.RawMessage{json.RawMessage(id)})
 					}
 				}
 			}()
