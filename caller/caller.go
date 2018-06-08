@@ -47,9 +47,9 @@ import (
 	"bitbucket.org/creachadair/jrpc2"
 )
 
-// RPC_serverInfo calls the built-in rpc.serverInfo method exported by servers
+// RPCServerInfo calls the built-in rpc.serverInfo method exported by servers
 // in the jrpc2 package.
-var RPC_serverInfo = New("rpc.serverInfo", Options{
+var RPCServerInfo = New("rpc.serverInfo", Options{
 	Result: (*jrpc2.ServerInfo)(nil),
 }).(func(context.Context, *jrpc2.Client) (*jrpc2.ServerInfo, error))
 
