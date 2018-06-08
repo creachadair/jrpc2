@@ -169,26 +169,25 @@ func readInput(in *bufio.Scanner, args []string) ([]string, []byte, error) {
 				log.Fatalf("Error reading: %v", err)
 			}
 			return args, data, nil
-		} else {
-			var buf bytes.Buffer
-			fmt.Fprint(os.Stderr, "* ")
-		moreInput:
-			for in.Scan() {
-				switch in.Text() {
-				case ".":
-					break moreInput
-				case "..":
-					buf.WriteString(".\n")
-				default:
-					fmt.Fprintln(&buf, in.Text())
-				}
-				fmt.Fprint(os.Stderr, "* ")
-			}
-			if err := in.Err(); err != nil {
-				return nil, nil, fmt.Errorf("reading input: %v", err)
-			}
-			return args, buf.Bytes(), nil
 		}
+		var buf bytes.Buffer
+		fmt.Fprint(os.Stderr, "* ")
+	moreInput:
+		for in.Scan() {
+			switch in.Text() {
+			case ".":
+				break moreInput
+			case "..":
+				buf.WriteString(".\n")
+			default:
+				fmt.Fprintln(&buf, in.Text())
+			}
+			fmt.Fprint(os.Stderr, "* ")
+		}
+		if err := in.Err(); err != nil {
+			return nil, nil, fmt.Errorf("reading input: %v", err)
+		}
+		return args, buf.Bytes(), nil
 	}
 	return args, nil, nil
 }
