@@ -28,7 +28,7 @@ var (
 	callTimeout = flag.Duration("timeout", 0, "Timeout on each call (0 for no timeout)")
 	doNotify    = flag.Bool("notify", false, "Send a notification")
 	withContext = flag.Bool("c", false, "Send context with request")
-	chanFraming = flag.String("f", "json", `Channel framing ("json", "line", "lsp", "varint")`)
+	chanFraming = flag.String("f", "raw", `Channel framing ("json", "line", "lsp", "raw", "varint")`)
 	withLogging = flag.Bool("v", false, "Enable verbose logging")
 )
 
@@ -127,6 +127,8 @@ func main() {
 
 func newChannel(fmt string) func(io.Reader, io.WriteCloser) channel.Channel {
 	switch fmt {
+	case "raw":
+		return channel.RawJSON
 	case "json":
 		return channel.JSON
 	case "lsp":
