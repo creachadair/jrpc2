@@ -1,4 +1,4 @@
-package jcontext
+package jctx
 
 import (
 	"context"

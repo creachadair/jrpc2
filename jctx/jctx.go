@@ -1,6 +1,6 @@
-// Package jcontext implements an encoder and decoder for request context
-// values, allowing context metadata to be propagated through JSON-RPC.
-package jcontext
+// Package jcts implements an encoder and decoder for request context values,
+// allowing context metadata to be propagated through JSON-RPC.
+package jctx
 
 import (
 	"context"
