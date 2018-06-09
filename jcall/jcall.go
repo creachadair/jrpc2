@@ -30,6 +30,7 @@ var (
 	withContext = flag.Bool("c", false, "Send context with request")
 	chanFraming = flag.String("f", "raw", `Channel framing ("json", "line", "lsp", "raw", "varint")`)
 	withLogging = flag.Bool("v", false, "Enable verbose logging")
+	withMeta    = flag.String("meta", "", "Attach this JSON value as request metadata (implies -c)")
 )
 
 func init() {
@@ -56,6 +57,14 @@ func main() {
 	}
 	nc := newChannel(*chanFraming)
 	ctx := context.Background()
+	if *withMeta != "" {
+		mc, err := jctx.WithMetadata(ctx, json.RawMessage(*withMeta))
+		if err != nil {
+			log.Fatalf("Invalid request metadata: %v", err)
+		}
+		ctx = mc
+		*withContext = true
+	}
 
 	addr := flag.Arg(0)
 	specs := make([]jrpc2.Spec, flag.NArg()/2)
