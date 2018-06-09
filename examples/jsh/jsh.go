@@ -20,7 +20,7 @@ import (
 
 	"bitbucket.org/creachadair/jrpc2"
 	"bitbucket.org/creachadair/jrpc2/code"
-	"bitbucket.org/creachadair/jrpc2/jcontext"
+	"bitbucket.org/creachadair/jrpc2/jctx"
 	"bitbucket.org/creachadair/jrpc2/server"
 )
 
@@ -104,7 +104,7 @@ func main() {
 		ServerOptions: &jrpc2.ServerOptions{
 			AllowV1:       true,
 			Logger:        lw,
-			DecodeContext: jcontext.Decode,
+			DecodeContext: jctx.Decode,
 		},
 	})
 }

@@ -20,7 +20,7 @@ import (
 
 	"bitbucket.org/creachadair/jrpc2"
 	"bitbucket.org/creachadair/jrpc2/channel"
-	"bitbucket.org/creachadair/jrpc2/jcontext"
+	"bitbucket.org/creachadair/jrpc2/jctx"
 )
 
 var (
@@ -77,7 +77,7 @@ func main() {
 
 	opts := new(jrpc2.ClientOptions)
 	if *withContext {
-		opts.EncodeContext = jcontext.Encode
+		opts.EncodeContext = jctx.Encode
 	}
 	if *withLogging {
 		opts.Logger = log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile)

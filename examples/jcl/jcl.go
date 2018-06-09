@@ -36,7 +36,7 @@ import (
 
 	"bitbucket.org/creachadair/jrpc2"
 	"bitbucket.org/creachadair/jrpc2/channel"
-	"bitbucket.org/creachadair/jrpc2/jcontext"
+	"bitbucket.org/creachadair/jrpc2/jctx"
 	"bitbucket.org/creachadair/shell"
 )
 
@@ -60,7 +60,7 @@ func main() {
 	defer conn.Close()
 
 	cli := jrpc2.NewClient(channel.JSON(conn, conn), &jrpc2.ClientOptions{
-		EncodeContext: jcontext.Encode,
+		EncodeContext: jctx.Encode,
 	})
 	in := bufio.NewScanner(os.Stdin)
 	for {

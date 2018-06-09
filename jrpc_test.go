@@ -12,7 +12,7 @@ import (
 
 	"bitbucket.org/creachadair/jrpc2/channel"
 	"bitbucket.org/creachadair/jrpc2/code"
-	"bitbucket.org/creachadair/jrpc2/jcontext"
+	"bitbucket.org/creachadair/jrpc2/jctx"
 )
 
 type testOptions struct {
@@ -481,8 +481,8 @@ func TestContextPlumbing(t *testing.T) {
 			return true, nil
 		}),
 	}, &testOptions{
-		server: &ServerOptions{DecodeContext: jcontext.Decode},
-		client: &ClientOptions{EncodeContext: jcontext.Encode},
+		server: &ServerOptions{DecodeContext: jctx.Decode},
+		client: &ClientOptions{EncodeContext: jctx.Encode},
 	})
 	defer cleanup()
 
