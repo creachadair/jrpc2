@@ -85,3 +85,49 @@ func TestDecoding(t *testing.T) {
 		})
 	}
 }
+
+func TestMetadata(t *testing.T) {
+	type value struct {
+		Name    string `json:"name,omitempty"`
+		Marbles int    `json:"marbles,omitempty"`
+	}
+	input := value{Name: "Hieronymus Bosch", Marbles: 3}
+
+	base := context.Background()
+	ctx, err := WithMetadata(base, input)
+	if err != nil {
+		t.Fatalf("WithMetadata(base, %+v) failed: %v", input, err)
+	}
+
+	var output value
+
+	// The base value does not contain the value.
+	if err := UnmarshalMetadata(base, &output); err != ErrNoMetadata {
+		t.Logf("Base metadata decoded value: %+v", output)
+		t.Errorf("UnmarshalMetadata(base): got error %v, want %v", err, ErrNoMetadata)
+	}
+
+	// The attached context does contain the value (prior to transmission).
+	output = value{}
+	if err := UnmarshalMetadata(ctx, &output); err != nil {
+		t.Errorf("UnmarshalMetadata(ctx): unexpected error: %v", err)
+	} else if output != input {
+		t.Errorf("UnmarshalMetadata(ctx): got %+v, want %+v", output, input)
+	}
+
+	// Simulate transmission -- encode, then decode.
+	var dec context.Context
+	if enc, err := Encode(ctx, nil); err != nil {
+		t.Fatalf("Encoding context failed: %v", err)
+	} else if dec, _, err = Decode(base, enc); err != nil {
+		t.Fatalf("Decoding context failed: %v", err)
+	}
+
+	// The decoded context does contain the value (after receipt).
+	output = value{}
+	if err := UnmarshalMetadata(dec, &output); err != nil {
+		t.Errorf("Metadata(dec): unexpected error: %v", err)
+	} else if output != input {
+		t.Errorf("Metadata(dec): got %+v, want %+v", output, input)
+	}
+}
