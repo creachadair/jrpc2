@@ -2,6 +2,7 @@ package jrpc2
 
 import (
 	"context"
+	"errors"
 
 	"bitbucket.org/creachadair/jrpc2/metrics"
 )
@@ -39,15 +40,21 @@ func InboundRequest(ctx context.Context) *Request {
 
 const inboundRequestKey = serverContextKey("inbound-request")
 
-// ServerNotify returns the server notifier associated with the given context,
-// or nil if ctx does not have a server notifier. The context passed to the
-// handler by *jrpc2.Server will include this value if the server was
+// ServerNotify posts a server notification. If ctx does not contain a server
+// notifier, this is reports ErrNotifyUnsupported. The context passed to the
+// handler by *jrpc2.Server will support notiications if the server was
 // constructed with the AllowNotify option set true.
-func ServerNotify(ctx context.Context) func(context.Context, string, interface{}) error {
-	if v := ctx.Value(serverNotifyKey); v != nil {
-		return v.(func(context.Context, string, interface{}) error)
+func ServerNotify(ctx context.Context, method string, params interface{}) error {
+	v := ctx.Value(serverNotifyKey)
+	if v == nil {
+		return ErrNotifyUnsupported
 	}
-	return nil
+	notify := v.(func(context.Context, string, interface{}) error)
+	return notify(ctx, method, params)
 }
 
 const serverNotifyKey = serverContextKey("server-notify")
+
+// ErrNotifyUnsupported is returned by ServerNotify if server notifications are
+// not enabled in the specified context.
+var ErrNotifyUnsupported = errors.New("server notifications are not enabled")

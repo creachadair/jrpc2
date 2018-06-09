@@ -423,10 +423,8 @@ func TestServerNotify(t *testing.T) {
 		"NoteMe": NewMethod(func(ctx context.Context) (bool, error) {
 			// When this method is called, it posts a notification back to the
 			// client before returning.
-			note := ServerNotify(ctx)
-			if note == nil {
-				t.Error("ServerNotify returned nil in the method handler")
-			} else if err := note(ctx, "method", nil); err != nil {
+			if err := ServerNotify(ctx, "method", nil); err != nil {
+				t.Errorf("ServerNotify unexpectedly failed: %v", err)
 				return false, err
 			}
 			return true, nil
