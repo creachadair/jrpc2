@@ -10,9 +10,7 @@ import (
 	"time"
 )
 
-type contextKey struct{}
-
-var metadataKey = new(contextKey)
+type metadataKey struct{}
 
 const wireVersion = "1"
 
@@ -37,7 +35,7 @@ func Encode(ctx context.Context, params json.RawMessage) (json.RawMessage, error
 		utcdl := dl.In(time.UTC)
 		c.Deadline = &utcdl
 	}
-	if v := ctx.Value(metadataKey); v != nil {
+	if v := ctx.Value(metadataKey{}); v != nil {
 		c.Metadata = v.(json.RawMessage)
 	}
 	return json.Marshal(c)
@@ -59,7 +57,7 @@ func Decode(ctx context.Context, req json.RawMessage) (context.Context, json.Raw
 		return nil, nil, fmt.Errorf("invalid context wire version %q", c.V)
 	}
 	if c.Metadata != nil {
-		ctx = context.WithValue(ctx, metadataKey, c.Metadata)
+		ctx = context.WithValue(ctx, metadataKey{}, c.Metadata)
 	}
 	if c.Deadline != nil && !c.Deadline.IsZero() {
 		var ignored context.CancelFunc
@@ -78,13 +76,13 @@ func WithMetadata(ctx context.Context, meta interface{}) (context.Context, error
 	if err != nil {
 		return ctx, err
 	}
-	return context.WithValue(ctx, metadataKey, json.RawMessage(bits)), nil
+	return context.WithValue(ctx, metadataKey{}, json.RawMessage(bits)), nil
 }
 
 // UnmarshalMetadata decodes the metadata value attached to ctx into meta, or
 // returns ErrNoMetadata if ctx does not have metadata attached.
 func UnmarshalMetadata(ctx context.Context, meta interface{}) error {
-	if v := ctx.Value(metadataKey); v != nil {
+	if v := ctx.Value(metadataKey{}); v != nil {
 		return json.Unmarshal(v.(json.RawMessage), meta)
 	}
 	return ErrNoMetadata

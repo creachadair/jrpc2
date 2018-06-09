@@ -15,13 +15,13 @@ type serverContextKey string
 // context, or nil if ctx doees not have a collector attached.  The context
 // passed to a handler by *jrpc2.Server will include this value.
 func ServerMetrics(ctx context.Context) *metrics.M {
-	if v := ctx.Value(serverMetricsKey); v != nil {
+	if v := ctx.Value(serverMetricsKey{}); v != nil {
 		return v.(*metrics.M)
 	}
 	return nil
 }
 
-const serverMetricsKey = serverContextKey("server-metrics")
+type serverMetricsKey struct{}
 
 // InboundRequest returns the inbound request associated with the given
 // context, or nil if ctx does not have an inbound request. The context passed
@@ -32,20 +32,20 @@ const serverMetricsKey = serverContextKey("server-metrics")
 // request value returned by InboundRequest will be the same value as was
 // passed explicitly.
 func InboundRequest(ctx context.Context) *Request {
-	if v := ctx.Value(inboundRequestKey); v != nil {
+	if v := ctx.Value(inboundRequestKey{}); v != nil {
 		return v.(*Request)
 	}
 	return nil
 }
 
-const inboundRequestKey = serverContextKey("inbound-request")
+type inboundRequestKey struct{}
 
 // ServerNotify posts a server notification. If ctx does not contain a server
 // notifier, this is reports ErrNotifyUnsupported. The context passed to the
 // handler by *jrpc2.Server will support notiications if the server was
 // constructed with the AllowNotify option set true.
 func ServerNotify(ctx context.Context, method string, params interface{}) error {
-	v := ctx.Value(serverNotifyKey)
+	v := ctx.Value(serverNotifyKey{})
 	if v == nil {
 		return ErrNotifyUnsupported
 	}
@@ -53,7 +53,7 @@ func ServerNotify(ctx context.Context, method string, params interface{}) error 
 	return notify(ctx, method, params)
 }
 
-const serverNotifyKey = serverContextKey("server-notify")
+type serverNotifyKey struct{}
 
 // ErrNotifyUnsupported is returned by ServerNotify if server notifications are
 // not enabled in the specified context.
