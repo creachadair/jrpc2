@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 )
 
@@ -13,11 +14,15 @@ type contextKey string
 
 const metadataKey = contextKey("jctx-metadata")
 
+const wireVersion = "1"
+
 // wireContext is the encoded representation of a context value. It includes
 // the deadline together with an underlying payload carrying the original
 // request parameters. The resulting message replaces the parameters of the
 // original JSON-RPC request.
 type wireContext struct {
+	V string `json:"jctx"` // must be wireVersion
+
 	Deadline *time.Time      `json:"deadline,omitempty"` // encoded in UTC
 	Payload  json.RawMessage `json:"payload,omitempty"`
 	Metadata json.RawMessage `json:"meta,omitempty"`
@@ -27,7 +32,7 @@ type wireContext struct {
 // If a deadline is set on ctx, it is converted to UTC before encoding.
 // If metadata are set on ctx (see jctx.WithMetadata), they are included.
 func Encode(ctx context.Context, params json.RawMessage) (json.RawMessage, error) {
-	c := wireContext{Payload: params}
+	c := wireContext{V: wireVersion, Payload: params}
 	if dl, ok := ctx.Deadline(); ok {
 		utcdl := dl.In(time.UTC)
 		c.Deadline = &utcdl
@@ -50,6 +55,8 @@ func Decode(ctx context.Context, req json.RawMessage) (context.Context, json.Raw
 	var c wireContext
 	if err := json.Unmarshal(req, &c); err != nil {
 		return nil, nil, err
+	} else if c.V != wireVersion {
+		return nil, nil, fmt.Errorf("invalid context wire version %q", c.V)
 	}
 	if c.Metadata != nil {
 		ctx = context.WithValue(ctx, metadataKey, c.Metadata)
