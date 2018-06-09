@@ -15,18 +15,18 @@ func TestEncoding(t *testing.T) {
 		deadline     time.Time
 		params, want string
 	}{
-		{"zero-void", time.Time{}, "", `{}`},
+		{"zero-void", time.Time{}, "", `{"jctx":"1"}`},
 
 		{"zero-payload", time.Time{},
-			"[1,2,3]", `{"payload":[1,2,3]}`},
+			"[1,2,3]", `{"jctx":"1","payload":[1,2,3]}`},
 
 		{"bicentennial-void", bicent.In(time.Local),
-			"", `{"deadline":"1976-07-04T01:02:03.000000004Z"}`,
+			"", `{"jctx":"1","deadline":"1976-07-04T01:02:03.000000004Z"}`,
 		},
 
 		{"bicentennial-payload", bicent,
 			`{"apple":"pear"}`,
-			`{"deadline":"1976-07-04T01:02:03.000000004Z","payload":{"apple":"pear"}}`,
+			`{"jctx":"1","deadline":"1976-07-04T01:02:03.000000004Z","payload":{"apple":"pear"}}`,
 		},
 	}
 	for _, test := range tests {
@@ -53,13 +53,14 @@ func TestDecoding(t *testing.T) {
 		deadline    time.Time
 		want        string
 	}{
-		{"zero-void", `{}`, time.Time{}, ""},
+		{"zero-void", `{"jctx":"1"}`, time.Time{}, ""},
 
-		{"zero-payload", `{"payload":["a","b","c"]}`, time.Time{}, `["a","b","c"]`},
+		{"zero-payload", `{"jctx":"1","payload":["a","b","c"]}`, time.Time{}, `["a","b","c"]`},
 
-		{"bicentennial-void", `{"deadline":"1976-07-04T01:02:03.000000004Z"}`, bicent, ""},
+		{"bicentennial-void", `{"jctx":"1","deadline":"1976-07-04T01:02:03.000000004Z"}`, bicent, ""},
 
 		{"bicentennial-payload", `{
+"jctx":"1",
 "deadline":"1976-07-04T01:02:03.000000004Z",
 "payload":{"lhs":1,"rhs":2}
 }`, bicent, `{"lhs":1,"rhs":2}`},

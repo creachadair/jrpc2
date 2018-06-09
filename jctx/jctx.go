@@ -10,9 +10,9 @@ import (
 	"time"
 )
 
-type contextKey string
+type contextKey struct{}
 
-const metadataKey = contextKey("jctx-metadata")
+var metadataKey = new(contextKey)
 
 const wireVersion = "1"
 
