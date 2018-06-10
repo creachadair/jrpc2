@@ -26,6 +26,9 @@ func (r *Request) ID() string { return string(r.id) }
 // Method reports the method name for the request.
 func (r *Request) Method() string { return r.method }
 
+// HasParams reports whether the request has non-empty parameters.
+func (r *Request) HasParams() bool { return len(r.params) != 0 }
+
 // UnmarshalParams decodes the parameters into v.
 func (r *Request) UnmarshalParams(v interface{}) error { return json.Unmarshal(r.params, v) }
 
