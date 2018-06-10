@@ -131,22 +131,14 @@ func (c *Client) send(ctx context.Context, reqs ...*Request) ([]*Pending, error)
 		return nil, errors.New("empty request batch")
 	}
 
-	batch := make(jrequests, len(reqs))
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.err != nil {
 		return nil, c.err
 	}
-	for i, req := range reqs {
-		if id := req.ID(); id != "" && c.pending[id] != nil {
-			return nil, fmt.Errorf("duplicate request ID %q", id)
-		}
-		batch[i] = &jrequest{
-			V:  Version,
-			ID: req.id,
-			M:  req.method,
-			P:  req.params,
-		}
+	batch, err := c.newBatch(reqs)
+	if err != nil {
+		return nil, err
 	}
 
 	b, err := json.Marshal(batch)
@@ -168,38 +160,61 @@ func (c *Client) send(ctx context.Context, reqs ...*Request) ([]*Pending, error)
 			pctx, p := newPending(ctx, id)
 			c.pending[id] = p
 			pends = append(pends, p)
-
-			// Wait for cancellation of the pending request. When the context
-			// ends, check whether the request is still in the pending set for
-			// the client: If so, a reply has not yet been delivered.
-			// Otherwise, the cancellation is a no-op ("too late").
-			go func() {
-				<-pctx.Done()
-				cleanup := func() {}
-				c.mu.Lock()
-				defer func() {
-					c.mu.Unlock()
-					cleanup() // N.B. outside the lock
-				}()
-				if _, ok := c.pending[id]; ok {
-					c.log("Context ended for id %q, err=%v", id, pctx.Err())
-					delete(c.pending, id)
-					code := ErrorCode(pctx.Err())
-					p.ch <- &jresponse{
-						ID: json.RawMessage(id),
-						E:  jerrorf(code, pctx.Err().Error()),
-					}
-
-					// Inform the server, best effort only.
-					cleanup = func() {
-						c.log("Sending rpc.cancel for id %q to the server", id)
-						c.Notify(context.Background(), "rpc.cancel", []json.RawMessage{json.RawMessage(id)})
-					}
-				}
-			}()
+			go c.waitComplete(pctx, id, p)
 		}
 	}
 	return pends, nil
+}
+
+// newBatch assembles wire-format requests for the given requests.  It requires
+// that the caller hold c.mu.
+func (c *Client) newBatch(reqs []*Request) (jrequests, error) {
+	batch := make(jrequests, len(reqs))
+	for i, req := range reqs {
+		if id := req.ID(); id != "" && c.pending[id] != nil {
+			return nil, fmt.Errorf("duplicate request ID %q", id)
+		}
+		batch[i] = &jrequest{
+			V:  Version,
+			ID: req.id,
+			M:  req.method,
+			P:  req.params,
+		}
+	}
+	return batch, nil
+}
+
+// waitComplete waits for completion of the context governing p. When the
+// context ends, check whether the request is still in the pending set for the
+// client: If so, a reply has not yet been delivered.  Otherwise, the
+// cancellation is a no-op ("too late").
+func (c *Client) waitComplete(pctx context.Context, id string, p *Pending) {
+	<-pctx.Done()
+	cleanup := func() {}
+	c.mu.Lock()
+	defer func() {
+		c.mu.Unlock()
+		cleanup() // N.B. outside the lock
+	}()
+
+	if _, ok := c.pending[id]; !ok {
+		return
+	}
+
+	c.log("Context ended for id %q, err=%v", id, pctx.Err())
+	delete(c.pending, id)
+	code := ErrorCode(pctx.Err())
+	p.ch <- &jresponse{
+		ID: json.RawMessage(id),
+		E:  jerrorf(code, pctx.Err().Error()),
+	}
+
+	// Inform the server, best effort only. N.B. Use a background context here,
+	// as the original context has ended by the time we get here.
+	cleanup = func() {
+		c.log("Sending rpc.cancel for id %q to the server", id)
+		c.Notify(context.Background(), "rpc.cancel", []json.RawMessage{json.RawMessage(id)})
+	}
 }
 
 // issue initiates a single request.  It blocks until the request is sent.
