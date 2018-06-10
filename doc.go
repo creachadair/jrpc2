@@ -7,15 +7,16 @@ Servers
 The *Server type implements a JSON-RPC server. A server communicates with a
 client over a channel.Channel, and dispatches client requests to user-defined
 method handlers.  Handlers satisfy the jrpc2.Method interface by exporting a
-Call method:
+Call method with this signature:
 
    Call(ctx Context.Context, req *jrpc2.Request) (interface{}, error)
 
-The server finds the Method for a request by looking up its name in a
+The jrpc2.NewMethod function helps adapt existing functions to this interface.
+A server finds the handler for a request by looking up its name in a
 jrpc2.Assigner provided when the server is set up.
 
-Let's work an example. Suppose we have defined the following Add function, and
-would like to export it via JSON-RPC:
+For example, suppose we have defined the following Add function, and would like
+to export it via JSON-RPC:
 
    // Add returns the sum of a slice of integers.
    func Add(ctx context.Context, values []int) (int, error) {
@@ -26,40 +27,44 @@ would like to export it via JSON-RPC:
       return sum, nil
    }
 
-To do this, we convert Add to a jrpc2.Method. The easiest way to do this is to
-call jrpc2.NewMethod, which uses reflection to lift the function into the
-jrpc2.Method interface exported by the server:
+To convert Add to a jrpc2.Method, call the jrpc2.NewMethod function, which uses
+reflection to lift its argument into the jrpc2.Method interface:
 
    m := jrpc2.NewMethod(Add)  // m is a jrpc2.Method that invokes Add
 
-Next, let's advertise this function under the name "Math.Add".  For static
-assignments, we can use a jrpc2.MapAssigner, which finds methods by looking
-them up in a Go map:
-
-   import "bitbucket.org/creachadair/jrpc2"
+We will advertise this function under the name "Add".  For static assignments
+we can use a jrpc2.MapAssigner, which finds methods by looking them up in a Go
+map:
 
    assigner := jrpc2.MapAssigner{
-      "Math.Add": jrpc2.NewMethod(Add),
+      "Add": jrpc2.NewMethod(Add),
    }
 
 Equipped with an Assigner we can now construct a Server:
 
    srv := jrpc2.NewServer(assigner, nil)  // nil for default options
 
-To serve requests, we will next need a connection. The channel package exports
-functions that can adapt various input and output streams to a channel.Channel,
-for example:
+To serve requests, we will next need a channel.Channel. The channel package
+exports functions that can adapt various input and output streams.  For this
+example, we'll use a channel that delimits messages by newlines, and
+communicates on os.Stdin and os.Stdout:
 
-   srv.Start(channel.Line(os.Stdin, os.Stdout))
+   ch := channel.Line(os.Stdin, os.Stdout)
+   srv.Start(ch)
 
-The running server will handle incoming requests until the connection fails or
-until it is stopped explicitly by calling srv.Stop(). To wait for the server to
-finish, call:
+Once started, the running server will handle incoming requests until the
+channel closes, or until it is stopped explicitly by calling srv.Stop(). To
+wait for the server to finish, call:
 
    err := srv.Wait()
 
 This will report the error that led to the server exiting. A working
-implementation of this example can found in examples/adder/adder.go.
+implementation of this example can found in examples/adder/adder.go:
+
+    $ go run examples/adder/adder.go
+
+You can interact with this server on the command line.
+
 
 Clients
 
@@ -74,13 +79,13 @@ To establish a client we first need a channel.Channel:
 
    conn, err := net.Dial("tcp", "localhost:8080")
    ...
-   cli := jrpc2.NewClient(channel.JSON(conn, conn), nil)
+   cli := jrpc2.NewClient(channel.RawJSON(conn, conn), nil)
 
 There are two parts to sending an RPC: First, we construct a request given the
 method name and parameters, and issue it to the server. This returns a pending
 call:
 
-   p, err := cli.Call(ctx, "Math.Add", []int{1, 3, 5, 7})
+   p, err := cli.Call(ctx, "Add", []int{1, 3, 5, 7})
 
 Second, we wait for the pending call to complete to receive its results:
 
