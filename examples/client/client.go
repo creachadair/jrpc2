@@ -67,7 +67,10 @@ func main() {
 	ctx := context.Background()
 
 	log.Print("\n-- Sending a notification...")
-	if err := cli.Notify(ctx, "Post.Alert", struct{ Msg string }{"There is a fire!"}); err != nil {
+	type alert struct {
+		M string `json:"message"`
+	}
+	if err := cli.Notify(ctx, "Post.Alert", alert{M: "There is a fire!"}); err != nil {
 		log.Fatalln("Notify:", err)
 	}
 

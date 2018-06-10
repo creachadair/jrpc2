@@ -73,36 +73,21 @@ server over a channel.Channel, and is safe for concurrent use by multiple
 goroutines. It supports batched requests and may have arbitrarily many pending
 requests in flight simultaneously.
 
-To establish a client we first need a channel.Channel:
+To establish a client we first need a channel:
 
    import "net"
 
    conn, err := net.Dial("tcp", "localhost:8080")
    ...
-   cli := jrpc2.NewClient(channel.RawJSON(conn, conn), nil)
+   ch := channel.RawJSON(conn, conn)
+   cli := jrpc2.NewClient(ch, nil)  // nil for default options
 
-There are two parts to sending an RPC: First, we construct a request given the
-method name and parameters, and issue it to the server. This returns a pending
-call:
+To send an RPC, use the Call method:
 
-   p, err := cli.Call(ctx, "Add", []int{1, 3, 5, 7})
+   rsp, err := cli.Call(ctx, "Add", []int{1, 3, 5, 7})
 
-Second, we wait for the pending call to complete to receive its results:
-
-   rsp := p.Wait()
-
-You can check whether a response contains an error using its Error method:
-
-   if rsp.Error() != nil {
-      log.Printf("Error from server: %v", rsp.Error())
-      // N.B. This includes context errors such as cancellations and timeouts.
-   }
-
-The separation of call and response allows requests to be issued serially and
-waited for in parallel.  For convenience, the client has a CallWait method that
-combines these for a single synchronous call:
-
-   rsp, err := cli.CallWait(ctx, "Math.Add", []int{1, 3, 5, 7})
+This blocks until the response is received. Any error returned by the server,
+including cancellation or deadline exceeded, has concrete type *jrpc2.Error.
 
 To issue a batch of requests all at once, use the Batch method:
 
@@ -111,20 +96,16 @@ To issue a batch of requests all at once, use the Batch method:
       {"Math.Mul", []int{4, 5, 6}},
       {"Math.Max", []int{-1, 5, 3, 0, 1}},
    })
-   ...
-   rsps := batch.Wait()  // waits for all the pending responses
 
-In this mode of operation, the caller must check each response for errors:
+The Batch method does not wait for the responses; instead, the caller should
+call the Wait method of the batch:
 
-   for i, rsp := range batch.Wait() {
-      if err := rsp.Error(); err != nil {
-        log.Printf("Request %d [%s] failed: %v", i, rsp.ID(), err)
-      }
-   }
+   rsps := batch.Wait()  // waits until all responses are received
 
-Alternatively, you may choose to wait for each request independently (though
-note that batch requests will usually not be returned until all results are
-complete anyway):
+Each response must be checked separately for errors. The responses will be
+returned in the same order as the Spec values.  Alternatively, you may choose
+to wait for each request independently (though note that batch requests may not
+be returned until all results are complete):
 
    rsp0 := batch[0].Wait()
    ...
@@ -138,15 +119,17 @@ To decode the result from a successful response use its UnmarshalResult method:
 
 To shut down a client and discard all its pending work, call cli.Close().
 
+
 Notifications
 
 The JSON-RPC protocol also supports a kind of request called a notification.
-Notifications differ from ordinary requests in that they are one-way: The
-client sends them to the server, but the server does not reply.
+Notifications differ from ordinary calls in that they are one-way: The client
+sends them to the server, but the server does not reply.
 
-A Client supports sending notifications as follows:
+A jrpc2.Client supports sending notifications as follows:
 
-   err := cli.Notify(ctx, "Alert", struct{Msg string}{"a fire is burning"})
+   type alert struct { M string `json:"message"` }
+   err := cli.Notify(ctx, "Alert", alert{M: "a fire is burning!"})
 
 Unlike ordinary requests, there are no pending calls for notifications; the
 notification is complete once it has been sent.
