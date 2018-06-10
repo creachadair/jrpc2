@@ -1,6 +1,7 @@
 package jctx_test
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -31,9 +32,13 @@ func ExampleEncode_deadline() {
 	if err != nil {
 		log.Fatalln("Encode:", err)
 	}
-	fmt.Println(string(enc))
+	fmt.Println(pretty(enc))
 	// Output:
-	// {"jctx":"1","deadline":"2018-06-09T20:45:33.000000001Z","payload":{}}
+	// {
+	//   "jctx": "1",
+	//   "deadline": "2018-06-09T20:45:33.000000001Z",
+	//   "payload": {}
+	// }
 }
 
 func ExampleDecode() {
@@ -69,9 +74,15 @@ func ExampleWithMetadata() {
 	if err != nil {
 		log.Fatal("Encode:", err)
 	}
-	fmt.Println(string(enc))
+	fmt.Println(pretty(enc))
 	// Output:
-	// {"jctx":"1","meta":{"user":"Jon Snow","token":"MjhFRjQwRjUtNzdDOS00NzQ0LUI1QkQtM0FEQ0QxQzE1MTQx"}}
+	// {
+	//   "jctx": "1",
+	//   "meta": {
+	//     "user": "Jon Snow",
+	//     "token": "MjhFRjQwRjUtNzdDOS00NzQ0LUI1QkQtM0FEQ0QxQzE1MTQx"
+	//   }
+	// }
 }
 
 func ExampleUnmarshalMetadata() {
@@ -95,4 +106,12 @@ func ExampleUnmarshalMetadata() {
 	// Output:
 	// user: Jon Snow
 	// token: 28EF40F5-77C9-4744-B5BD-3ADCD1C15141
+}
+
+func pretty(v []byte) string {
+	var buf bytes.Buffer
+	if err := json.Indent(&buf, v, "", "  "); err != nil {
+		log.Fatal(err)
+	}
+	return buf.String()
 }
