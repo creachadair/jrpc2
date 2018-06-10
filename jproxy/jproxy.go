@@ -4,7 +4,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -18,6 +17,7 @@ import (
 	"bitbucket.org/creachadair/jrpc2"
 	"bitbucket.org/creachadair/jrpc2/channel"
 	"bitbucket.org/creachadair/jrpc2/channel/chanutil"
+	"bitbucket.org/creachadair/jrpc2/proxy"
 	"bitbucket.org/creachadair/jrpc2/server"
 )
 
@@ -102,7 +102,10 @@ func run(ctx context.Context, cframe, sframe channel.Framing) error {
 		cancel()
 	}()
 
-	pc := newProxyClient(sframe(out, in))
+	pc := proxy.New(jrpc2.NewClient(sframe(out, in), &jrpc2.ClientOptions{
+		Logger: logger,
+	}))
+	defer pc.Close()
 
 	kind, addr := "tcp", *address
 	if !strings.Contains(addr, ":") {
@@ -126,48 +129,4 @@ func run(ctx context.Context, cframe, sframe channel.Framing) error {
 		},
 	})
 	return nil
-}
-
-func newProxyClient(ch channel.Channel) *proxy {
-	return &proxy{
-		client: jrpc2.NewClient(ch, &jrpc2.ClientOptions{
-			Logger: logger,
-		}),
-	}
-}
-
-// proxy is a reverse proxy that redirects requests through a client.
-type proxy struct{ client *jrpc2.Client }
-
-// Assign implements part of the jrpc2.Assigner interface.
-func (p *proxy) Assign(_ string) jrpc2.Method { return p }
-
-// Names implements part of the jrpc2.Assigner interface.
-func (proxy) Names() []string { return []string{"*"} }
-
-// Call implements the jrpc2.Method interface.
-func (p *proxy) Call(ctx context.Context, req *jrpc2.Request) (interface{}, error) {
-	// If the request has parameters, unpack them so we can pass them to the call.
-	var params interface{}
-	if req.HasParams() {
-		var msg json.RawMessage
-		if err := req.UnmarshalParams(&msg); err != nil {
-			log.Printf("MJF :: UnmarshalParams err=%v", err)
-			return nil, err
-		}
-		params = msg
-	}
-
-	// Invoke the requested method on the proxied server.
-	rsp, err := p.client.Call(ctx, req.Method(), params)
-	if err != nil {
-		return nil, err
-	}
-
-	// Extract the response value or error.
-	var result json.RawMessage
-	if err := rsp.UnmarshalResult(&result); err != nil {
-		return nil, err
-	}
-	return result, nil
 }
