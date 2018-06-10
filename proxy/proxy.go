@@ -32,7 +32,9 @@ type Proxy struct{ h handler }
 // Close closes the underlying client for p and reports its result.
 func (p *Proxy) Close() error { return p.h.client.Close() }
 
-// Assign implements part of the jrpc2.Assigner interface.
+// Assign implements part of the jrpc2.Assigner interface. All methods are
+// assigned to the proxy's internal handler, which forwards them across the
+// client.
 func (p *Proxy) Assign(_ string) jrpc2.Method { return p.h }
 
 // Names implements part of the jrpc2.Assigner interface.  It always returns
