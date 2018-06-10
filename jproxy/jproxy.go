@@ -117,7 +117,7 @@ func run(ctx context.Context, cframe, sframe channel.Framing) error {
 		lst.Close()
 	}()
 
-	return server.Loop(lst, pc, &server.LoopOptions{
+	server.Loop(lst, pc, &server.LoopOptions{
 		Framing: cframe,
 		ServerOptions: &jrpc2.ServerOptions{
 			Concurrency:    8,
@@ -125,6 +125,7 @@ func run(ctx context.Context, cframe, sframe channel.Framing) error {
 			Logger:         logger,
 		},
 	})
+	return nil
 }
 
 func newProxyClient(ch channel.Channel) *proxy {
