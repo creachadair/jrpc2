@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
 	"log"
 	"net"
 	"os"
@@ -19,7 +18,7 @@ import (
 	"time"
 
 	"bitbucket.org/creachadair/jrpc2"
-	"bitbucket.org/creachadair/jrpc2/channel"
+	"bitbucket.org/creachadair/jrpc2/channel/chanutil"
 	"bitbucket.org/creachadair/jrpc2/jctx"
 )
 
@@ -55,7 +54,10 @@ func main() {
 	if flag.NArg() < 3 || flag.NArg()%2 == 0 {
 		log.Fatal("Arguments are <address> {<method> <params>}...")
 	}
-	nc := newChannel(*chanFraming)
+	nc := chanutil.Framing(*chanFraming)
+	if nc == nil {
+		log.Fatalf("Unknown channel framing %q", *chanFraming)
+	}
 	ctx := context.Background()
 	if *withMeta != "" {
 		mc, err := jctx.WithMetadata(ctx, json.RawMessage(*withMeta))
@@ -132,23 +134,6 @@ func main() {
 	if failed {
 		os.Exit(1)
 	}
-}
-
-func newChannel(fmt string) func(io.Reader, io.WriteCloser) channel.Channel {
-	switch fmt {
-	case "raw":
-		return channel.RawJSON
-	case "json":
-		return channel.JSON
-	case "lsp":
-		return channel.LSP
-	case "line":
-		return channel.Line
-	case "varint":
-		return channel.Varint
-	}
-	log.Fatalf("Unknown channel format %q", fmt)
-	panic("unreachable")
 }
 
 func parseAddress(s string) (ntype, addr string) {
