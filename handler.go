@@ -99,8 +99,8 @@ func (m ServiceMapper) Names() []string {
 	return all.Elements()
 }
 
-// NewMethod adapts a function to a Method. The concrete value of fn must be a
-// function with one of the following type signatures:
+// NewMethod adapts a function to a jrpc2.Method. The concrete value of fn must
+// be a function with one of the following type signatures:
 //
 //    func(context.Context) (Y, error)
 //    func(context.Context, X) (Y, error)
@@ -110,6 +110,9 @@ func (m ServiceMapper) Names() []string {
 // for JSON-marshalable types X and Y. NewMethod will panic if the type of its
 // argument does not have one of these forms.  The resulting method will handle
 // encoding and decoding of JSON and report appropriate errors.
+//
+// Functions adapted by in this way can obtain the *jrpc2.Request value using
+// the jrpc2.InboundRequest helper on the context value supplied by the server.
 func NewMethod(fn interface{}) Method {
 	m, err := newMethod(fn)
 	if err != nil {
