@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"strings"
 
 	"bitbucket.org/creachadair/jrpc2"
@@ -24,7 +25,27 @@ var (
 	address       = flag.String("address", "", "Proxy listener address")
 	clientFraming = flag.String("cf", "raw", "Client channel framing")
 	serverFraming = flag.String("sf", "raw", "Server channel framing")
+	doVerbose     = flag.Bool("v", false, "Enable verbose logging")
+
+	logger *log.Logger
 )
+
+func init() {
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, `Usage: %s [options] <cmd> <args>...
+
+Start the specified command in a subprocess and connect a JSON-RPC client to
+its stdin and stdout. Listen at the given address, and reverse proxy clients
+that connect to it via the client to the subprocess.
+
+If the subprocess exits or the proxy receives an interrupt (SIGINT), the
+process cleans up any remaining clients and exits.
+
+Options:
+`, filepath.Base(os.Args[0]))
+		flag.PrintDefaults()
+	}
+}
 
 func main() {
 	flag.Parse()
@@ -32,6 +53,9 @@ func main() {
 		log.Fatal("You must provide a command to execute")
 	} else if *address == "" {
 		log.Fatal("You must provide an -address to listen on")
+	}
+	if *doVerbose {
+		logger = log.New(os.Stderr, "[proxy] ", log.LstdFlags|log.Lshortfile)
 	}
 
 	cframe := chanutil.Framing(*clientFraming)
@@ -96,14 +120,19 @@ func run(ctx context.Context, cframe, sframe channel.Framing) error {
 	return server.Loop(lst, pc, &server.LoopOptions{
 		Framing: cframe,
 		ServerOptions: &jrpc2.ServerOptions{
-			DisableBuiltin: true,
 			Concurrency:    8,
+			DisableBuiltin: true,
+			Logger:         logger,
 		},
 	})
 }
 
 func newProxyClient(ch channel.Channel) *proxy {
-	return &proxy{client: jrpc2.NewClient(ch, nil)}
+	return &proxy{
+		client: jrpc2.NewClient(ch, &jrpc2.ClientOptions{
+			Logger: logger,
+		}),
+	}
 }
 
 // proxy is a reverse proxy that redirects requests through a client.
