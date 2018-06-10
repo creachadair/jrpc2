@@ -26,7 +26,8 @@ type Server struct {
 	allow1 bool                         // allow v1 requests with no version marker
 	allowN bool                         // allow server notifications to the client
 	log    func(string, ...interface{}) // write debug logs here
-	dectx  func(context.Context, json.RawMessage) (context.Context, json.RawMessage, error)
+	dectx  decoder                      // decode context from request
+	expctx bool                         // whether to expect request context
 
 	mu      *sync.Mutex     // protects the fields below
 	err     error           // error from a previous operation
@@ -51,13 +52,15 @@ func NewServer(mux Assigner, opts *ServerOptions) *Server {
 	if mux == nil {
 		panic("nil assigner")
 	}
+	dc, exp := opts.decodeContext()
 	s := &Server{
 		mux:     mux,
 		sem:     semaphore.NewWeighted(opts.concurrency()),
 		allow1:  opts.allowV1(),
 		allowN:  opts.allowNotify(),
 		log:     opts.logger(),
-		dectx:   opts.decodeContext(),
+		dectx:   dc,
+		expctx:  exp,
 		mu:      new(sync.Mutex),
 		metrics: opts.metrics(),
 	}
@@ -315,9 +318,10 @@ func (s *Server) Notify(ctx context.Context, method string, params interface{}) 
 // the caller hold s.mu.
 func (s *Server) serverInfo() *ServerInfo {
 	info := &ServerInfo{
-		Methods:  s.mux.Names(),
-		Counter:  make(map[string]int64),
-		MaxValue: make(map[string]int64),
+		Methods:     s.mux.Names(),
+		UsesContext: s.expctx,
+		Counter:     make(map[string]int64),
+		MaxValue:    make(map[string]int64),
 	}
 	s.metrics.Snapshot(metrics.Snapshot{
 		Counter:  info.Counter,
@@ -429,6 +433,9 @@ func (s *Server) read(ch channel.Receiver) {
 type ServerInfo struct {
 	// The list of method names exported by this server.
 	Methods []string `json:"methods,omitempty"`
+
+	// Whether this server understands context wrappers.
+	UsesContext bool `json:"usesContext"`
 
 	// Metric values defined by the evaluation of methods.
 	Counter  map[string]int64 `json:"counters,omitempty"`

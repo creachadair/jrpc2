@@ -60,13 +60,15 @@ func (s *ServerOptions) concurrency() int64 {
 	return int64(s.Concurrency)
 }
 
-func (s *ServerOptions) decodeContext() func(context.Context, json.RawMessage) (context.Context, json.RawMessage, error) {
+type decoder = func(context.Context, json.RawMessage) (context.Context, json.RawMessage, error)
+
+func (s *ServerOptions) decodeContext() (decoder, bool) {
 	if s == nil || s.DecodeContext == nil {
 		return func(ctx context.Context, params json.RawMessage) (context.Context, json.RawMessage, error) {
 			return ctx, params, nil
-		}
+		}, false
 	}
-	return s.DecodeContext
+	return s.DecodeContext, true
 }
 
 func (s *ServerOptions) metrics() *metrics.M {
@@ -110,7 +112,9 @@ func (c *ClientOptions) logger() func(string, ...interface{}) {
 
 func (c *ClientOptions) allowV1() bool { return c != nil && c.AllowV1 }
 
-func (c *ClientOptions) encodeContext() func(context.Context, json.RawMessage) (json.RawMessage, error) {
+type encoder = func(context.Context, json.RawMessage) (json.RawMessage, error)
+
+func (c *ClientOptions) encodeContext() encoder {
 	if c == nil || c.EncodeContext == nil {
 		return func(_ context.Context, params json.RawMessage) (json.RawMessage, error) { return params, nil }
 	}
