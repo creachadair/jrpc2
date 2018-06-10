@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"strings"
 	"sync"
 	"time"
 
@@ -466,6 +467,10 @@ func (s *Server) assign(name string) Method {
 			}
 			return nil, nil
 		})
+	default:
+		if strings.HasPrefix(name, "rpc.") {
+			return nil // the rpc. prefix is reserved for system extensions
+		}
 	}
 	return s.mux.Assign(name)
 }

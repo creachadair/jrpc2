@@ -488,3 +488,20 @@ func TestContextPlumbing(t *testing.T) {
 		t.Errorf("Call X failed: %v", err)
 	}
 }
+
+func TestSpecialMethods(t *testing.T) {
+	s := NewServer(MapAssigner{
+		"rpc.nonesuch": NewMethod(func(context.Context) (string, error) { return "OK", nil }),
+		"donkeybait":   NewMethod(func(context.Context) (bool, error) { return true, nil }),
+	}, nil)
+	for _, name := range []string{"rpc.serverInfo", "rpc.cancel", "donkeybait"} {
+		if got := s.assign(name); got == nil {
+			t.Errorf("s.assign(%s): no method assigned", name)
+		} else {
+			t.Logf("s.assign(%s): got %v OK", name, got)
+		}
+	}
+	if got := s.assign("rpc.nonesuch"); got != nil {
+		t.Errorf("s.assign(rpc.nonesuch): got %v, want nil", got)
+	}
+}
