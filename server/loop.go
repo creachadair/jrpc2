@@ -3,7 +3,6 @@ package server
 
 import (
 	"io"
-	"log"
 	"net"
 	"sync"
 
@@ -18,11 +17,15 @@ import (
 func Loop(lst net.Listener, assigner jrpc2.Assigner, opts *LoopOptions) error {
 	newChannel := opts.framing()
 	serverOpts := opts.serverOpts()
+	log := func(string, ...interface{}) {}
+	if serverOpts != nil && serverOpts.Logger != nil {
+		log = serverOpts.Logger.Printf
+	}
 	var wg sync.WaitGroup
 	for {
 		conn, err := lst.Accept()
 		if err != nil {
-			log.Printf("Error accepting new connection: %v", err)
+			log("Error accepting new connection: %v", err)
 			wg.Wait()
 			return err
 		}
@@ -32,7 +35,7 @@ func Loop(lst net.Listener, assigner jrpc2.Assigner, opts *LoopOptions) error {
 			defer wg.Done()
 			srv := jrpc2.NewServer(assigner, serverOpts).Start(ch)
 			if err := srv.Wait(); err != nil && err != io.EOF {
-				log.Printf("Server exit: %v", err)
+				log("Server exit: %v", err)
 			}
 		}()
 	}

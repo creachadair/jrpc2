@@ -45,7 +45,7 @@ type ServerOptions struct {
 	Metrics *metrics.M
 }
 
-func (s *ServerOptions) logger() func(string, ...interface{}) {
+func (s *ServerOptions) logger() logger {
 	if s == nil || s.Logger == nil {
 		return func(string, ...interface{}) {}
 	}
@@ -106,7 +106,7 @@ type ClientOptions struct {
 }
 
 // ClientLog enables debug logging to the specified writer.
-func (c *ClientOptions) logger() func(string, ...interface{}) {
+func (c *ClientOptions) logger() logger {
 	if c == nil || c.Logger == nil {
 		return func(string, ...interface{}) {}
 	}
