@@ -43,6 +43,7 @@ func Encode(ctx context.Context, params json.RawMessage) (json.RawMessage, error
 
 // Decode decodes the specified request message as a context-wrapped request,
 // and returns the updated context (based on ctx) and the embedded parameters.
+// If the request does not have a context wrapper, it is returned as-is.
 //
 // If the encoded request specifies a deadline, that deadline is set in the
 // context value returned.
@@ -50,11 +51,17 @@ func Encode(ctx context.Context, params json.RawMessage) (json.RawMessage, error
 // If the request includes context metadata, they are attached and can be
 // recovered using jctx.UnmarshalMetadata.
 func Decode(ctx context.Context, req json.RawMessage) (context.Context, json.RawMessage, error) {
+	if len(req) == 0 {
+		return ctx, req, nil // an empty message has no wrapper
+	}
 	var c wireContext
 	if err := json.Unmarshal(req, &c); err != nil {
+		if _, ok := err.(*json.UnmarshalTypeError); ok {
+			return ctx, req, nil // fall back assuming an un-wrapped message
+		}
 		return nil, nil, err
 	} else if c.V != wireVersion {
-		return nil, nil, fmt.Errorf("invalid context wire version %q", c.V)
+		return nil, nil, fmt.Errorf("invalid context version %q", c.V)
 	}
 	if c.Metadata != nil {
 		ctx = context.WithValue(ctx, metadataKey{}, c.Metadata)

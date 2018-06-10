@@ -54,8 +54,10 @@ func TestDecoding(t *testing.T) {
 		want        string
 	}{
 		{"zero-void", `{"jctx":"1"}`, time.Time{}, ""},
+		{"zero-void-naked", "", time.Time{}, ""},
 
 		{"zero-payload", `{"jctx":"1","payload":["a","b","c"]}`, time.Time{}, `["a","b","c"]`},
+		{"zero-payload-naked", `["a", "b", "c"]`, time.Time{}, `["a", "b", "c"]`},
 
 		{"bicentennial-void", `{"jctx":"1","deadline":"1976-07-04T01:02:03.000000004Z"}`, bicent, ""},
 
