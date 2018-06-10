@@ -240,14 +240,14 @@ func (s *Server) setContext(t *task, id string, rawParams json.RawMessage) bool 
 	base, params, err := s.dectx(context.Background(), rawParams)
 	if err != nil {
 		t.err = Errorf(code.InternalError, "invalid request context: %v", err)
-	}
-	t.params = params
-	t.ctx = base
-	if id != "" {
+	} else if id != "" {
 		ctx, cancel := context.WithCancel(base)
 		s.used[id] = cancel
 		t.ctx = ctx
+	} else {
+		t.ctx = base
 	}
+	t.params = params
 	return err == nil
 }
 
