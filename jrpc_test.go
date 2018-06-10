@@ -505,3 +505,23 @@ func TestSpecialMethods(t *testing.T) {
 		t.Errorf("s.assign(rpc.nonesuch): got %v, want nil", got)
 	}
 }
+
+func TestDisableBuiltin(t *testing.T) {
+	s := NewServer(MapAssigner{
+		"rpc.nonesuch": NewMethod(func(context.Context) (string, error) { return "OK", nil }),
+	}, &ServerOptions{DisableBuiltin: true})
+
+	// With builtins disabled, the default rpc.* methods should not get assigned.
+	for _, name := range []string{"rpc.serverInfo", "rpc.cancel"} {
+		if got := s.assign(name); got != nil {
+			t.Errorf("s.assign(%s): got %+v, wanted nil", name, got)
+		}
+	}
+
+	// However, user-assigned methods with this prefix should now work.
+	if got := s.assign("rpc.nonesuch"); got == nil {
+		t.Error("s.assign(rpc.nonesuch): missing assignment")
+	} else {
+		t.Logf("s.assign(rpc.nonesuch): got assignment %+v", got)
+	}
+}

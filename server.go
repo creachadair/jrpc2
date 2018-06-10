@@ -16,18 +16,21 @@ import (
 	"golang.org/x/sync/semaphore"
 )
 
+type logger = func(string, ...interface{})
+
 // A Server is a JSON-RPC 2.0 server. The server receives requests and sends
 // responses on a channel.Channel provided by the caller, and dispatches
 // requests to user-defined Method handlers.
 type Server struct {
-	wg     sync.WaitGroup               // ready when workers are done at shutdown time
-	mux    Assigner                     // associates method names with handlers
-	sem    *semaphore.Weighted          // bounds concurrent execution (default 1)
-	allow1 bool                         // allow v1 requests with no version marker
-	allowN bool                         // allow server notifications to the client
-	log    func(string, ...interface{}) // write debug logs here
-	dectx  decoder                      // decode context from request
-	expctx bool                         // whether to expect request context
+	wg     sync.WaitGroup      // ready when workers are done at shutdown time
+	mux    Assigner            // associates method names with handlers
+	sem    *semaphore.Weighted // bounds concurrent execution (default 1)
+	allow1 bool                // allow v1 requests with no version marker
+	allowN bool                // allow server notifications to the client
+	allowB bool                // enable built-in rpc.* methods
+	log    logger              // write debug logs here
+	dectx  decoder             // decode context from request
+	expctx bool                // whether to expect request context
 
 	mu      *sync.Mutex     // protects the fields below
 	err     error           // error from a previous operation
@@ -58,6 +61,7 @@ func NewServer(mux Assigner, opts *ServerOptions) *Server {
 		sem:     semaphore.NewWeighted(opts.concurrency()),
 		allow1:  opts.allowV1(),
 		allowN:  opts.allowNotify(),
+		allowB:  opts.allowBuiltin(),
 		log:     opts.logger(),
 		dectx:   dc,
 		expctx:  exp,
@@ -442,41 +446,55 @@ type ServerInfo struct {
 	MaxValue map[string]int64 `json:"maxValue,omitempty"`
 }
 
+// Handle the special rpc.cancel notification, that requests cancellation of a
+// set of pending methods. This only works if issued as a notification.
+func (s *Server) handleRPCCancel(_ context.Context, req *Request) (interface{}, error) {
+	if !req.IsNotification() {
+		return nil, Errorf(code.MethodNotFound, "no such method")
+	}
+	var ids []json.RawMessage
+	if err := req.UnmarshalParams(&ids); err != nil {
+		return nil, err
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, raw := range ids {
+		id := string(raw)
+		if cancel, ok := s.used[id]; ok {
+			cancel()
+			s.log("Cancelled request %s by client order", id)
+		}
+	}
+	return nil, nil
+}
+
+func (s *Server) handleRPCServerInfo(context.Context, *Request) (interface{}, error) {
+	return s.serverInfo(), nil
+}
+
 // assign returns a Method to handle the specified name, or nil.
 // The caller must hold s.mu.
 func (s *Server) assign(name string) Method {
-	switch name {
-	case "rpc.serverInfo":
-		info := s.serverInfo()
-		return methodFunc(func(context.Context, *Request) (interface{}, error) {
-			return info, nil
-		})
+	if s.allowB {
+		// Built-in handlers enabled by default.
+		switch name {
+		case "rpc.serverInfo":
+			return methodFunc(s.handleRPCServerInfo)
 
-	case "rpc.cancel":
-		// Handle client-requested cancellation of a pending method. This only
-		// works if issued as a notification.
-		return methodFunc(func(_ context.Context, req *Request) (interface{}, error) {
-			if !req.IsNotification() {
-				return nil, Errorf(code.MethodNotFound, "no such method: %q", name)
+		case "rpc.cancel":
+			// Handle client-requested cancellation of a pending method. This only
+			// works if issued as a notification.
+			return methodFunc(s.handleRPCCancel)
+
+		default:
+			// Spec: "Method names that begin with rpc. are reserved for system
+			// extensions, and MUST NOT be used for anything else."
+			//
+			// When built-in handlers are enabled, names with the rpc.* prefix
+			// are filtered from user handlers and reported as missing.
+			if strings.HasPrefix(name, "rpc.") {
+				return nil
 			}
-			var ids []json.RawMessage
-			if err := req.UnmarshalParams(&ids); err != nil {
-				return nil, err
-			}
-			s.mu.Lock()
-			defer s.mu.Unlock()
-			for _, raw := range ids {
-				id := string(raw)
-				if cancel, ok := s.used[id]; ok {
-					cancel()
-					s.log("Cancelled request %s by client order", id)
-				}
-			}
-			return nil, nil
-		})
-	default:
-		if strings.HasPrefix(name, "rpc.") {
-			return nil // the rpc. prefix is reserved for system extensions
 		}
 	}
 	return s.mux.Assign(name)
