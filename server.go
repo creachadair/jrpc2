@@ -168,8 +168,8 @@ func (s *Server) dispatch(next jrequests, ch channel.Sender) func() error {
 		go func() {
 			defer wg.Done()
 			t.val, t.err = s.invoke(t.ctx, t.m, &Request{
-				id:     t.req.ID,
-				method: t.req.M,
+				id:     t.reqID,
+				method: t.reqM,
 				params: t.params,
 			})
 		}()
@@ -211,7 +211,7 @@ func (s *Server) checkAndAssign(next jrequests) tasks {
 	var tasks tasks
 	for _, req := range next {
 		s.log("Checking request for %q: %s", req.M, string(req.P))
-		t := &task{req: req}
+		t := &task{reqID: req.ID, reqM: req.M}
 		req.ID = fixID(req.ID)
 		if id := string(req.ID); id != "" && s.used[id] != nil {
 			t.err = Errorf(code.InvalidRequest, "duplicate request id %q", id)
@@ -494,13 +494,17 @@ func (s *Server) versionOK(v string) bool {
 	return v == Version // ... otherwise it must match the spec
 }
 
+// A task represents a pending method invocation received by the server.
 type task struct {
-	m      Method
-	req    *jrequest
-	val    json.RawMessage
-	ctx    context.Context
-	params json.RawMessage
-	err    error
+	m Method // the assigned handler (after assignment)
+
+	ctx    context.Context // the context passed to the handler
+	reqID  json.RawMessage // the original request ID
+	reqM   string          // the original method name
+	params json.RawMessage // the encoded parameters
+
+	val json.RawMessage // the result value (when complete)
+	err error           // the error value (when complete)
 }
 
 type tasks []*task
@@ -508,7 +512,7 @@ type tasks []*task
 func (ts tasks) responses() jresponses {
 	var rsps jresponses
 	for _, task := range ts {
-		if task.req.ID == nil {
+		if task.reqID == nil {
 			// Spec: "The Server MUST NOT reply to a Notification, including
 			// those that are within a batch request.  Notifications are not
 			// confirmable by definition, since they do not have a Response
@@ -516,7 +520,7 @@ func (ts tasks) responses() jresponses {
 			// any errors."
 			continue
 		}
-		rsp := &jresponse{V: Version, ID: task.req.ID}
+		rsp := &jresponse{V: Version, ID: task.reqID}
 		if task.err == nil {
 			rsp.R = task.val
 		} else if e, ok := task.err.(*Error); ok {
