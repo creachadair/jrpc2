@@ -141,7 +141,7 @@ func New(method string, opts Options) interface{} {
 
 		// N.B. the same err is threaded all the way through, so that there is
 		// only one point of exit where all the remaining reflection occurs.
-		raw, err := cli.CallWait(ctx, method, param(args))
+		raw, err := cli.Call(ctx, method, param(args))
 		if err == nil {
 			if raw.Error() == nil {
 				err = raw.UnmarshalResult(rsp.Interface())

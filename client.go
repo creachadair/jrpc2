@@ -202,8 +202,8 @@ func (c *Client) send(ctx context.Context, reqs ...*Request) ([]*Pending, error)
 	return pends, nil
 }
 
-// Call initiates a single request.  It blocks until the request is sent.
-func (c *Client) Call(ctx context.Context, method string, params interface{}) (*Pending, error) {
+// issue initiates a single request.  It blocks until the request is sent.
+func (c *Client) issue(ctx context.Context, method string, params interface{}) (*Pending, error) {
 	req, err := c.req(ctx, method, params)
 	if err != nil {
 		return nil, err
@@ -215,11 +215,11 @@ func (c *Client) Call(ctx context.Context, method string, params interface{}) (*
 	return ps[0], nil
 }
 
-// CallWait initiates a single request and blocks until the response returns.
-// It is shorthand for Call + Wait. If err != nil then rsp == nil. Errors from
-// the server have concrete type *jrpc2.Error.
+// Call initiates a single request and blocks until the response returns.  If
+// err != nil then rsp == nil. Errors from the server have concrete type
+// *jrpc2.Error.
 //
-//    rsp, err := c.CallWait(ctx, method, params)
+//    rsp, err := c.Call(ctx, method, params)
 //    if err != nil {
 //       if e, ok := err.(*jrpc2.Error); ok {
 //          log.Fatalf("Error from server: %v", err)
@@ -229,8 +229,8 @@ func (c *Client) Call(ctx context.Context, method string, params interface{}) (*
 //    }
 //    handleValidResponse(rsp)
 //
-func (c *Client) CallWait(ctx context.Context, method string, params interface{}) (*Response, error) {
-	p, err := c.Call(ctx, method, params)
+func (c *Client) Call(ctx context.Context, method string, params interface{}) (*Response, error) {
+	p, err := c.issue(ctx, method, params)
 	if err != nil {
 		return nil, err
 	}

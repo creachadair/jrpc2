@@ -123,7 +123,7 @@ func TestClientServer(t *testing.T) {
 
 	// Verify that individual sequential requests work.
 	for _, test := range tests {
-		rsp, err := c.CallWait(ctx, test.method, test.params)
+		rsp, err := c.Call(ctx, test.method, test.params)
 		if err != nil {
 			t.Errorf("Call %q %v: unexpected error: %v", test.method, test.params, err)
 			continue
@@ -188,7 +188,7 @@ func TestTimeout(t *testing.T) {
 	defer cancel()
 
 	start := time.Now()
-	got, err := c.CallWait(ctx, "Stall", nil)
+	got, err := c.Call(ctx, "Stall", nil)
 	if err == nil {
 		t.Errorf("Stall: got %+v, wanted error", got)
 	} else if err != context.DeadlineExceeded {
@@ -222,9 +222,9 @@ func TestClientCancellation(t *testing.T) {
 	// Start a call that will hang around until a timer expires or an explicit
 	// cancellation is received.
 	ctx, cancel := context.WithCancel(context.Background())
-	p, err := c.Call(ctx, "Hang", nil)
+	p, err := c.issue(ctx, "Hang", nil)
 	if err != nil {
-		t.Fatalf("Call failed: %v", err)
+		t.Fatalf("issue failed: %v", err)
 	}
 
 	// Wait for the handler to start so that we don't race with calling the
@@ -261,9 +261,9 @@ func TestErrors(t *testing.T) {
 	}, nil)
 	defer cleanup()
 
-	got, err := c.CallWait(context.Background(), "Err", nil)
+	got, err := c.Call(context.Background(), "Err", nil)
 	if err == nil {
-		t.Errorf("CallWait: got %#v, wanted error", got)
+		t.Errorf("Call: got %#v, wanted error", got)
 	} else if e, ok := err.(*Error); ok {
 		t.Logf("Response error is %+v", e)
 		if e.Code != errCode {
@@ -276,7 +276,7 @@ func TestErrors(t *testing.T) {
 			t.Errorf("Error data: got %q, want %q", s, errData)
 		}
 	} else {
-		t.Fatalf("CallWait(Err): unexpected error: %v", err)
+		t.Fatalf("Call(Err): unexpected error: %v", err)
 	}
 }
 
@@ -325,8 +325,8 @@ func TestServerInfo(t *testing.T) {
 	defer cleanup()
 
 	ctx := context.Background()
-	if _, err := c.CallWait(ctx, "Metricize", nil); err != nil {
-		t.Fatalf("CallWait(Metricize) failed: %v", err)
+	if _, err := c.Call(ctx, "Metricize", nil); err != nil {
+		t.Fatalf("Call(Metricize) failed: %v", err)
 	}
 
 	info := s.ServerInfo()
@@ -409,7 +409,7 @@ func TestOtherClient(t *testing.T) {
 			t.Fatalf("Recv failed: %v", err)
 		}
 		if got := string(raw); got != test.want {
-			t.Errorf("Call %#q: got %#q, want %#q", test.input, got, test.want)
+			t.Errorf("Simulated call %#q: got %#q, want %#q", test.input, got, test.want)
 		}
 	}
 }
@@ -449,7 +449,7 @@ func TestServerNotify(t *testing.T) {
 	}
 
 	// Call the method that posts a notification.
-	if _, err := c.CallWait(ctx, "NoteMe", nil); err != nil {
+	if _, err := c.Call(ctx, "NoteMe", nil); err != nil {
 		t.Errorf("Call NoteMe: unexpected error: %v", err)
 	}
 
@@ -484,7 +484,7 @@ func TestContextPlumbing(t *testing.T) {
 	})
 	defer cleanup()
 
-	if _, err := c.CallWait(ctx, "X", nil); err != nil {
+	if _, err := c.Call(ctx, "X", nil); err != nil {
 		t.Errorf("Call X failed: %v", err)
 	}
 }

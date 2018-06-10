@@ -77,7 +77,7 @@ func main() {
 			ctx, cancel = context.WithTimeout(ctx, *callTimeout)
 		}
 		var result RunResult
-		rsp, err := cli.CallWait(ctx, "Run", req)
+		rsp, err := cli.Call(ctx, "Run", req)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "# Error: %v\n", err)
 		} else if err := rsp.UnmarshalResult(&result); err != nil {

@@ -128,7 +128,7 @@ func main() {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				rsp, err := cli.CallWait(ctx, "Math.Sub", struct{ X, Y int }{x, y})
+				rsp, err := cli.Call(ctx, "Math.Sub", struct{ X, Y int }{x, y})
 				if err != nil {
 					log.Printf("Req (%d-%d) failed: %v", x, y, err)
 					return
