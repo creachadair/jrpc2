@@ -25,6 +25,9 @@ type ServerOptions struct {
 	// method of the server will report an error when called.
 	AllowNotify bool
 
+	// Instructs the server to disable the built-in rpc.* handler methods.
+	DisableBuiltin bool
+
 	// Allows up to the specified number of concurrent goroutines to execute
 	// when processing requests. A value less than 1 uses runtime.NumCPU().
 	Concurrency int
@@ -50,8 +53,9 @@ func (s *ServerOptions) logger() func(string, ...interface{}) {
 	return func(msg string, args ...interface{}) { logger.Output(2, fmt.Sprintf(msg, args...)) }
 }
 
-func (s *ServerOptions) allowV1() bool     { return s != nil && s.AllowV1 }
-func (s *ServerOptions) allowNotify() bool { return s != nil && s.AllowNotify }
+func (s *ServerOptions) allowV1() bool      { return s != nil && s.AllowV1 }
+func (s *ServerOptions) allowNotify() bool  { return s != nil && s.AllowNotify }
+func (s *ServerOptions) allowBuiltin() bool { return s == nil || !s.DisableBuiltin }
 
 func (s *ServerOptions) concurrency() int64 {
 	if s == nil || s.Concurrency < 1 {
