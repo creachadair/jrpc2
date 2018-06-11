@@ -17,7 +17,7 @@ import (
 //    cli := jrpc2.NewClient(ch, clientOpts)
 //    ...
 //    s := jrpc2.NewServer(proxy.New(cli), &jrpc2.ServerOptions{
-//        DisableBuiltin: true,
+//        DisableBuiltin: true,  // disable the proxy's rpc.* handlers
 //    })
 //
 func New(c *jrpc2.Client) *Proxy {
