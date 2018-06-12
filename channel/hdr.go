@@ -82,8 +82,8 @@ func (h *hdr) Recv() ([]byte, error) {
 		}
 	}
 
-	// Verify that the content-type matches what we expect.
-	if ctype, ok := p["content-type"]; !ok || ctype != h.mtype {
+	// Verify that the content-type, if it is set, matches what we expect.
+	if ctype, ok := p["content-type"]; ok && ctype != h.mtype {
 		return nil, errors.New("invalid content-type")
 	}
 
