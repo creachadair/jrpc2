@@ -6,6 +6,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"os"
@@ -25,6 +26,7 @@ var (
 	address       = flag.String("address", "", "Proxy listener address")
 	clientFraming = flag.String("cf", "raw", "Client channel framing")
 	serverFraming = flag.String("sf", "raw", "Server channel framing")
+	doPipe        = flag.Bool("pipe", false, "Communicate with stdin/stdout")
 	doVerbose     = flag.Bool("v", false, "Enable verbose logging")
 
 	logger *log.Logger
@@ -49,8 +51,8 @@ Options:
 
 func main() {
 	flag.Parse()
-	if flag.NArg() == 0 {
-		log.Fatal("You must provide a command to execute")
+	if *doPipe != (flag.NArg() == 0) {
+		log.Fatal("You must provide a command to execute or set -pipe")
 	} else if *address == "" {
 		log.Fatal("You must provide an -address to listen on")
 	}
@@ -85,24 +87,12 @@ func run(ctx context.Context, cframe, sframe channel.Framing) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	// Start the subprocess and connect its stdin and stdout to a client.
-	proc := exec.CommandContext(ctx, flag.Arg(0), flag.Args()[1:]...)
-	in, err := proc.StdinPipe()
+	rc, wc, err := start(ctx, cancel)
 	if err != nil {
-		return fmt.Errorf("connecting to stdin: %v", err)
+		return err
 	}
-	out, err := proc.StdoutPipe()
-	if err != nil {
-		return fmt.Errorf("connecting to stdout: %v", err)
-	} else if err := proc.Start(); err != nil {
-		return fmt.Errorf("starting server failed: %v", err)
-	}
-	go func() {
-		log.Printf("Subprocess exited: %v", proc.Wait())
-		cancel()
-	}()
 
-	pc := proxy.New(jrpc2.NewClient(sframe(out, in), &jrpc2.ClientOptions{
+	pc := proxy.New(jrpc2.NewClient(sframe(rc, wc), &jrpc2.ClientOptions{
 		Logger: logger,
 	}))
 	defer pc.Close()
@@ -129,4 +119,27 @@ func run(ctx context.Context, cframe, sframe channel.Framing) error {
 		},
 	})
 	return nil
+}
+
+func start(ctx context.Context, cancel context.CancelFunc) (io.ReadCloser, io.WriteCloser, error) {
+	if *doPipe {
+		return os.Stdin, os.Stdout, nil
+	}
+	// Start the subprocess and connect its stdin and stdout to a client.
+	proc := exec.CommandContext(ctx, flag.Arg(0), flag.Args()[1:]...)
+	in, err := proc.StdinPipe()
+	if err != nil {
+		return nil, nil, fmt.Errorf("connecting to stdin: %v", err)
+	}
+	out, err := proc.StdoutPipe()
+	if err != nil {
+		return nil, nil, fmt.Errorf("connecting to stdout: %v", err)
+	} else if err := proc.Start(); err != nil {
+		return nil, nil, fmt.Errorf("starting server failed: %v", err)
+	}
+	go func() {
+		log.Printf("Subprocess exited: %v", proc.Wait())
+		cancel()
+	}()
+	return out, in, nil
 }
