@@ -28,7 +28,7 @@ var (
 	doNotify    = flag.Bool("notify", false, "Send a notification")
 	withContext = flag.Bool("c", false, "Send context with request")
 	chanFraming = flag.String("f", "raw", `Channel framing ("json", "line", "lsp", "raw", "varint")`)
-	doSeq       = flag.Bool("s", false, "Issue calls sequentially rather than as a batch")
+	doSeq       = flag.Bool("seq", false, "Issue calls sequentially rather than as a batch")
 	withLogging = flag.Bool("v", false, "Enable verbose logging")
 	withMeta    = flag.String("meta", "", "Attach this JSON value as request metadata (implies -c)")
 )
