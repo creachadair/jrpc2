@@ -28,6 +28,7 @@ var (
 	doNotify    = flag.Bool("notify", false, "Send a notification")
 	withContext = flag.Bool("c", false, "Send context with request")
 	chanFraming = flag.String("f", "raw", `Channel framing ("json", "line", "lsp", "raw", "varint")`)
+	doSeq       = flag.Bool("s", false, "Issue calls sequentially rather than as a batch")
 	withLogging = flag.Bool("v", false, "Enable verbose logging")
 	withMeta    = flag.String("meta", "", "Attach this JSON value as request metadata (implies -c)")
 )
@@ -68,17 +69,8 @@ func main() {
 		*withContext = true
 	}
 
-	addr := flag.Arg(0)
-	specs := make([]jrpc2.Spec, flag.NArg()/2)
-	for i, j := 1, 0; i < flag.NArg(); i += 2 {
-		specs[j].Method = flag.Arg(i)
-		if p := flag.Arg(i + 1); p != "" {
-			specs[j].Params = json.RawMessage(p)
-		}
-		j++
-	}
-
 	// Connect to the server and establish a client.
+	addr := flag.Arg(0)
 	ntype, addr := parseAddress(addr)
 	conn, err := net.DialTimeout(ntype, addr, *dialTimeout)
 	if err != nil {
@@ -95,27 +87,15 @@ func main() {
 	}
 	cli := jrpc2.NewClient(nc(conn, conn), opts)
 
-	// Handle notifications...
-	if *doNotify {
-		for _, spec := range specs {
-			if err := cli.Notify(ctx, spec.Method, spec.Params); err != nil {
-				log.Fatalf("Notify %q failed: %v", spec.Method, err)
-			}
-		}
-		return
-	}
-
-	// Handle a batch of requests.
 	if *callTimeout > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, *callTimeout)
 		defer cancel()
 	}
-	batch, err := cli.Batch(ctx, specs)
+	rsps, err := issueCalls(ctx, cli, flag.Args()[1:])
 	if err != nil {
 		log.Fatalf("Call failed: %v", err)
 	}
-	rsps := batch.Wait()
 	failed := false
 	for i, rsp := range rsps {
 		if rerr := rsp.Error(); rerr != nil {
@@ -143,4 +123,42 @@ func parseAddress(s string) (ntype, addr string) {
 		return "tcp", s
 	}
 	return "unix", s
+}
+
+func issueCalls(ctx context.Context, cli *jrpc2.Client, args []string) ([]*jrpc2.Response, error) {
+	if *doSeq && !*doNotify {
+		return issueSequential(ctx, cli, args)
+	}
+	specs := make([]jrpc2.Spec, 0, len(args)/2)
+	for i := 0; i < len(args); i += 2 {
+		specs = append(specs, jrpc2.Spec{
+			Method: args[i],
+			Params: param(args[i+1]),
+			Notify: *doNotify,
+		})
+	}
+	batch, err := cli.Batch(ctx, specs)
+	if err != nil {
+		return nil, err
+	}
+	return batch.Wait(), nil
+}
+
+func issueSequential(ctx context.Context, cli *jrpc2.Client, args []string) ([]*jrpc2.Response, error) {
+	var rsps []*jrpc2.Response
+	for i := 0; i < len(args); i += 2 {
+		rsp, err := cli.Call(ctx, args[i], param(args[i+1]))
+		if err != nil {
+			return nil, err
+		}
+		rsps = append(rsps, rsp)
+	}
+	return rsps, nil
+}
+
+func param(s string) interface{} {
+	if s == "" {
+		return nil
+	}
+	return json.RawMessage(s)
 }
