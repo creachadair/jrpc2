@@ -175,28 +175,13 @@ func newMethod(fn interface{}) (Method, error) {
 			return []reflect.Value{reflect.ValueOf(req)}, nil
 		}
 
-	} else if argType := typ.In(1); typ.IsVariadic() {
-		// Case 3a: The function is variadic in its argument. Unpack the
-		// arguments before calling it. Note that in this case argType is
-		// already of slice type (see reflect.IsVariadic).
-		newinput = func(req *Request) ([]reflect.Value, error) {
-			in := reflect.New(argType).Interface()
-			if err := req.UnmarshalParams(in); err != nil {
-				return nil, Errorf(code.InvalidParams, "wrong argument type: %v", err)
-			}
-			args := reflect.ValueOf(in).Elem()
-			vals := make([]reflect.Value, args.Len())
-			for i := 0; i < args.Len(); i++ {
-				vals[i] = args.Index(i)
-			}
-			return vals, nil
-		}
 	} else {
 		// Check whether the function wants a pointer to its argument.  We need
 		// to create one either way to support unmarshaling, but we need to
 		// indirect it back off if the callee didn't want it.
 
 		// Case 3b: The function wants a bare value, not a pointer.
+		argType := typ.In(1)
 		undo := reflect.Value.Elem
 
 		if argType.Kind() == reflect.Ptr {
@@ -215,6 +200,10 @@ func newMethod(fn interface{}) (Method, error) {
 		}
 	}
 	f := reflect.ValueOf(fn)
+	call := f.Call
+	if typ.IsVariadic() {
+		call = f.CallSlice
+	}
 
 	return methodFunc(func(ctx context.Context, req *Request) (interface{}, error) {
 		rest, ierr := newinput(req)
@@ -222,7 +211,7 @@ func newMethod(fn interface{}) (Method, error) {
 			return nil, ierr
 		}
 		args := append([]reflect.Value{reflect.ValueOf(ctx)}, rest...)
-		vals := f.Call(args)
+		vals := call(args)
 		out, oerr := vals[0].Interface(), vals[1].Interface()
 		if oerr != nil {
 			return nil, oerr.(error)
