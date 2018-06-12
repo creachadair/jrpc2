@@ -168,52 +168,50 @@ func newMethod(fn interface{}) (Method, error) {
 	if typ.NumIn() == 1 {
 		// Case 1: The function does not want any request parameters.
 		newinput = func(req *Request) ([]reflect.Value, error) { return nil, nil }
+
 	} else if a := typ.In(1); a == reqType {
 		// Case 2: The function wants the underlying *Request value.
 		newinput = func(req *Request) ([]reflect.Value, error) {
 			return []reflect.Value{reflect.ValueOf(req)}, nil
 		}
+
+	} else if argType := typ.In(1); typ.IsVariadic() {
+		// Case 3a: The function is variadic in its argument. Unpack the
+		// arguments before calling it. Note that in this case argType is
+		// already of slice type (see reflect.IsVariadic).
+		newinput = func(req *Request) ([]reflect.Value, error) {
+			in := reflect.New(argType).Interface()
+			if err := req.UnmarshalParams(in); err != nil {
+				return nil, Errorf(code.InvalidParams, "wrong argument type: %v", err)
+			}
+			args := reflect.ValueOf(in).Elem()
+			vals := make([]reflect.Value, args.Len())
+			for i := 0; i < args.Len(); i++ {
+				vals[i] = args.Index(i)
+			}
+			return vals, nil
+		}
 	} else {
-		// Case 3: The function wants us to unpack the request parameters.
-		argType := typ.In(1)
-		if typ.IsVariadic() {
-			// Case 3a: If the function is variadic in its argument, unpack the
-			// arguments before calling. Note that in this case argType is
-			// already of slice type (see reflect.IsVariadic).
-			newinput = func(req *Request) ([]reflect.Value, error) {
-				in := reflect.New(argType).Interface()
-				if err := req.UnmarshalParams(in); err != nil {
-					return nil, Errorf(code.InvalidParams, "wrong argument type: %v", err)
-				}
-				args := reflect.ValueOf(in).Elem()
-				vals := make([]reflect.Value, args.Len())
-				for i := 0; i < args.Len(); i++ {
-					vals[i] = args.Index(i)
-				}
-				return vals, nil
-			}
-		} else {
-			// Check whether the function wants a pointer to its argument.  We
-			// need to create one either way to support unmarshaling, but we
-			// need to indirect it back off if the callee didn't want it.
+		// Check whether the function wants a pointer to its argument.  We need
+		// to create one either way to support unmarshaling, but we need to
+		// indirect it back off if the callee didn't want it.
 
-			// Case 3b: The function wants a bare value, not a pointer.
-			undo := reflect.Value.Elem
+		// Case 3b: The function wants a bare value, not a pointer.
+		undo := reflect.Value.Elem
 
-			if argType.Kind() == reflect.Ptr {
-				// Case 3c: The function wants a pointer.
-				undo = func(v reflect.Value) reflect.Value { return v }
-				argType = argType.Elem()
-			}
+		if argType.Kind() == reflect.Ptr {
+			// Case 3c: The function wants a pointer.
+			undo = func(v reflect.Value) reflect.Value { return v }
+			argType = argType.Elem()
+		}
 
-			newinput = func(req *Request) ([]reflect.Value, error) {
-				in := reflect.New(argType).Interface()
-				if err := req.UnmarshalParams(in); err != nil {
-					return nil, Errorf(code.InvalidParams, "wrong argument type: %v", err)
-				}
-				arg := reflect.ValueOf(in)
-				return []reflect.Value{undo(arg)}, nil
+		newinput = func(req *Request) ([]reflect.Value, error) {
+			in := reflect.New(argType).Interface()
+			if err := req.UnmarshalParams(in); err != nil {
+				return nil, Errorf(code.InvalidParams, "wrong argument type: %v", err)
 			}
+			arg := reflect.ValueOf(in)
+			return []reflect.Value{undo(arg)}, nil
 		}
 	}
 	f := reflect.ValueOf(fn)
