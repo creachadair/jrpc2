@@ -118,6 +118,15 @@ func (c *Client) req(ctx context.Context, method string, params interface{}) (*R
 	}, nil
 }
 
+// note constructs a notification request for the specified method and parameters.
+func (c *Client) note(ctx context.Context, method string, params interface{}) (*Request, error) {
+	bits, err := c.marshalParams(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+	return &Request{method: method, params: bits}, nil
+}
+
 // send transmits the specified requests to the server and returns a slice of
 // Pending stubs that can be used to wait for their responses.
 //
@@ -268,19 +277,27 @@ func (c *Client) Call(ctx context.Context, method string, params interface{}) (*
 func (c *Client) Batch(ctx context.Context, specs []Spec) (Batch, error) {
 	reqs := make([]*Request, len(specs))
 	for i, spec := range specs {
-		req, err := c.req(ctx, spec.Method, spec.Params)
-		if err != nil {
+		if spec.Notify {
+			req, err := c.note(ctx, spec.Method, spec.Params)
+			if err != nil {
+				return nil, err
+			}
+			reqs[i] = req
+		} else if req, err := c.req(ctx, spec.Method, spec.Params); err != nil {
 			return nil, err
+		} else {
+			reqs[i] = req
 		}
-		reqs[i] = req
 	}
 	return c.send(ctx, reqs...)
 }
 
-// A Spec combines a method name and parameter value.
+// A Spec combines a method name and parameter value. If the Notify field is
+// true, the spec is sent as a notification instead of a request.
 type Spec struct {
 	Method string
 	Params interface{}
+	Notify bool
 }
 
 // A Batch is a group of pending requests awaiting responses.
@@ -300,14 +317,11 @@ func (b Batch) Wait() []*Response {
 // Notify transmits a notification to the specified method and parameters.  It
 // blocks until the notification has been sent.
 func (c *Client) Notify(ctx context.Context, method string, params interface{}) error {
-	bits, err := c.marshalParams(ctx, params)
+	req, err := c.note(ctx, method, params)
 	if err != nil {
 		return err
 	}
-	_, err = c.send(ctx, &Request{
-		method: method,
-		params: bits,
-	})
+	_, err = c.send(ctx, req)
 	return err
 }
 

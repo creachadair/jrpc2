@@ -146,7 +146,7 @@ func TestClientServer(t *testing.T) {
 	// Verify that a batch request works.
 	specs := make([]Spec, len(tests))
 	for i, test := range tests {
-		specs[i] = Spec{test.method, test.params}
+		specs[i] = Spec{test.method, test.params, false}
 	}
 	batch, err := c.Batch(ctx, specs)
 	if err != nil {
