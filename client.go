@@ -341,8 +341,7 @@ func (c *Client) stop(err error) {
 		return // nothing is running
 	}
 	c.ch.Close()
-	for id, p := range c.pending {
-		delete(c.pending, id)
+	for _, p := range c.pending {
 		p.cancel()
 	}
 	c.err = err
