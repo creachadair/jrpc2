@@ -64,21 +64,16 @@ func (h *hdr) Recv() ([]byte, error) {
 	p := make(map[string]string)
 	for {
 		raw, err := h.rd.ReadString('\n')
-		line := strings.TrimRight(raw, "\r\n")
-		if line != "" {
-			parts := strings.SplitN(line, ":", 2)
-			if len(parts) == 2 {
-				p[strings.ToLower(parts[0])] = strings.TrimSpace(parts[1])
-			} else {
-				return nil, errors.New("invalid header line")
-			}
-		}
-		if err == io.EOF {
-			break
+		if len(raw) == 0 && err == io.EOF {
+			return nil, err
 		} else if err != nil {
 			return nil, err
-		} else if line == "" {
+		} else if line := strings.TrimRight(raw, "\r\n"); line == "" {
 			break
+		} else if parts := strings.SplitN(line, ":", 2); len(parts) == 2 {
+			p[strings.ToLower(parts[0])] = strings.TrimSpace(parts[1])
+		} else {
+			return nil, errors.New("invalid header line")
 		}
 	}
 
