@@ -6,7 +6,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"io"
 	"log"
 	"net"
 	"os"
@@ -68,8 +67,13 @@ func main() {
 	if sframe == nil {
 		log.Fatalf("Unknown server channel framing %q", *serverFraming)
 	}
+	if err := run(context.Background(), cframe, sframe); err != nil {
+		log.Fatalf("Error: %v", err)
+	}
+}
 
-	ctx, cancel := context.WithCancel(context.Background())
+func run(ctx context.Context, cframe, sframe channel.Framing) error {
+	ctx, cancel := context.WithCancel(ctx)
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt)
 	go func() {
@@ -78,21 +82,11 @@ func main() {
 		signal.Stop(sig)
 	}()
 
-	if err := run(ctx, cframe, sframe); err != nil {
-		log.Fatalf("Error: %v", err)
-	}
-}
-
-func run(ctx context.Context, cframe, sframe channel.Framing) error {
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	rc, wc, err := start(ctx, cancel)
+	ch, err := start(ctx, sframe)
 	if err != nil {
 		return err
 	}
-
-	pc := proxy.New(jrpc2.NewClient(sframe(rc, wc), &jrpc2.ClientOptions{
+	pc := proxy.New(jrpc2.NewClient(channel.WithTrigger(ch, cancel), &jrpc2.ClientOptions{
 		Logger: logger,
 	}))
 	defer pc.Close()
@@ -121,25 +115,24 @@ func run(ctx context.Context, cframe, sframe channel.Framing) error {
 	return nil
 }
 
-func start(ctx context.Context, cancel context.CancelFunc) (io.ReadCloser, io.WriteCloser, error) {
+func start(ctx context.Context, framing channel.Framing) (channel.Channel, error) {
 	if *doPipe {
-		return os.Stdin, os.Stdout, nil
+		return framing(os.Stdin, os.Stdout), nil
 	}
 	// Start the subprocess and connect its stdin and stdout to a client.
 	proc := exec.CommandContext(ctx, flag.Arg(0), flag.Args()[1:]...)
 	in, err := proc.StdinPipe()
 	if err != nil {
-		return nil, nil, fmt.Errorf("connecting to stdin: %v", err)
+		return nil, fmt.Errorf("connecting to stdin: %v", err)
 	}
 	out, err := proc.StdoutPipe()
 	if err != nil {
-		return nil, nil, fmt.Errorf("connecting to stdout: %v", err)
+		return nil, fmt.Errorf("connecting to stdout: %v", err)
 	} else if err := proc.Start(); err != nil {
-		return nil, nil, fmt.Errorf("starting server failed: %v", err)
+		return nil, fmt.Errorf("starting server failed: %v", err)
 	}
 	go func() {
 		log.Printf("Subprocess exited: %v", proc.Wait())
-		cancel()
 	}()
-	return out, in, nil
+	return framing(out, in), nil
 }
