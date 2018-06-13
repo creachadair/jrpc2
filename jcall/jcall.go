@@ -70,8 +70,10 @@ func main() {
 	}
 
 	// Connect to the server and establish a client.
-	addr := flag.Arg(0)
-	ntype, addr := parseAddress(addr)
+	ntype, addr := "tcp", flag.Arg(0)
+	if !strings.Contains(addr, ":") {
+		ntype = "unix"
+	}
 	conn, err := net.DialTimeout(ntype, addr, *dialTimeout)
 	if err != nil {
 		log.Fatalf("Dial %q: %v", addr, err)
@@ -116,19 +118,34 @@ func main() {
 	}
 }
 
-func parseAddress(s string) (ntype, addr string) {
-	// A TCP address has the form [host]:port, so there must be a colon in it.
-	// If we don't find that, assume it's a unix-domain socket.
-	if strings.Contains(s, ":") {
-		return "tcp", s
+func issueCalls(ctx context.Context, cli *jrpc2.Client, args []string) ([]*jrpc2.Response, error) {
+	specs := newSpecs(args)
+	if *doSeq {
+		return issueSequential(ctx, cli, specs)
+	} else if batch, err := cli.Batch(ctx, specs); err != nil {
+		return nil, err
+	} else {
+		return batch.Wait(), nil
 	}
-	return "unix", s
 }
 
-func issueCalls(ctx context.Context, cli *jrpc2.Client, args []string) ([]*jrpc2.Response, error) {
-	if *doSeq && !*doNotify {
-		return issueSequential(ctx, cli, args)
+func issueSequential(ctx context.Context, cli *jrpc2.Client, specs []jrpc2.Spec) ([]*jrpc2.Response, error) {
+	var rsps []*jrpc2.Response
+	for _, spec := range specs {
+		if spec.Notify {
+			if err := cli.Notify(ctx, spec.Method, spec.Params); err != nil {
+				return nil, err
+			}
+		} else if rsp, err := cli.Call(ctx, spec.Method, spec.Params); err != nil {
+			return nil, err
+		} else {
+			rsps = append(rsps, rsp)
+		}
 	}
+	return rsps, nil
+}
+
+func newSpecs(args []string) []jrpc2.Spec {
 	specs := make([]jrpc2.Spec, 0, len(args)/2)
 	for i := 0; i < len(args); i += 2 {
 		specs = append(specs, jrpc2.Spec{
@@ -137,23 +154,7 @@ func issueCalls(ctx context.Context, cli *jrpc2.Client, args []string) ([]*jrpc2
 			Notify: *doNotify,
 		})
 	}
-	batch, err := cli.Batch(ctx, specs)
-	if err != nil {
-		return nil, err
-	}
-	return batch.Wait(), nil
-}
-
-func issueSequential(ctx context.Context, cli *jrpc2.Client, args []string) ([]*jrpc2.Response, error) {
-	var rsps []*jrpc2.Response
-	for i := 0; i < len(args); i += 2 {
-		rsp, err := cli.Call(ctx, args[i], param(args[i+1]))
-		if err != nil {
-			return nil, err
-		}
-		rsps = append(rsps, rsp)
-	}
-	return rsps, nil
+	return specs
 }
 
 func param(s string) interface{} {
