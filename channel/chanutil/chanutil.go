@@ -13,19 +13,12 @@ import "bitbucket.org/creachadair/jrpc2/channel"
 //    raw    -- corresponds to channel.RawJSON
 //    varint -- corresponds to channel.Varint
 //
-func Framing(name string) channel.Framing {
-	switch name {
-	case "json":
-		return channel.JSON
-	case "line":
-		return channel.Line
-	case "lsp":
-		return channel.LSP
-	case "raw":
-		return channel.RawJSON
-	case "varint":
-		return channel.Varint
-	default:
-		return nil
-	}
+func Framing(name string) channel.Framing { return framings[name] }
+
+var framings = map[string]channel.Framing{
+	"json":   channel.JSON,
+	"line":   channel.Line,
+	"lsp":    channel.LSP,
+	"raw":    channel.RawJSON,
+	"varint": channel.Varint,
 }
