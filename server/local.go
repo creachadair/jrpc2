@@ -15,7 +15,7 @@ func Local(assigner jrpc2.Assigner, opts *LocalOptions) (client *jrpc2.Client, w
 	if opts == nil {
 		opts = new(LocalOptions)
 	}
-	cpipe, spipe := channel.Pipe(channel.Line)
+	cpipe, spipe := channel.Pipe(channel.Varint)
 	srv := jrpc2.NewServer(assigner, opts.ServerOptions).Start(spipe)
 	return jrpc2.NewClient(cpipe, opts.ClientOptions), srv.Wait
 }
