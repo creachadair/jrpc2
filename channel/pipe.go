@@ -3,7 +3,8 @@ package channel
 import "io"
 
 // Pipe creates a pair of connected in-memory channels using the specified
-// framing discipline. Pipe will panic if framing == nil.
+// framing discipline. Sends to client will be received by server, and vice
+// versa. Pipe will panic if framing == nil.
 func Pipe(framing Framing) (client, server Channel) {
 	cr, sw := io.Pipe()
 	sr, cw := io.Pipe()
