@@ -20,8 +20,10 @@ type Receiver interface {
 
 // A Channel represents the ability to transmit and receive data records.  A
 // channel does not interpret the contents of a record, but may add and remove
-// framing so that records can be embedded in higher-level protocols.  The
-// methods of a Channel need not be safe for concurrent use.
+// framing so that records can be embedded in higher-level protocols.
+//
+// One sender and one receiver may use a Channel concurrently, but the methods
+// of a Channel are not otherwise required to be safe for concurrent use.
 type Channel interface {
 	Sender
 	Receiver
