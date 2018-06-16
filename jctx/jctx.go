@@ -23,7 +23,7 @@
 // Of these, only the "jctx" marker is required; the others are assumed to be
 // empty if they do not appear in the message.
 //
-// Deadlines & Timeouts
+// Deadlines and Timeouts
 //
 // If the parent context contains a deadline, it is encoded into the wrapper as
 // an RFC 3339 timestamp in UTC, for example "2009-11-10T23:00:00.00000015Z".
