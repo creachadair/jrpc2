@@ -103,6 +103,7 @@ func (m ServiceMapper) Names() []string {
 // be a function with one of the following type signatures:
 //
 //    func(context.Context) (Y, error)
+//    func(context.Context, X) error
 //    func(context.Context, X) (Y, error)
 //    func(context.Context, ...X) (Y, error)
 //    func(context.Context, *jrpc2.Request) (Y, error)
@@ -226,12 +227,16 @@ func checkMethodType(fn interface{}) (reflect.Type, error) {
 		return nil, errors.New("not a function")
 	} else if np := typ.NumIn(); np == 0 || np > 2 {
 		return nil, errors.New("wrong number of parameters")
-	} else if typ.NumOut() != 2 {
+	} else if no := typ.NumOut(); no < 1 || no > 2 {
 		return nil, errors.New("wrong number of results")
-	} else if a := typ.In(0); a != ctxType {
+	} else if typ.In(0) != ctxType {
 		return nil, errors.New("first parameter is not context.Context")
-	} else if a := typ.Out(1); a != errType {
-		return nil, errors.New("second result is not error")
+	} else if no == 2 {
+		if typ.Out(1) != errType {
+			return nil, errors.New("second result is not of type error")
+		}
+	} else if typ.Out(0) != errType {
+		return nil, errors.New("result is not of type error")
 	}
 	return typ, nil
 }
