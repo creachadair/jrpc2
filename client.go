@@ -50,29 +50,37 @@ func NewClient(ch channel.Channel, opts *ClientOptions) *Client {
 	go func() {
 		defer c.wg.Done()
 		for {
-			// Accept the next batch of responses from the server.  This may
-			// either be a list or a single object, the decoder for jresponses
-			// knows how to handle both.
-			var in jresponses
-			err := decode(ch, &in)
-			c.mu.Lock()
-			if isRecoverableJSONError(err) {
-				c.log("Recoverable decoding error: %v", err)
-			} else if err != nil {
-				c.log("Unrecoverable decoding error: %v", err)
-				c.stop(err)
-				c.mu.Unlock()
-				return
+			if err := c.accept(ch); err != nil {
+				break
 			}
-
-			c.log("Received %d responses", len(in))
-			for _, rsp := range in {
-				c.deliver(rsp)
-			}
-			c.mu.Unlock()
 		}
 	}()
 	return c
+}
+
+// accept receives the next batch of responses from the server.  This may
+// either be a list or a single object, the decoder for jresponses knows how to
+// handle both. The caller must not hold c.mu.
+func (c *Client) accept(ch channel.Receiver) error {
+	var in jresponses
+	err := decode(ch, &in)
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if isRecoverableJSONError(err) {
+		c.log("Recoverable decoding error: %v", err)
+		return nil
+	} else if err != nil {
+		c.log("Unrecoverable decoding error: %v", err)
+		c.stop(err)
+		return err
+	}
+
+	c.log("Received %d responses", len(in))
+	for _, rsp := range in {
+		c.deliver(rsp)
+	}
+	return nil
 }
 
 // For each response, find the request pending on its ID and deliver it.  The
