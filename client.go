@@ -15,7 +15,7 @@ import (
 // A Client is a JSON-RPC 2.0 client. The client sends requests and receives
 // responses on a channel.Channel provided by the caller.
 type Client struct {
-	wg sync.WaitGroup // ready when the reader is done at shutdown time
+	done chan struct{} // closed when the reader is done at shutdown time
 
 	log    func(string, ...interface{}) // write debug logs here
 	allow1 bool                         // tolerate v1 replies with no version marker
@@ -32,6 +32,7 @@ type Client struct {
 // NewClient returns a new client that communicates with the server via ch.
 func NewClient(ch channel.Channel, opts *ClientOptions) *Client {
 	c := &Client{
+		done:   make(chan struct{}),
 		log:    opts.logger(),
 		allow1: opts.allowV1(),
 		enctx:  opts.encodeContext(),
@@ -46,9 +47,8 @@ func NewClient(ch channel.Channel, opts *ClientOptions) *Client {
 	// back to pending requests by their ID. Outbound requests do not queue;
 	// they are sent synchronously in the Send method.
 
-	c.wg.Add(1)
 	go func() {
-		defer c.wg.Done()
+		defer close(c.done)
 		for {
 			if err := c.accept(ch); err != nil {
 				break
@@ -340,8 +340,9 @@ func (c *Client) Notify(ctx context.Context, method string, params interface{}) 
 // Close shuts down the client, abandoning any pending in-flight requests.
 func (c *Client) Close() error {
 	c.mu.Lock()
-	defer c.mu.Unlock()
 	c.stop(errClientStopped)
+	c.mu.Unlock()
+	<-c.done
 	return c.err
 }
 
