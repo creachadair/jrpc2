@@ -559,6 +559,8 @@ func TestNewMethod(t *testing.T) {
 			t.Errorf("newMethod(%T): unexpected error: %v", test.v, err)
 		} else if test.bad && err == nil {
 			t.Errorf("newMethod(%T): got %+v, want error", test.v, got)
+		} else if _, ok := got.(methodFunc); !ok && got != nil {
+			t.Errorf("newMethod(%T): incorrect return type %T", test.v, got)
 		} else {
 			t.Logf("newMethod(%T)=(%T, %v)", test.v, got, err)
 		}
