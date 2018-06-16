@@ -65,38 +65,42 @@ func NewClient(ch channel.Channel, opts *ClientOptions) *Client {
 				return
 			}
 
-			// For each response, find the request pending on its ID and
-			// deliver it.  Unknown response IDs are logged and discarded.  As
-			// we are under the lock, we do not wait for the pending receiver
-			// to pick up the response; we just drop it in their channel.  The
-			// channel is buffered so we don't need to rendezvous.
 			c.log("Received %d responses", len(in))
 			for _, rsp := range in {
-				if id := string(fixID(rsp.ID)); id == "" {
-					if !c.snote(rsp) {
-						c.log("Discarding response without ID: %v", rsp)
-					}
-				} else if p := c.pending[id]; p == nil {
-					c.log("Discarding response for unknown ID %q", id)
-				} else if !c.versionOK(rsp.V) {
-					delete(c.pending, id)
-					p.ch <- &jresponse{
-						ID: rsp.ID,
-						E:  jerrorf(code.InvalidRequest, "incorrect version marker %q", rsp.V),
-					}
-					c.log("Invalid response for ID %q", id)
-				} else {
-					// Remove the pending request from the set and deliver its response.
-					// Determining whether it's an error is the caller's responsibility.
-					delete(c.pending, id)
-					p.ch <- rsp
-					c.log("Completed request for ID %q", id)
-				}
+				c.deliver(rsp)
 			}
 			c.mu.Unlock()
 		}
 	}()
 	return c
+}
+
+// For each response, find the request pending on its ID and deliver it.  The
+// caller must hold c.mu.  Unknown response IDs are logged and discarded.  As
+// we are under the lock, we do not wait for the pending receiver to pick up
+// the response; we just drop it in their channel.  The channel is buffered so
+// we don't need to rendezvous.
+func (c *Client) deliver(rsp *jresponse) {
+	if id := string(fixID(rsp.ID)); id == "" {
+		if !c.snote(rsp) {
+			c.log("Discarding response without ID: %v", rsp)
+		}
+	} else if p := c.pending[id]; p == nil {
+		c.log("Discarding response for unknown ID %q", id)
+	} else if !c.versionOK(rsp.V) {
+		delete(c.pending, id)
+		p.ch <- &jresponse{
+			ID: rsp.ID,
+			E:  jerrorf(code.InvalidRequest, "incorrect version marker %q", rsp.V),
+		}
+		c.log("Invalid response for ID %q", id)
+	} else {
+		// Remove the pending request from the set and deliver its response.
+		// Determining whether it's an error is the caller's responsibility.
+		delete(c.pending, id)
+		p.ch <- rsp
+		c.log("Completed request for ID %q", id)
+	}
 }
 
 // req constructs a fresh request for the specified method and parameters.
