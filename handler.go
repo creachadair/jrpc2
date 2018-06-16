@@ -150,6 +150,10 @@ var (
 )
 
 func newMethod(fn interface{}) (Method, error) {
+	if fn == nil {
+		return nil, errors.New("nil method")
+	}
+
 	// Special case: If fn has the exact signature of the Call method, don't do
 	// any (additional) reflection at all.
 	if f, ok := fn.(func(context.Context, *Request) (interface{}, error)); ok {
@@ -200,6 +204,30 @@ func newMethod(fn interface{}) (Method, error) {
 			return []reflect.Value{undo(arg)}, nil
 		}
 	}
+
+	// Construct a function to decode the result values.
+	var decodeOut func([]reflect.Value) (interface{}, error)
+
+	if typ.NumOut() == 1 {
+		// A function that returns only error: Result is always nil.
+		decodeOut = func(vals []reflect.Value) (interface{}, error) {
+			oerr := vals[0].Interface()
+			if oerr != nil {
+				return nil, oerr.(error)
+			}
+			return nil, nil
+		}
+	} else {
+		// A function that returns a value and an error.
+		decodeOut = func(vals []reflect.Value) (interface{}, error) {
+			out, oerr := vals[0].Interface(), vals[1].Interface()
+			if oerr != nil {
+				return nil, oerr.(error)
+			}
+			return out, nil
+		}
+	}
+
 	f := reflect.ValueOf(fn)
 	call := f.Call
 	if typ.IsVariadic() {
@@ -212,12 +240,7 @@ func newMethod(fn interface{}) (Method, error) {
 			return nil, ierr
 		}
 		args := append([]reflect.Value{reflect.ValueOf(ctx)}, rest...)
-		vals := call(args)
-		out, oerr := vals[0].Interface(), vals[1].Interface()
-		if oerr != nil {
-			return nil, oerr.(error)
-		}
-		return out, nil
+		return decodeOut(call(args))
 	}), nil
 }
 
@@ -235,6 +258,8 @@ func checkMethodType(fn interface{}) (reflect.Type, error) {
 		if typ.Out(1) != errType {
 			return nil, errors.New("second result is not of type error")
 		}
+	} else if np == 1 {
+		return nil, errors.New("no parameters and no result")
 	} else if typ.Out(0) != errType {
 		return nil, errors.New("result is not of type error")
 	}
