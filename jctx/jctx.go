@@ -15,9 +15,9 @@
 //
 //    {
 //      "jctx": "1",
-//      "payload": <original-params>,
+//      "payload":  <original-params>,
 //      "deadline": <rfc-3339-timestamp>,
-//      "metadata": <json-value>
+//      "meta":     <json-value>
 //    }
 //
 // Of these, only the "jctx" marker is required; the others are assumed to be
