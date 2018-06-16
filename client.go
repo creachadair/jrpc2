@@ -49,10 +49,7 @@ func NewClient(ch channel.Channel, opts *ClientOptions) *Client {
 
 	go func() {
 		defer close(c.done)
-		for {
-			if err := c.accept(ch); err != nil {
-				break
-			}
+		for c.accept(ch) == nil {
 		}
 	}()
 	return c
