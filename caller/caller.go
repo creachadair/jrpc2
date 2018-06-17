@@ -2,9 +2,9 @@
 Package caller provides a function to construct JRPC2 client call wrappers.
 
 The New function reflectively constructs wrapper functions for calls through a
-*jrpc2.Client. This makes it easier to provide a "natural" function call
-signature for the remote method, that handles the details of creating the
-request and decoding the response internally.
+*jrpc2.Client. This makes it easier to provide a natural function signature for
+the remote method, that handles the details of creating the request and
+decoding the response internally.
 
 The caller.New function takes the name of a method, a request type X and a
 return type Y, and returns a function having the signature:
@@ -34,7 +34,7 @@ NewCaller can also optionally generate a variadic function:
 
 It can also generate a function with no request parameter (with X == nil):
 
-   Status := jrpc.NewCaller("Status", caller.Options{
+   Status := caller.New("Status", caller.Options{
       Result: string(""),  // result type string, no request parameters
    }).(func(context.Context, *jrpc2.Client) (string, error))
 */
