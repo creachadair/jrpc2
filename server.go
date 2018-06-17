@@ -203,9 +203,7 @@ func (s *Server) deliver(rsps jresponses, ch channel.Sender, elapsed time.Durati
 
 	// Ensure all the inflight requests get their contexts cancelled.
 	for _, rsp := range rsps {
-		if cancel, ok := s.used[string(rsp.ID)]; ok {
-			cancel()
-		}
+		s.cancel(string(rsp.ID))
 	}
 
 	nw, err := encode(ch, rsps)
@@ -368,8 +366,8 @@ func (s *Server) stop(err error) {
 			if req.ID == nil {
 				keep = append(keep, req)
 				s.log("Retaining notification %+v", req)
-			} else if cancel, ok := s.used[string(req.ID)]; ok {
-				cancel()
+			} else {
+				s.cancel(string(req.ID))
 			}
 		}
 		if len(keep) != 0 {
@@ -460,8 +458,7 @@ func (s *Server) handleRPCCancel(_ context.Context, req *Request) (interface{}, 
 	defer s.mu.Unlock()
 	for _, raw := range ids {
 		id := string(raw)
-		if cancel, ok := s.used[id]; ok {
-			cancel()
+		if s.cancel(id) {
 			s.log("Cancelled request %s by client order", id)
 		}
 	}
@@ -515,6 +512,18 @@ func (s *Server) pushError(id json.RawMessage, jerr *jerror) {
 	if err != nil {
 		s.log("Writing error response: %v", err)
 	}
+}
+
+// cancel reports whether id is an active call.  If so, it also calls the
+// cancellation function associated with id and removes it from the
+// reservations. The caller must hold s.mu.
+func (s *Server) cancel(id string) bool {
+	cancel, ok := s.used[id]
+	if ok {
+		cancel()
+		delete(s.used, id)
+	}
+	return ok
 }
 
 func (s *Server) versionOK(v string) bool {
