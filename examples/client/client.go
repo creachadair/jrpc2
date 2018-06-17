@@ -131,12 +131,12 @@ func main() {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				rsp, err := cli.Call(ctx, "Math.Sub", struct{ X, Y int }{x, y})
-				if err != nil {
+				var result int
+				if err := cli.CallResult(ctx, "Math.Sub", struct{ X, Y int }{x, y}, &result); err != nil {
 					log.Printf("Req (%d-%d) failed: %v", x, y, err)
 					return
 				}
-				log.Printf("Req (%d - %d): result=%d", x, y, intResult(rsp))
+				log.Printf("Req (%d - %d): result=%d", x, y, result)
 			}()
 		}
 	}

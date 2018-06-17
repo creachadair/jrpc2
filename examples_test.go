@@ -59,6 +59,17 @@ func ExampleClient_Call() {
 	// Hello, world!
 }
 
+func ExampleClient_CallResult() {
+	// var c = jrpc2.NewClient(cli, nil)
+	var msg string
+	if err := c.CallResult(ctx, "Hello", nil, &msg); err != nil {
+		log.Fatalf("CallResult: %v", err)
+	}
+	fmt.Println(msg)
+	// Output:
+	// Hello, world!
+}
+
 func ExampleClient_Batch() {
 	// var c = jrpc2.NewClient(cli, nil)
 	rsps, err := c.Batch(ctx, []jrpc2.Spec{

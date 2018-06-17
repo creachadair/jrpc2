@@ -143,6 +143,19 @@ func TestClientServer(t *testing.T) {
 		}
 	}
 
+	// Verify also that the CallResult wrapper works.
+	for _, test := range tests {
+		var got int
+		if err := c.CallResult(ctx, test.method, test.params, &got); err != nil {
+			t.Errorf("CallResult %q %v: unexpected error: %v", test.method, test.params, err)
+			continue
+		}
+		t.Logf("CallResult %q %v returned %d", test.method, test.params, got)
+		if got != test.want {
+			t.Errorf("CallResult %q: got %v, want %v", test.method, got, test.want)
+		}
+	}
+
 	// Verify that a batch request works.
 	specs := make([]Spec, len(tests))
 	for i, test := range tests {

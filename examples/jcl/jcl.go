@@ -77,11 +77,8 @@ func main() {
 			ctx, cancel = context.WithTimeout(ctx, *callTimeout)
 		}
 		var result RunResult
-		rsp, err := cli.Call(ctx, "Run", req)
-		if err != nil {
+		if err := cli.CallResult(ctx, "Run", req, &result); err != nil {
 			fmt.Fprintf(os.Stderr, "# Error: %v\n", err)
-		} else if err := rsp.UnmarshalResult(&result); err != nil {
-			log.Printf("Invalid result: %v", err)
 		} else {
 			fmt.Fprintf(os.Stderr, "# Succeeded: %v\n", result.Success)
 			os.Stdout.Write(result.Output)

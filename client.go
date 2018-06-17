@@ -281,6 +281,17 @@ func (c *Client) Call(ctx context.Context, method string, params interface{}) (*
 	return rsp, nil
 }
 
+// CallResult invokes Call with the given method and params. If it succeeds,
+// the result is decoded into result. This is a convenient shorthand for Call
+// followed by UnmarshalResult. It will panic if result == nil.
+func (c *Client) CallResult(ctx context.Context, method string, params, result interface{}) error {
+	rsp, err := c.Call(ctx, method, params)
+	if err != nil {
+		return err
+	}
+	return rsp.UnmarshalResult(result)
+}
+
 // Batch initiates a batch of concurrent requests, and blocks until all the
 // responses return. The responses are returned in the same order as the
 // original specs, omitting notifications.
