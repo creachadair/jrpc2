@@ -215,6 +215,26 @@ func TestBatch(t *testing.T) {
 	}
 }
 
+func TestErrorOnly(t *testing.T) {
+	const message = "the bogosity is real"
+	_, c, cleanup := newServer(t, MapAssigner{
+		"ErrorOnly": NewMethod(func(_ context.Context, ss []string) error {
+			return Errorf(15, ss[0])
+		}),
+	}, nil)
+	defer cleanup()
+
+	ctx := context.Background()
+	rsp, err := c.Call(ctx, "ErrorOnly", []string{message, "arg"})
+	if err == nil {
+		t.Errorf("ErrorOnly: got %+v, want error", rsp)
+	} else if e, ok := err.(*Error); !ok {
+		t.Errorf("ErrorOnly: got %v, want *Error", err)
+	} else if e.Code != 15 || e.Message != "the bogosity is real" {
+		t.Errorf("ErrorOnly: got (%s, %s), want (15, %s)", e.Code, e.Message, message)
+	}
+}
+
 func TestTimeout(t *testing.T) {
 	_, c, cleanup := newServer(t, MapAssigner{
 		"Stall": NewMethod(func(ctx context.Context) (bool, error) {
