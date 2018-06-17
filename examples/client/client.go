@@ -25,21 +25,32 @@ var serverAddr = flag.String("server", "", "Server address")
 
 var (
 	// Reflective call wrappers for the remote methods.
+
 	add = caller.New("Math.Add", caller.Options{
 		Params:   int(0),
 		Result:   int(0),
 		Variadic: true,
 	}).(func(context.Context, *jrpc2.Client, ...int) (int, error))
+
 	div = caller.New("Math.Div", caller.Options{
 		Params: binarg{},
 		Result: float64(0),
 	}).(func(context.Context, *jrpc2.Client, binarg) (float64, error))
+
 	stat = caller.New("Math.Status", caller.Options{
 		Result: "",
 	}).(func(context.Context, *jrpc2.Client) (string, error))
+
+	alert = caller.New("Post.Alert", caller.Options{
+		Params: msg{},
+	}).(func(context.Context, *jrpc2.Client, msg) error)
 )
 
 type binarg struct{ X, Y int }
+
+type msg struct {
+	M string `json:"message"`
+}
 
 func intResult(rsp *jrpc2.Response) int {
 	var v int
@@ -67,10 +78,7 @@ func main() {
 	ctx := context.Background()
 
 	log.Print("\n-- Sending a notification...")
-	type alert struct {
-		M string `json:"message"`
-	}
-	if err := cli.Notify(ctx, "Post.Alert", alert{M: "There is a fire!"}); err != nil {
+	if err := alert(ctx, cli, msg{"There is a fire!"}); err != nil {
 		log.Fatalln("Notify:", err)
 	}
 

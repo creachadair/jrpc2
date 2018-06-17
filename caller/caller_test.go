@@ -38,8 +38,8 @@ func newServer(t *testing.T, assigner jrpc2.Assigner, opts *jrpc2.ServerOptions)
 }
 
 func TestNew(t *testing.T) {
-	// A dummy method that returns the length of its argument slice.
 	ass := jrpc2.MapAssigner{
+		// A dummy method that returns the length of its argument slice.
 		"F": jrpc2.NewMethod(func(_ context.Context, req []string) (int, error) {
 			t.Logf("Call to F with arguments %#v", req)
 
@@ -49,9 +49,17 @@ func TestNew(t *testing.T) {
 			}
 			return len(req), nil
 		}),
+		// A method that returns a fixed string.
 		"OK": jrpc2.NewMethod(func(context.Context) (string, error) {
 			t.Log("Call to OK")
 			return "OK, hello", nil
+		}),
+		// A method that returns an error only, no data value.
+		"ErrOnly": jrpc2.NewMethod(func(_ context.Context, req []string) error {
+			if len(req) != 0 {
+				return jrpc2.Errorf(1, req[0])
+			}
+			return nil
 		}),
 	}
 
@@ -72,11 +80,6 @@ func TestNew(t *testing.T) {
 	V, ok := vcaller.(func(context.Context, *jrpc2.Client, ...string) (int, error))
 	if !ok {
 		t.Fatalf("New (variadic): wrong type: %T", vcaller)
-	}
-	okcaller := New("OK", Options{Result: ""})
-	OK, ok := okcaller.(func(context.Context, *jrpc2.Client) (string, error))
-	if !ok {
-		t.Fatalf("New (niladic): wrong type: %T", okcaller)
 	}
 
 	// Verify that various success cases do indeed.
@@ -104,29 +107,60 @@ func TestNew(t *testing.T) {
 	}
 
 	// Verify that errors get propagated sensibly.
-	if got, err := F(ctx, c, []string{"fail", "propagate error"}); err == nil {
-		t.Errorf("F(_, c, _): should have failed, returned %d", got)
-	} else {
-		t.Logf("F(_, c, _): correctly failed: %v", err)
-	}
-	if got, err := V(ctx, c, "fail", "propagate error"); err == nil {
-		t.Errorf("V(_, c, _): should have failed, returned %d", got)
-	} else {
-		t.Logf("V(_, c, _): correctly failed: %v", err)
-	}
+	t.Run("PropagateErrors", func(t *testing.T) {
+		if got, err := F(ctx, c, []string{"fail", "propagate error"}); err == nil {
+			t.Errorf("F(_, c, _): should have failed, returned %d", got)
+		} else {
+			t.Logf("F(_, c, _): correctly failed: %v", err)
+		}
+		if got, err := V(ctx, c, "fail", "propagate error"); err == nil {
+			t.Errorf("V(_, c, _): should have failed, returned %d", got)
+		} else {
+			t.Logf("V(_, c, _): correctly failed: %v", err)
+		}
+	})
 
 	// Verify that we can call through a stub without request parameters.
-	if m, err := OK(ctx, c); err != nil {
-		t.Errorf("OK(_, c): unexpected error: %v", err)
-	} else {
-		t.Logf("OK(_, c): returned message %q", m)
-	}
+	t.Run("OmitParams", func(t *testing.T) {
+		okcaller := New("OK", Options{Result: ""})
+		OK, ok := okcaller.(func(context.Context, *jrpc2.Client) (string, error))
+		if !ok {
+			t.Fatalf("New (niladic): wrong type: %T", okcaller)
+		}
+		if m, err := OK(ctx, c); err != nil {
+			t.Errorf("OK(_, c): unexpected error: %v", err)
+		} else {
+			t.Logf("OK(_, c): returned message %q", m)
+		}
+	})
+
+	// Verify that we can call through a stub without a result value.
+	t.Run("OmitResult", func(t *testing.T) {
+		errcaller := New("ErrOnly", Options{Params: []string(nil)})
+		E, ok := errcaller.(func(context.Context, *jrpc2.Client, []string) error)
+		if !ok {
+			t.Fatalf("New (no-result): wrong type: %T", errcaller)
+		}
+
+		const message = "cork bat"
+		if err := E(ctx, c, []string{message}); err == nil {
+			t.Errorf("E(_, c, %q): unexpected success", message)
+		} else if e, ok := err.(*jrpc2.Error); !ok || e.Message != message {
+			t.Errorf("E(_, c, %q): got error (%T) %#v, wanted message %q", message, err, err, message)
+		} else {
+			t.Logf("E(_, c, %q): got expected error %#v", message, e)
+		}
+	})
 
 	// Verify that we can list the methods via the server hook.
-	info, err := RPCServerInfo(ctx, c)
-	if err != nil {
-		t.Errorf("rpc.serverInfo: unexpected error: %v", err)
-	} else if want := []string{"F", "OK"}; !reflect.DeepEqual(info.Methods, want) {
-		t.Errorf("rpc.serverInfo: got %+v, want %+q", info, want)
-	}
+	t.Run("RPCServerInfo", func(t *testing.T) {
+		info, err := RPCServerInfo(ctx, c)
+		if err != nil {
+			t.Fatalf("rpc.serverInfo: unexpected error: %v", err)
+		}
+		want := []string{"ErrOnly", "F", "OK"}
+		if !reflect.DeepEqual(info.Methods, want) {
+			t.Errorf("rpc.serverInfo: got %+v, want %+q", info, want)
+		}
+	})
 }

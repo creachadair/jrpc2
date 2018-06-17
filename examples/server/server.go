@@ -62,9 +62,9 @@ type alert struct {
 }
 
 // Alert implements a notification handler that logs its argument.
-func Alert(ctx context.Context, a alert) (bool, error) {
+func Alert(ctx context.Context, a alert) error {
 	log.Printf("[ALERT]: %s", a.M)
-	return false, nil // return values are ignored for notifications
+	return nil
 }
 
 var (
