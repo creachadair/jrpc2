@@ -82,7 +82,7 @@ To establish a client we first need a channel:
    ch := channel.RawJSON(conn, conn)
    cli := jrpc2.NewClient(ch, nil)  // nil for default options
 
-To send an RPC, use the Call method:
+To send a single RPC, use the Call method:
 
    rsp, err := cli.Call(ctx, "Add", []int{1, 3, 5, 7})
 
@@ -91,24 +91,15 @@ including cancellation or deadline exceeded, has concrete type *jrpc2.Error.
 
 To issue a batch of requests all at once, use the Batch method:
 
-   batch, err := cli.Batch(ctx, []jrpc2.Spec{
+   rsps, err := cli.Batch(ctx, []jrpc2.Spec{
       {"Math.Add", []int{1, 2, 3}},
       {"Math.Mul", []int{4, 5, 6}},
       {"Math.Max", []int{-1, 5, 3, 0, 1}},
    })
 
-The Batch method does not wait for the responses; instead, the caller should
-call the Wait method of the batch:
-
-   rsps := batch.Wait()  // waits until all responses are received
-
-Each response must be checked separately for errors. The responses will be
-returned in the same order as the Spec values.  Alternatively, you may choose
-to wait for each request independently (though note that batch requests may not
-be returned until all results are complete):
-
-   rsp0 := batch[0].Wait()
-   ...
+The Batch method waits until all the responses are received.  The caller must
+check each response separately for errors. The responses will be returned in
+the same order as the Spec values, save that notifications are omitted.
 
 To decode the result from a successful response use its UnmarshalResult method:
 

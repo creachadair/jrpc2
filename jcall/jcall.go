@@ -122,11 +122,8 @@ func issueCalls(ctx context.Context, cli *jrpc2.Client, args []string) ([]*jrpc2
 	specs := newSpecs(args)
 	if *doSeq {
 		return issueSequential(ctx, cli, specs)
-	} else if batch, err := cli.Batch(ctx, specs); err != nil {
-		return nil, err
-	} else {
-		return batch.Wait(), nil
 	}
+	return cli.Batch(ctx, specs)
 }
 
 func issueSequential(ctx context.Context, cli *jrpc2.Client, specs []jrpc2.Spec) ([]*jrpc2.Response, error) {

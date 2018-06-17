@@ -110,11 +110,11 @@ func main() {
 			})
 		}
 	}
-	batch, err := cli.Batch(ctx, specs)
+	rsps, err := cli.Batch(ctx, specs)
 	if err != nil {
 		log.Fatalln("Batch:", err)
 	}
-	for i, rsp := range batch.Wait() {
+	for i, rsp := range rsps {
 		if err := rsp.Error(); err != nil {
 			log.Printf("Req %q %s failed: %v", specs[i].Method, rsp.ID(), err)
 			continue

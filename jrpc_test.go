@@ -152,7 +152,7 @@ func TestClientServer(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Batch failed: %v", err)
 	}
-	for i, rsp := range batch.Wait() {
+	for i, rsp := range batch {
 		if err := rsp.Error(); err != nil {
 			t.Errorf("Response %d failed: %v", i+1, err)
 			continue
@@ -222,7 +222,7 @@ func TestClientCancellation(t *testing.T) {
 	// Start a call that will hang around until a timer expires or an explicit
 	// cancellation is received.
 	ctx, cancel := context.WithCancel(context.Background())
-	p, err := c.issue(ctx, "Hang", nil)
+	rsp, err := c.issue(ctx, "Hang", nil)
 	if err != nil {
 		t.Fatalf("issue failed: %v", err)
 	}
@@ -233,7 +233,7 @@ func TestClientCancellation(t *testing.T) {
 	cancel()
 
 	// The call should fail client side, in the usual way for a cancellation.
-	rsp := p.Wait()
+	rsp.wait()
 	if err := rsp.Error(); err != nil {
 		if err.Code != code.Cancelled {
 			t.Errorf("Response error for %q: got %v, want %v", rsp.ID(), err, code.Cancelled)

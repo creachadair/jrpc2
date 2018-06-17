@@ -61,7 +61,7 @@ func ExampleClient_Call() {
 
 func ExampleClient_Batch() {
 	// var c = jrpc2.NewClient(cli, nil)
-	b, err := c.Batch(ctx, []jrpc2.Spec{
+	rsps, err := c.Batch(ctx, []jrpc2.Spec{
 		{Method: "Hello"},
 		{Method: "Log", Params: Msg{"Sing it!"}, Notify: true},
 	})
@@ -69,9 +69,8 @@ func ExampleClient_Batch() {
 		log.Fatalf("Batch: %v", err)
 	}
 
-	// Wait for all the replies. There should be only one in this case, since
-	// we sent 1 notification and 1 request.
-	rsps := b.Wait()
+	// There should be only one reply in this case, since we sent 1
+	// notification and 1 request.
 	if len(rsps) != 1 {
 		log.Fatalf("Wait: got %d responses, wanted 1", len(rsps))
 	}

@@ -34,13 +34,20 @@ func (r *Request) UnmarshalParams(v interface{}) error { return json.Unmarshal(r
 
 // A Response is a response message from a server to a client.
 type Response struct {
-	id     json.RawMessage
+	id     string
 	err    *Error
 	result json.RawMessage
+
+	// Waiters synchronize on reading from ch. The first successful reader from
+	// ch completes the request and is responsible for updating rsp and then
+	// closing ch. The client owns writing to ch, and is responsible to ensure
+	// that at most one write is ever performed.
+	ch     chan *jresponse
+	cancel func()
 }
 
 // ID returns the request identifier for r.
-func (r *Response) ID() string { return string(r.id) }
+func (r *Response) ID() string { return r.id }
 
 // Error returns a non-nil *Error if the response contains an error.
 func (r *Response) Error() *Error {
@@ -58,6 +65,26 @@ func (r *Response) UnmarshalResult(v interface{}) error {
 		return r.err
 	}
 	return json.Unmarshal(r.result, v)
+}
+
+// wait blocks until p is complete. It is safe to call this multiple times and
+// from concurrent goroutines.
+func (r *Response) wait() {
+	raw, ok := <-r.ch
+	if ok {
+		// N.B. We intentionally DO NOT have the sender close the channel, to
+		// prevent a data race between callers of Wait. The channel is closed
+		// by the first waiter to get a real value (ok == true).
+		//
+		// The first waiter must update the response value, THEN close the
+		// channel and cancel the context. This order ensures that subsequent
+		// waiters all get the same response, and do not race on accessing it.
+		r.id = string(fixID(raw.ID))
+		r.err = raw.E.toError()
+		r.result = raw.R
+		close(r.ch)
+		r.cancel() // release the context observer
+	}
 }
 
 // jrequests is either a single request or a slice of requests.  This handles

@@ -22,11 +22,11 @@ type Client struct {
 	enctx  func(context.Context, json.RawMessage) (json.RawMessage, error)
 	snote  func(*jresponse) bool
 
-	mu      sync.Mutex          // protects the fields below
-	ch      channel.Channel     // channel to the server
-	err     error               // error from a previous operation
-	pending map[string]*Pending // requests pending completion, by ID
-	nextID  int64               // next unused request ID
+	mu      sync.Mutex           // protects the fields below
+	ch      channel.Channel      // channel to the server
+	err     error                // error from a previous operation
+	pending map[string]*Response // requests pending completion, by ID
+	nextID  int64                // next unused request ID
 }
 
 // NewClient returns a new client that communicates with the server via ch.
@@ -40,7 +40,7 @@ func NewClient(ch channel.Channel, opts *ClientOptions) *Client {
 
 		// Lock-protected fields
 		ch:      ch,
-		pending: make(map[string]*Pending),
+		pending: make(map[string]*Response),
 	}
 
 	// The main client loop reads responses from the server and delivers them
@@ -137,14 +137,14 @@ func (c *Client) note(ctx context.Context, method string, params interface{}) (*
 }
 
 // send transmits the specified requests to the server and returns a slice of
-// Pending stubs that can be used to wait for their responses.
+// pending responses awaiting a reply from the server.
 //
 // The resulting slice will contain one entry for each input request that
 // expects a response (that is, all those that are not notifications). If all
 // the requests are notifications, the slice will be empty.
 //
 // This method blocks until the entire batch of requests has been transmitted.
-func (c *Client) send(ctx context.Context, reqs ...*Request) ([]*Pending, error) {
+func (c *Client) send(ctx context.Context, reqs ...*Request) ([]*Response, error) {
 	if len(reqs) == 0 {
 		return nil, errors.New("empty request batch")
 	}
@@ -172,7 +172,7 @@ func (c *Client) send(ctx context.Context, reqs ...*Request) ([]*Pending, error)
 	// Now that we have sent them, record pending requests for each that is not
 	// a notification. We do this after transmission so that an error does not
 	// leave us with dead pending requests awaiting responses.
-	var pends []*Pending
+	var pends []*Response
 	for _, req := range reqs {
 		if id := req.ID(); id != "" {
 			pctx, p := newPending(ctx, id)
@@ -206,7 +206,7 @@ func (c *Client) newBatch(reqs []*Request) (jrequests, error) {
 // context ends, check whether the request is still in the pending set for the
 // client: If so, a reply has not yet been delivered.  Otherwise, the
 // cancellation is a no-op ("too late").
-func (c *Client) waitComplete(pctx context.Context, id string, p *Pending) {
+func (c *Client) waitComplete(pctx context.Context, id string, p *Response) {
 	<-pctx.Done()
 	cleanup := func() {}
 	c.mu.Lock()
@@ -236,7 +236,7 @@ func (c *Client) waitComplete(pctx context.Context, id string, p *Pending) {
 }
 
 // issue initiates a single request.  It blocks until the request is sent.
-func (c *Client) issue(ctx context.Context, method string, params interface{}) (*Pending, error) {
+func (c *Client) issue(ctx context.Context, method string, params interface{}) (*Response, error) {
 	req, err := c.req(ctx, method, params)
 	if err != nil {
 		return nil, err
@@ -263,11 +263,11 @@ func (c *Client) issue(ctx context.Context, method string, params interface{}) (
 //    handleValidResponse(rsp)
 //
 func (c *Client) Call(ctx context.Context, method string, params interface{}) (*Response, error) {
-	p, err := c.issue(ctx, method, params)
+	rsp, err := c.issue(ctx, method, params)
 	if err != nil {
 		return nil, err
 	}
-	rsp := p.Wait()
+	rsp.wait()
 	if err := rsp.Error(); err != nil {
 		switch err.Code {
 		case code.Cancelled:
@@ -281,9 +281,13 @@ func (c *Client) Call(ctx context.Context, method string, params interface{}) (*
 	return rsp, nil
 }
 
-// Batch initiates a batch of concurrent requests.  It blocks until the entire
-// batch is sent.
-func (c *Client) Batch(ctx context.Context, specs []Spec) (Batch, error) {
+// Batch initiates a batch of concurrent requests, and blocks until all the
+// responses return. The responses are returned in the same order as the
+// original specs, omitting notifications.
+//
+// Any error returned is from sending the batch; the caller must check each
+// response for errors from the server in each response.
+func (c *Client) Batch(ctx context.Context, specs []Spec) ([]*Response, error) {
 	reqs := make([]*Request, len(specs))
 	for i, spec := range specs {
 		if spec.Notify {
@@ -298,7 +302,14 @@ func (c *Client) Batch(ctx context.Context, specs []Spec) (Batch, error) {
 			reqs[i] = req
 		}
 	}
-	return c.send(ctx, reqs...)
+	rsps, err := c.send(ctx, reqs...)
+	if err != nil {
+		return nil, err
+	}
+	for _, rsp := range rsps {
+		rsp.wait()
+	}
+	return rsps, nil
 }
 
 // A Spec combines a method name and parameter value. If the Notify field is
@@ -307,20 +318,6 @@ type Spec struct {
 	Method string
 	Params interface{}
 	Notify bool
-}
-
-// A Batch is a group of pending requests awaiting responses.
-type Batch []*Pending
-
-// Wait blocks until all the requests in b have completed, and returns the
-// corresponding responses. The caller is responsible for checking for errors
-// in each of the responses.
-func (b Batch) Wait() []*Response {
-	rsps := make([]*Response, len(b))
-	for i, p := range b {
-		rsps[i] = p.Wait()
-	}
-	return rsps
 }
 
 // Notify transmits a notification to the specified method and parameters.  It
@@ -388,55 +385,13 @@ func (c *Client) marshalParams(ctx context.Context, params interface{}) (json.Ra
 	return bits, err
 }
 
-// A Pending tracks a single pending request whose response is awaited.
-// Calling Wait blocks until the response is received. It is safe to call Wait
-// multiple times from concurrent goroutines.
-type Pending struct {
-	// Waiters synchronize on reading from ch. The first successful reader from
-	// ch completes the request and is responsible for updating rsp and then
-	// closing ch. The client owns writing to ch, and is responsible to ensure
-	// that at most one write is ever performed.
-	ch chan *jresponse
-
-	id     string    // the ID from the request
-	rsp    *Response // once complete, the response received
-	cancel func()    // cancel the context associated with this request
-}
-
-func newPending(ctx context.Context, id string) (context.Context, *Pending) {
+func newPending(ctx context.Context, id string) (context.Context, *Response) {
 	// Buffer the channel so the response reader does not need to rendezvous
 	// with the recipient.
 	pctx, cancel := context.WithCancel(ctx)
-	return pctx, &Pending{
+	return pctx, &Response{
 		ch:     make(chan *jresponse, 1),
 		id:     id,
 		cancel: cancel,
 	}
-}
-
-// ID reports the request identifier of the request p is waiting for.  It is
-// safe to call ID even if the request has not yet completed.
-func (p *Pending) ID() string { return p.id }
-
-// Wait blocks until p is complete, then returns the response.  The caller must
-// check the response for an error from the server.
-func (p *Pending) Wait() *Response {
-	raw, ok := <-p.ch
-	if ok {
-		// N.B. We intentionally DO NOT have the sender close the channel, to
-		// prevent a data race between callers of Wait. The channel is closed
-		// by the first waiter to get a real value (ok == true).
-		//
-		// The first waiter must update the response value, THEN close the
-		// channel and cancel the context. This order ensures that subsequent
-		// waiters all get the same response, and do not race on accessing it.
-		p.rsp = &Response{
-			id:     fixID(raw.ID),
-			err:    raw.E.toError(),
-			result: raw.R,
-		}
-		close(p.ch)
-		p.cancel() // release the context observer
-	}
-	return p.rsp
 }
