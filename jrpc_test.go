@@ -90,8 +90,34 @@ func (dummy) Ctx(ctx context.Context, req *Request) (int, error) {
 // Unrelated should not be picked up by the server.
 func (dummy) Unrelated() string { return "ceci n'est pas une méthode" }
 
-func TestClientServer(t *testing.T) {
-	s, c, cleanup := newServer(t, ServiceMapper{
+var callTests = []struct {
+	method string
+	params interface{}
+	want   int
+}{
+	{"Test.Add", []int{}, 0},
+	{"Test.Add", []int{1, 2, 3}, 6},
+	{"Test.Mul", struct{ X, Y int }{7, 9}, 63},
+	{"Test.Mul", struct{ X, Y int }{}, 0},
+	{"Test.Max", []int{3, 1, 8, 4, 2, 0, -5}, 8},
+	{"Test.Ctx", nil, 1},
+	{"Test.Nil", nil, 42},
+}
+
+func TestMethodNames(t *testing.T) {
+	s, _, cleanup := newServer(t, ServiceMapper{
+		"Test": NewService(dummy{}),
+	}, nil)
+	defer cleanup()
+
+	// Verify that the assigner got the names it was supposed to.
+	if got, want := s.mux.Names(), []string{"Test.Add", "Test.Ctx", "Test.Max", "Test.Mul", "Test.Nil"}; !reflect.DeepEqual(got, want) {
+		t.Errorf("Names:\ngot  %+q\nwant %+q", got, want)
+	}
+}
+
+func TestCall(t *testing.T) {
+	_, c, cleanup := newServer(t, ServiceMapper{
 		"Test": NewService(dummy{}),
 	}, &testOptions{
 		server: &ServerOptions{
@@ -102,27 +128,8 @@ func TestClientServer(t *testing.T) {
 	defer cleanup()
 	ctx := context.Background()
 
-	// Verify that the assigner got the names it was supposed to.
-	if got, want := s.mux.Names(), []string{"Test.Add", "Test.Ctx", "Test.Max", "Test.Mul", "Test.Nil"}; !reflect.DeepEqual(got, want) {
-		t.Errorf("Names:\ngot  %+q\nwant %+q", got, want)
-	}
-
-	tests := []struct {
-		method string
-		params interface{}
-		want   int
-	}{
-		{"Test.Add", []int{}, 0},
-		{"Test.Add", []int{1, 2, 3}, 6},
-		{"Test.Mul", struct{ X, Y int }{7, 9}, 63},
-		{"Test.Mul", struct{ X, Y int }{}, 0},
-		{"Test.Max", []int{3, 1, 8, 4, 2, 0, -5}, 8},
-		{"Test.Ctx", nil, 1},
-		{"Test.Nil", nil, 42},
-	}
-
 	// Verify that individual sequential requests work.
-	for _, test := range tests {
+	for _, test := range callTests {
 		rsp, err := c.Call(ctx, test.method, test.params)
 		if err != nil {
 			t.Errorf("Call %q %v: unexpected error: %v", test.method, test.params, err)
@@ -142,9 +149,22 @@ func TestClientServer(t *testing.T) {
 			t.Errorf("Notify %q %v: unexpected error: %v", test.method, test.params, err)
 		}
 	}
+}
+
+func TestCallResult(t *testing.T) {
+	_, c, cleanup := newServer(t, ServiceMapper{
+		"Test": NewService(dummy{}),
+	}, &testOptions{
+		server: &ServerOptions{
+			AllowV1:     true,
+			Concurrency: 16,
+		},
+	})
+	defer cleanup()
+	ctx := context.Background()
 
 	// Verify also that the CallResult wrapper works.
-	for _, test := range tests {
+	for _, test := range callTests {
 		var got int
 		if err := c.CallResult(ctx, test.method, test.params, &got); err != nil {
 			t.Errorf("CallResult %q %v: unexpected error: %v", test.method, test.params, err)
@@ -155,10 +175,23 @@ func TestClientServer(t *testing.T) {
 			t.Errorf("CallResult %q: got %v, want %v", test.method, got, test.want)
 		}
 	}
+}
+
+func TestBatch(t *testing.T) {
+	_, c, cleanup := newServer(t, ServiceMapper{
+		"Test": NewService(dummy{}),
+	}, &testOptions{
+		server: &ServerOptions{
+			AllowV1:     true,
+			Concurrency: 16,
+		},
+	})
+	defer cleanup()
+	ctx := context.Background()
 
 	// Verify that a batch request works.
-	specs := make([]Spec, len(tests))
-	for i, test := range tests {
+	specs := make([]Spec, len(callTests))
+	for i, test := range callTests {
 		specs[i] = Spec{test.method, test.params, false}
 	}
 	batch, err := c.Batch(ctx, specs)
@@ -176,8 +209,8 @@ func TestClientServer(t *testing.T) {
 			continue
 		}
 		t.Logf("Response %d (%q) contains %d", i+1, rsp.ID(), got)
-		if got != tests[i].want {
-			t.Errorf("Response %d (%q): got %v, want %v", i+1, rsp.ID(), got, tests[i].want)
+		if got != callTests[i].want {
+			t.Errorf("Response %d (%q): got %v, want %v", i+1, rsp.ID(), got, callTests[i].want)
 		}
 	}
 }
