@@ -26,7 +26,7 @@ type Server struct {
 	mux    Assigner            // associates method names with handlers
 	sem    *semaphore.Weighted // bounds concurrent execution (default 1)
 	allow1 bool                // allow v1 requests with no version marker
-	allowN bool                // allow server notifications to the client
+	allowP bool                // allow server notifications to the client
 	allowB bool                // enable built-in rpc.* methods
 	log    logger              // write debug logs here
 	dectx  decoder             // decode context from request
@@ -60,7 +60,7 @@ func NewServer(mux Assigner, opts *ServerOptions) *Server {
 		mux:     mux,
 		sem:     semaphore.NewWeighted(opts.concurrency()),
 		allow1:  opts.allowV1(),
-		allowN:  opts.allowNotify(),
+		allowP:  opts.allowPush(),
 		allowB:  opts.allowBuiltin(),
 		log:     opts.logger(),
 		dectx:   dc,
@@ -263,8 +263,8 @@ func (s *Server) setContext(t *task, id string, rawParams json.RawMessage) bool 
 func (s *Server) invoke(base context.Context, m Method, req *Request) (json.RawMessage, error) {
 	ctx := context.WithValue(base, inboundRequestKey{}, req)
 	ctx = context.WithValue(ctx, serverMetricsKey{}, s.metrics)
-	if s.allowN {
-		ctx = context.WithValue(ctx, serverNotifyKey{}, s.Notify)
+	if s.allowP {
+		ctx = context.WithValue(ctx, serverPushKey{}, s.Push)
 	}
 	if err := s.sem.Acquire(ctx, 1); err != nil {
 		return nil, err
@@ -289,12 +289,12 @@ func (s *Server) ServerInfo() *ServerInfo {
 	return s.serverInfo()
 }
 
-// Notify posts a server-side notification to the client.  This is a
-// non-standard extension of JSON-RPC, and may not be supported by all clients.
-// Unless s was constructed with the AllowNotify option set true, this method
-// will always report an error without sending anything.
-func (s *Server) Notify(ctx context.Context, method string, params interface{}) error {
-	if !s.allowN {
+// Push posts a server-side notification to the client.  This is a non-standard
+// extension of JSON-RPC, and may not be supported by all clients.  Unless s
+// was constructed with the AllowNotify option set true, this method will
+// always report an error without sending anything.
+func (s *Server) Push(ctx context.Context, method string, params interface{}) error {
+	if !s.allowP {
 		return errors.New("server notifications are disabled")
 	}
 	var bits []byte

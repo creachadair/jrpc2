@@ -423,15 +423,15 @@ func TestServerNotify(t *testing.T) {
 		"NoteMe": NewMethod(func(ctx context.Context) (bool, error) {
 			// When this method is called, it posts a notification back to the
 			// client before returning.
-			if err := ServerNotify(ctx, "method", nil); err != nil {
-				t.Errorf("ServerNotify unexpectedly failed: %v", err)
+			if err := ServerPush(ctx, "method", nil); err != nil {
+				t.Errorf("ServerPush unexpectedly failed: %v", err)
 				return false, err
 			}
 			return true, nil
 		}),
 	}, &testOptions{
 		server: &ServerOptions{
-			AllowNotify: true,
+			AllowPush: true,
 		},
 		client: &ClientOptions{
 			OnNotify: func(req *Request) {
@@ -444,7 +444,7 @@ func TestServerNotify(t *testing.T) {
 	ctx := context.Background()
 
 	// Post an explicit notification.
-	if err := s.Notify(ctx, "explicit", nil); err != nil {
+	if err := s.Push(ctx, "explicit", nil); err != nil {
 		t.Errorf("Notify explicit: unexpected error: %v", err)
 	}
 

@@ -40,12 +40,12 @@ func InboundRequest(ctx context.Context) *Request {
 
 type inboundRequestKey struct{}
 
-// ServerNotify posts a server notification. If ctx does not contain a server
-// notifier, this is reports ErrNotifyUnsupported. The context passed to the
-// handler by *jrpc2.Server will support notiications if the server was
-// constructed with the AllowNotify option set true.
-func ServerNotify(ctx context.Context, method string, params interface{}) error {
-	v := ctx.Value(serverNotifyKey{})
+// ServerPush posts a server notification to the client. If ctx does not
+// contain a server notifier, this is reports ErrNotifyUnsupported. The context
+// passed to the handler by *jrpc2.Server will support notiications if the
+// server was constructed with the AllowPush option set true.
+func ServerPush(ctx context.Context, method string, params interface{}) error {
+	v := ctx.Value(serverPushKey{})
 	if v == nil {
 		return ErrNotifyUnsupported
 	}
@@ -53,7 +53,7 @@ func ServerNotify(ctx context.Context, method string, params interface{}) error 
 	return notify(ctx, method, params)
 }
 
-type serverNotifyKey struct{}
+type serverPushKey struct{}
 
 // ErrNotifyUnsupported is returned by ServerNotify if server notifications are
 // not enabled in the specified context.

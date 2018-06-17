@@ -21,9 +21,9 @@ type ServerOptions struct {
 	AllowV1 bool
 
 	// Instructs the server to allow server notifications, a non-standard
-	// extension to the JSON-RPC protocol. If AllowNotify is false, the Notify
+	// extension to the JSON-RPC protocol. If AllowPush is false, the Push
 	// method of the server will report an error when called.
-	AllowNotify bool
+	AllowPush bool
 
 	// Instructs the server to disable the built-in rpc.* handler methods.
 	DisableBuiltin bool
@@ -54,7 +54,7 @@ func (s *ServerOptions) logger() logger {
 }
 
 func (s *ServerOptions) allowV1() bool      { return s != nil && s.AllowV1 }
-func (s *ServerOptions) allowNotify() bool  { return s != nil && s.AllowNotify }
+func (s *ServerOptions) allowPush() bool    { return s != nil && s.AllowPush }
 func (s *ServerOptions) allowBuiltin() bool { return s == nil || !s.DisableBuiltin }
 
 func (s *ServerOptions) concurrency() int64 {
