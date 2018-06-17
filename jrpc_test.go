@@ -25,7 +25,7 @@ func newServer(t *testing.T, assigner Assigner, opts *testOptions) (*Server, *Cl
 	if opts == nil {
 		opts = new(testOptions)
 	}
-	cpipe, spipe := channel.Pipe(channel.JSON)
+	cpipe, spipe := channel.Pipe(channel.RawJSON)
 	srv := NewServer(assigner, opts.server).Start(spipe)
 	t.Logf("Server running on pipe %+v", spipe)
 
