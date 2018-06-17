@@ -139,17 +139,7 @@ func New(method string, opts Options) interface{} {
 		rsp := reflect.New(rspType)
 		rerr := reflect.Zero(errType)
 
-		// N.B. the same err is threaded all the way through, so that there is
-		// only one point of exit where all the remaining reflection occurs.
-		raw, err := cli.Call(ctx, method, param(args))
-		if err == nil {
-			if raw.Error() == nil {
-				err = raw.UnmarshalResult(rsp.Interface())
-			} else {
-				err = raw.Error()
-			}
-		}
-		if err != nil {
+		if err := cli.CallResult(ctx, method, param(args), rsp.Interface()); err != nil {
 			rerr = reflect.ValueOf(err).Convert(errType)
 		}
 		if wantPtr {
