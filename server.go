@@ -412,7 +412,7 @@ func (s *Server) read(ch channel.Receiver) {
 		s.mu.Lock()
 		if err != nil {
 			if e, ok := err.(*Error); ok {
-				s.pushError(e.data, jerrorf(e.code, e.Message))
+				s.pushError(e.data, jerrorf(e.code, e.message))
 			} else if isRecoverableJSONError(err) {
 				s.pushError(nil, jerrorf(code.ParseError, "invalid JSON request message"))
 			} else {

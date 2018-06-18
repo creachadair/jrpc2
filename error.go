@@ -10,17 +10,19 @@ import (
 
 // Error is the concrete type of errors returned from RPC calls.
 type Error struct {
-	Message string
-
-	code code.Code
-	data json.RawMessage
+	message string
+	code    code.Code
+	data    json.RawMessage
 }
 
 // Error renders e to a human-readable string for the error interface.
-func (e Error) Error() string { return fmt.Sprintf("[%d] %s", e.code, e.Message) }
+func (e Error) Error() string { return fmt.Sprintf("[%d] %s", e.code, e.message) }
 
 // Code returns the error code value associated with e.
 func (e Error) Code() code.Code { return e.code }
+
+// Message returns the message string associated with e.
+func (e Error) Message() string { return e.message }
 
 // HasData reports whether e has error data to unmarshal.
 func (e Error) HasData() bool { return len(e.data) != 0 }
@@ -35,7 +37,7 @@ func (e Error) UnmarshalData(v interface{}) error {
 }
 
 func (e Error) tojerror() *jerror {
-	return &jerror{Code: int32(e.code), Msg: e.Message, Data: e.data}
+	return &jerror{Code: int32(e.code), Msg: e.message, Data: e.data}
 }
 
 // ErrNoData indicates that there are no data to unmarshal.
@@ -60,7 +62,7 @@ func Errorf(code code.Code, msg string, args ...interface{}) error {
 // specified code, error data, and formatted message string.
 // If v == nil this behaves identically to Errorf(code, msg, args...).
 func DataErrorf(code code.Code, v interface{}, msg string, args ...interface{}) error {
-	e := &Error{code: code, Message: fmt.Sprintf(msg, args...)}
+	e := &Error{code: code, message: fmt.Sprintf(msg, args...)}
 	if v != nil {
 		if data, err := json.Marshal(v); err == nil {
 			e.data = data

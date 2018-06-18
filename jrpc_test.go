@@ -230,8 +230,8 @@ func TestErrorOnly(t *testing.T) {
 		t.Errorf("ErrorOnly: got %+v, want error", rsp)
 	} else if e, ok := err.(*Error); !ok {
 		t.Errorf("ErrorOnly: got %v, want *Error", err)
-	} else if e.code != 15 || e.Message != "the bogosity is real" {
-		t.Errorf("ErrorOnly: got (%s, %s), want (15, %s)", e.code, e.Message, message)
+	} else if e.code != 15 || e.message != "the bogosity is real" {
+		t.Errorf("ErrorOnly: got (%s, %s), want (15, %s)", e.code, e.message, message)
 	}
 }
 
@@ -335,8 +335,8 @@ func TestErrors(t *testing.T) {
 		if e.code != errCode {
 			t.Errorf("Error code: got %d, want %d", e.code, errCode)
 		}
-		if e.Message != errMessage {
-			t.Errorf("Error message: got %q, want %q", e.Message, errMessage)
+		if e.message != errMessage {
+			t.Errorf("Error message: got %q, want %q", e.message, errMessage)
 		}
 		if s := string(e.data); s != errData {
 			t.Errorf("Error data: got %q, want %q", s, errData)

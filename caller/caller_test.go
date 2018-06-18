@@ -155,7 +155,7 @@ func TestNew(t *testing.T) {
 		const message = "cork bat"
 		if err := E(ctx, c, []string{message}); err == nil {
 			t.Errorf("E(_, c, %q): unexpected success", message)
-		} else if e, ok := err.(*jrpc2.Error); !ok || e.Message != message {
+		} else if e, ok := err.(*jrpc2.Error); !ok || e.Message() != message {
 			t.Errorf("E(_, c, %q): got error (%T) %#v, wanted message %q", message, err, err, message)
 		} else {
 			t.Logf("E(_, c, %q): got expected error %#v", message, e)
