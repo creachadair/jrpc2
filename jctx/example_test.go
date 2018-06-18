@@ -28,7 +28,7 @@ func ExampleEncode_deadline() {
 	ctx, cancel := context.WithDeadline(context.Background(), deadline)
 	defer cancel()
 
-	enc, err := jctx.Encode(ctx, json.RawMessage("{}"))
+	enc, err := jctx.Encode(ctx, json.RawMessage(`{"A":"#1"}`))
 	if err != nil {
 		log.Fatalln("Encode:", err)
 	}
@@ -37,12 +37,14 @@ func ExampleEncode_deadline() {
 	// {
 	//   "jctx": "1",
 	//   "deadline": "2018-06-09T20:45:33.000000001Z",
-	//   "payload": {}
+	//   "payload": {
+	//     "A": "#1"
+	//   }
 	// }
 }
 
 func ExampleDecode() {
-	const input = `{"jctx":"1","deadline":"2018-06-09T20:45:33.000000001Z","payload":{}}`
+	const input = `{"jctx":"1","deadline":"2018-06-09T20:45:33.000000001Z","payload":["a", "b", "c"]}`
 
 	ctx, param, err := jctx.Decode(context.Background(), json.RawMessage(input))
 	if err != nil {
@@ -53,7 +55,7 @@ func ExampleDecode() {
 	fmt.Println("params:", string(param))
 	fmt.Println("deadline:", ok, dl)
 	// Output:
-	// params: {}
+	// params: ["a", "b", "c"]
 	// deadline: true 2018-06-09 20:45:33.000000001 +0000 UTC
 }
 
