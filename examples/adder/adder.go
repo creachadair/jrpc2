@@ -32,7 +32,7 @@ func Add(ctx context.Context, vs ...int) (int, error) {
 func main() {
 	// Set up the server to respond to "Add" by calling the add function.
 	s := jrpc2.NewServer(jrpc2.MapAssigner{
-		"Add": jrpc2.NewMethod(Add),
+		"Add": jrpc2.NewHandler(Add),
 	}, nil)
 
 	// Start the server on a channel comprising stdin/stdout.

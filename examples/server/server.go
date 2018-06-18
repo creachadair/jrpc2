@@ -86,7 +86,7 @@ func main() {
 	// Bind the methods of the math type to an assigner.
 	mux := jrpc2.ServiceMapper{
 		"Math": jrpc2.NewService(math{}),
-		"Post": jrpc2.MapAssigner{"Alert": jrpc2.NewMethod(Alert)},
+		"Post": jrpc2.MapAssigner{"Alert": jrpc2.NewHandler(Alert)},
 	}
 
 	lst, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", *port))

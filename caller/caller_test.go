@@ -40,7 +40,7 @@ func newServer(t *testing.T, assigner jrpc2.Assigner, opts *jrpc2.ServerOptions)
 func TestNew(t *testing.T) {
 	ass := jrpc2.MapAssigner{
 		// A dummy method that returns the length of its argument slice.
-		"F": jrpc2.NewMethod(func(_ context.Context, req []string) (int, error) {
+		"F": jrpc2.NewHandler(func(_ context.Context, req []string) (int, error) {
 			t.Logf("Call to F with arguments %#v", req)
 
 			// Check for this special form, and generate an error if it matches.
@@ -50,12 +50,12 @@ func TestNew(t *testing.T) {
 			return len(req), nil
 		}),
 		// A method that returns a fixed string.
-		"OK": jrpc2.NewMethod(func(context.Context) (string, error) {
+		"OK": jrpc2.NewHandler(func(context.Context) (string, error) {
 			t.Log("Call to OK")
 			return "OK, hello", nil
 		}),
 		// A method that returns an error only, no data value.
-		"ErrOnly": jrpc2.NewMethod(func(_ context.Context, req []string) error {
+		"ErrOnly": jrpc2.NewHandler(func(_ context.Context, req []string) error {
 			if len(req) != 0 {
 				return jrpc2.Errorf(1, req[0])
 			}
@@ -63,7 +63,7 @@ func TestNew(t *testing.T) {
 		}),
 		// A method that should only ever be called as a notification.  It
 		// generates a test error if it is sent a call expecting a reply.
-		"Note": jrpc2.NewMethod(func(_ context.Context, req *jrpc2.Request) error {
+		"Note": jrpc2.NewHandler(func(_ context.Context, req *jrpc2.Request) error {
 			if !req.IsNotification() {
 				t.Errorf("Note called expecting a reply: %+v", req)
 				return errors.New("bad")

@@ -13,7 +13,7 @@ func TestProxy(t *testing.T) {
 
 	// Set up a "remote" server that exports a method we can dispatch to.
 	remote, cleanup := server.Local(jrpc2.MapAssigner{
-		"Test": jrpc2.NewMethod(func(_ context.Context) (string, error) {
+		"Test": jrpc2.NewHandler(func(_ context.Context) (string, error) {
 			return remoteAnswer, nil
 		}),
 	}, nil)

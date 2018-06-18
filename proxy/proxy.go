@@ -35,7 +35,7 @@ func (p *Proxy) Close() error { return p.h.client.Close() }
 // Assign implements part of the jrpc2.Assigner interface. All methods are
 // assigned to the proxy's internal handler, which forwards them across the
 // client.
-func (p *Proxy) Assign(_ string) jrpc2.Method { return p.h }
+func (p *Proxy) Assign(_ string) jrpc2.Handler { return p.h }
 
 // Names implements part of the jrpc2.Assigner interface.  It always returns
 // nil, since the resolution of method names is delegated to the remote server.
@@ -43,7 +43,7 @@ func (Proxy) Names() []string { return nil }
 
 type handler struct{ client *jrpc2.Client }
 
-// Call implements the jrpc2.Method interface. It handles any call or
+// Call implements the jrpc2.Handler interface. It handles any call or
 // notification method name given, by forwarding it transparently to the remote
 // server. The only errors returned from the proxy itself are decoding errors,
 // or errors from the internals of the client's Call and Notify methods.
