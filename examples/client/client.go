@@ -10,6 +10,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"log"
 	"math/rand"
@@ -74,7 +75,13 @@ func main() {
 	log.Printf("Connected to %v", conn.RemoteAddr())
 
 	// Start up the client, and enable logging to stderr.
-	cli := jrpc2.NewClient(channel.RawJSON(conn, conn), nil)
+	cli := jrpc2.NewClient(channel.RawJSON(conn, conn), &jrpc2.ClientOptions{
+		OnNotify: func(req *jrpc2.Request) {
+			var params json.RawMessage
+			req.UnmarshalParams(&params)
+			log.Printf("[server push] Method %q params %#q", req.Method(), string(params))
+		},
+	})
 	defer cli.Close()
 	ctx := context.Background()
 

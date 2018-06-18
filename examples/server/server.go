@@ -55,7 +55,12 @@ func (math) Div(ctx context.Context, arg binop) (float64, error) {
 	return float64(arg.X) / float64(arg.Y), nil
 }
 
-func (math) Status(context.Context) (string, error) { return "OK", nil }
+func (math) Status(ctx context.Context) (string, error) {
+	if err := jrpc2.ServerPush(ctx, "pushback", []string{"hello, friend"}); err != nil {
+		return "BAD", err
+	}
+	return "OK", nil
+}
 
 type alert struct {
 	M string `json:"message"`
@@ -94,6 +99,7 @@ func main() {
 			Logger:      log.New(os.Stderr, "[jrpc2.Server] ", log.LstdFlags|log.Lshortfile),
 			Concurrency: *maxTasks,
 			Metrics:     metrics.New(),
+			AllowPush:   true,
 		},
 	})
 }
