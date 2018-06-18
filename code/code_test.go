@@ -1,6 +1,10 @@
 package code
 
-import "testing"
+import (
+	"context"
+	"errors"
+	"testing"
+)
 
 func TestRegistration(t *testing.T) {
 	const message = "fun for the whole family"
@@ -21,4 +25,24 @@ func TestRegistrationError(t *testing.T) {
 		}
 	}()
 	Register(int32(ParseError), "bogus")
+}
+
+func TestFromError(t *testing.T) {
+	tests := []struct {
+		input error
+		want  Code
+	}{
+		{nil, NoError},
+		{ParseError, ParseError},
+		{InvalidRequest, InvalidRequest},
+		{Code(25), Code(25)},
+		{context.Canceled, Cancelled},
+		{context.DeadlineExceeded, DeadlineExceeded},
+		{errors.New("other"), SystemError},
+	}
+	for _, test := range tests {
+		if got := FromError(test.input); got != test.want {
+			t.Errorf("FromError(%v): got %v, want %v", test.input, got, test.want)
+		}
+	}
 }

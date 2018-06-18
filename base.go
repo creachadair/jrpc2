@@ -175,8 +175,9 @@ func (e *jerror) toError() *Error {
 		return nil
 	}
 	return &Error{
-		Code:    code.Code(e.Code),
 		Message: e.Msg,
+
+		code:    code.Code(e.Code),
 		data:    e.Data,
 	}
 }

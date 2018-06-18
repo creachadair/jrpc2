@@ -230,8 +230,8 @@ func TestErrorOnly(t *testing.T) {
 		t.Errorf("ErrorOnly: got %+v, want error", rsp)
 	} else if e, ok := err.(*Error); !ok {
 		t.Errorf("ErrorOnly: got %v, want *Error", err)
-	} else if e.Code != 15 || e.Message != "the bogosity is real" {
-		t.Errorf("ErrorOnly: got (%s, %s), want (15, %s)", e.Code, e.Message, message)
+	} else if e.code != 15 || e.Message != "the bogosity is real" {
+		t.Errorf("ErrorOnly: got (%s, %s), want (15, %s)", e.code, e.Message, message)
 	}
 }
 
@@ -301,7 +301,7 @@ func TestClientCancellation(t *testing.T) {
 	// The call should fail client side, in the usual way for a cancellation.
 	rsp.wait()
 	if err := rsp.Error(); err != nil {
-		if err.Code != code.Cancelled {
+		if err.code != code.Cancelled {
 			t.Errorf("Response error for %q: got %v, want %v", rsp.ID(), err, code.Cancelled)
 		}
 	} else {
@@ -332,8 +332,8 @@ func TestErrors(t *testing.T) {
 		t.Errorf("Call: got %#v, wanted error", got)
 	} else if e, ok := err.(*Error); ok {
 		t.Logf("Response error is %+v", e)
-		if e.Code != errCode {
-			t.Errorf("Error code: got %d, want %d", e.Code, errCode)
+		if e.code != errCode {
+			t.Errorf("Error code: got %d, want %d", e.code, errCode)
 		}
 		if e.Message != errMessage {
 			t.Errorf("Error message: got %q, want %q", e.Message, errMessage)
@@ -357,7 +357,7 @@ func TestErrorCode(t *testing.T) {
 		{code.InvalidParams, code.InvalidParams},          // a naked code
 	}
 	for _, test := range tests {
-		if got := ErrorCode(test.err); got != test.want {
+		if got := code.FromError(test.err); got != test.want {
 			t.Errorf("ErrorCode(%v): got %v, want %v", test.err, got, test.want)
 		}
 	}

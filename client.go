@@ -221,7 +221,7 @@ func (c *Client) waitComplete(pctx context.Context, id string, p *Response) {
 
 	c.log("Context ended for id %q, err=%v", id, pctx.Err())
 	delete(c.pending, id)
-	code := ErrorCode(pctx.Err())
+	code := code.FromError(pctx.Err())
 	p.ch <- &jresponse{
 		ID: json.RawMessage(id),
 		E:  jerrorf(code, pctx.Err().Error()),
@@ -269,7 +269,7 @@ func (c *Client) Call(ctx context.Context, method string, params interface{}) (*
 	}
 	rsp.wait()
 	if err := rsp.Error(); err != nil {
-		switch err.Code {
+		switch err.code {
 		case code.Cancelled:
 			return nil, context.Canceled
 		case code.DeadlineExceeded:

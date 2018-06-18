@@ -1,7 +1,10 @@
 // Package code defines error code values used by the jrpc2 package.
 package code
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+)
 
 // A Code is an error response code, that satisfies the error interface.
 type Code int32
@@ -11,6 +14,11 @@ func (c Code) Error() string {
 		return s
 	}
 	return fmt.Sprintf("error code %d", c)
+}
+
+// A Coder is a value that can report an error code value.
+type Coder interface {
+	Code() Code
 }
 
 // Pre-defined error codes, including the standard ones from the JSON-RPC
@@ -53,4 +61,30 @@ func Register(value int32, message string) Code {
 	}
 	stdError[code] = message
 	return code
+}
+
+// FromError returns a Code to categorize the specified error.
+// If err == nil, it returns code.NoError.
+// If err is a Code, it returns that code.
+// If err is a Coder, it returns the reported code value.
+// If err is context.Canceled, it returns code.Cancelled.
+// If err is context.DeadlineExceeded, it returns code.DeadlineExceeded.
+// Otherwise it returns code.SystemError.
+func FromError(err error) Code {
+	switch t := err.(type) {
+	case nil:
+		return NoError
+	case Code:
+		return t
+	case Coder:
+		return t.Code()
+	}
+	switch err {
+	case context.Canceled:
+		return Cancelled
+	case context.DeadlineExceeded:
+		return DeadlineExceeded
+	default:
+		return SystemError
+	}
 }

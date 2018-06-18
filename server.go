@@ -412,7 +412,7 @@ func (s *Server) read(ch channel.Receiver) {
 		s.mu.Lock()
 		if err != nil {
 			if e, ok := err.(*Error); ok {
-				s.pushError(e.data, jerrorf(e.Code, e.Message))
+				s.pushError(e.data, jerrorf(e.code, e.Message))
 			} else if isRecoverableJSONError(err) {
 				s.pushError(nil, jerrorf(code.ParseError, "invalid JSON request message"))
 			} else {
@@ -564,7 +564,7 @@ func (ts tasks) responses() jresponses {
 			rsp.R = task.val
 		} else if e, ok := task.err.(*Error); ok {
 			rsp.E = e.tojerror()
-		} else if c := ErrorCode(task.err); c != code.NoError {
+		} else if c := code.FromError(task.err); c != code.NoError {
 			rsp.E = jerrorf(c, "%v: %v", c.Error(), task.err)
 		} else {
 			rsp.E = jerrorf(code.InternalError, "internal error: %v", task.err)
