@@ -36,9 +36,6 @@ func TestChannelTypes(t *testing.T) {
 
 func TestEmptyMessage(t *testing.T) {
 	for _, test := range tests {
-		if test.name == "RawJSON" {
-			continue // this framing can't handle empty messages
-		}
 		t.Run(test.name, func(t *testing.T) {
 			lhs, rhs := Pipe(test.framing)
 			defer lhs.Close()
