@@ -10,35 +10,43 @@ import (
 // Line is a framing that transmits and receives messages on r and wc with line
 // framing.  Each message is terminated by a Unicode LF (10). This framing has
 // the constraint that outbound records may not contain any LF characters.
-func Line(r io.Reader, wc io.WriteCloser) Channel {
-	return line{wc: wc, buf: bufio.NewReader(r)}
+var Line = Split('\n')
+
+// Split returns a framing in which each message is terminated by the specified
+// byte value. The framing has the constraint that outbound records may not
+// contain the split byte internally.
+func Split(b byte) Framing {
+	return func(r io.Reader, wc io.WriteCloser) Channel {
+		return split{split: b, wc: wc, buf: bufio.NewReader(r)}
+	}
 }
 
-// line implements Channel. Messages sent on a raw channel are framed by
-// terminating newlines.
-type line struct {
-	wc  io.WriteCloser
-	buf *bufio.Reader
+// split implements Channel in which messages are terminated by occurrences of
+// the specified byte. Outbound messages may not contain the split byte.
+type split struct {
+	split byte
+	wc    io.WriteCloser
+	buf   *bufio.Reader
 }
 
 // Send implements part of the Channel interface.  It reports an error if msg
-// contains a Unicode LF (10).
-func (c line) Send(msg []byte) error {
-	if bytes.ContainsAny(msg, "\n") {
-		return errors.New("message contains LF")
+// contains a split byte.
+func (c split) Send(msg []byte) error {
+	if bytes.ContainsAny(msg, string(c.split)) {
+		return errors.New("message contains split byte")
 	}
 	out := make([]byte, len(msg)+1)
 	copy(out, msg)
-	out[len(msg)] = '\n'
+	out[len(msg)] = c.split
 	_, err := c.wc.Write(out)
 	return err
 }
 
 // Recv implements part of the Channel interface.
-func (c line) Recv() ([]byte, error) {
+func (c split) Recv() ([]byte, error) {
 	var buf bytes.Buffer
 	for {
-		chunk, err := c.buf.ReadSlice('\n')
+		chunk, err := c.buf.ReadSlice(c.split)
 		buf.Write(chunk)
 		if err == bufio.ErrBufferFull {
 			continue // incomplete line
@@ -52,4 +60,4 @@ func (c line) Recv() ([]byte, error) {
 }
 
 // Close implements part of the Channel interface.
-func (c line) Close() error { return c.wc.Close() }
+func (c split) Close() error { return c.wc.Close() }

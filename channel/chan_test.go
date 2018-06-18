@@ -15,6 +15,8 @@ var tests = []struct {
 	{"Header", Header("binary/octet-stream")},
 	{"Line", Line},
 	{"Varint", Varint},
+	{"NUL", Split('\x00')},
+	{"RS", Split('\x1e')},
 }
 
 func TestChannelTypes(t *testing.T) {
