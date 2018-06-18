@@ -6,17 +6,17 @@ Servers
 
 The *Server type implements a JSON-RPC server. A server communicates with a
 client over a channel.Channel, and dispatches client requests to user-defined
-method handlers.  Handlers satisfy the jrpc2.Method interface by exporting a
+method handlers.  Handlers satisfy the jrpc2.Handler interface by exporting a
 Call method with this signature:
 
    Call(ctx Context.Context, req *jrpc2.Request) (interface{}, error)
 
-The jrpc2.NewMethod function helps adapt existing functions to this interface.
-A server finds the handler for a request by looking up its name in a
+The jrpc2.NewHandler function helps adapt existing functions to this interface.
+A server finds the handler for a request by looking up its method name in a
 jrpc2.Assigner provided when the server is set up.
 
 For example, suppose we have defined the following Add function, and would like
-to export it via JSON-RPC:
+to export it as a JSON-RPC method:
 
    // Add returns the sum of a slice of integers.
    func Add(ctx context.Context, values []int) (int, error) {
@@ -27,17 +27,17 @@ to export it via JSON-RPC:
       return sum, nil
    }
 
-To convert Add to a jrpc2.Method, call the jrpc2.NewMethod function, which uses
-reflection to lift its argument into the jrpc2.Method interface:
+To convert Add to a jrpc2.Handler, call the jrpc2.NewHandler function, which
+uses reflection to lift its argument into the jrpc2.Handler interface:
 
-   m := jrpc2.NewMethod(Add)  // m is a jrpc2.Method that invokes Add
+   h := jrpc2.NewHandler(Add)  // h is a jrpc2.Handler that invokes Add
 
 We will advertise this function under the name "Add".  For static assignments
 we can use a jrpc2.MapAssigner, which finds methods by looking them up in a Go
 map:
 
    assigner := jrpc2.MapAssigner{
-      "Add": jrpc2.NewMethod(Add),
+      "Add": jrpc2.NewHandler(Add),
    }
 
 Equipped with an Assigner we can now construct a Server:
@@ -154,10 +154,10 @@ from this package.
 
 Services with Multiple Methods
 
-The examples above show a server with only one method using NewMethod; you will
-often want to expose more than one. The NewService function supports this by
-applying NewMethod to all the exported methods of a concrete value to produce a
-MapAssigner for those methods:
+The examples above show a server with only one method using NewHandler; you
+will often want to expose more than one. The NewService function supports this
+by applying NewHandler to all the exported methods of a concrete value to
+produce a MapAssigner for those methods:
 
    type math struct{}
 

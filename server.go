@@ -20,7 +20,7 @@ type logger = func(string, ...interface{})
 
 // A Server is a JSON-RPC 2.0 server. The server receives requests and sends
 // responses on a channel.Channel provided by the caller, and dispatches
-// requests to user-defined Method handlers.
+// requests to user-defined Handlers.
 type Server struct {
 	wg     sync.WaitGroup      // ready when workers are done at shutdown time
 	mux    Assigner            // associates method names with handlers
@@ -258,7 +258,7 @@ func (s *Server) setContext(t *task, id string, rawParams json.RawMessage) bool 
 
 // invoke invokes the handler m for the specified request type, and marshals
 // the return value into JSON if there is one.
-func (s *Server) invoke(base context.Context, m Method, req *Request) (json.RawMessage, error) {
+func (s *Server) invoke(base context.Context, m Handler, req *Request) (json.RawMessage, error) {
 	ctx := context.WithValue(base, inboundRequestKey{}, req)
 	ctx = context.WithValue(ctx, serverMetricsKey{}, s.metrics)
 	if s.allowP {
@@ -469,9 +469,9 @@ func (s *Server) handleRPCServerInfo(context.Context, *Request) (interface{}, er
 	return s.serverInfo(), nil
 }
 
-// assign returns a Method to handle the specified name, or nil.
+// assign returns a Handler to handle the specified name, or nil.
 // The caller must hold s.mu.
-func (s *Server) assign(name string) Method {
+func (s *Server) assign(name string) Handler {
 	if s.allowB {
 		// Built-in handlers enabled by default.
 		switch name {
@@ -535,7 +535,7 @@ func (s *Server) versionOK(v string) bool {
 
 // A task represents a pending method invocation received by the server.
 type task struct {
-	m Method // the assigned handler (after assignment)
+	m Handler // the assigned handler (after assignment)
 
 	ctx    context.Context // the context passed to the handler
 	reqID  json.RawMessage // the original request ID

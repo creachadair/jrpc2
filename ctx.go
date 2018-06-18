@@ -28,7 +28,7 @@ type serverMetricsKey struct{}
 // to the handler by *jrpc2.Server will include this value.
 //
 // This is mainly useful to wrapped server methods that do not have the request
-// as an explicit parameter; for direct implementations of Method.Call the
+// as an explicit parameter; for direct implementations of Handler.Call the
 // request value returned by InboundRequest will be the same value as was
 // passed explicitly.
 func InboundRequest(ctx context.Context) *Request {

@@ -25,10 +25,10 @@ type Msg struct {
 func ExampleNewServer() {
 	// Construct a new server with a single method "Hello".
 	s = jrpc2.NewServer(jrpc2.MapAssigner{
-		"Hello": jrpc2.NewMethod(func(ctx context.Context) (string, error) {
+		"Hello": jrpc2.NewHandler(func(ctx context.Context) (string, error) {
 			return "Hello, world!", nil
 		}),
-		"Log": jrpc2.NewMethod(func(ctx context.Context, msg Msg) (bool, error) {
+		"Log": jrpc2.NewHandler(func(ctx context.Context, msg Msg) (bool, error) {
 			fmt.Println("Log:", msg.Text)
 			return true, nil
 		}),

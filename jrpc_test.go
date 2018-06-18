@@ -218,7 +218,7 @@ func TestBatch(t *testing.T) {
 func TestErrorOnly(t *testing.T) {
 	const message = "the bogosity is real"
 	_, c, cleanup := newServer(t, MapAssigner{
-		"ErrorOnly": NewMethod(func(_ context.Context, ss []string) error {
+		"ErrorOnly": NewHandler(func(_ context.Context, ss []string) error {
 			return Errorf(15, ss[0])
 		}),
 	}, nil)
@@ -237,7 +237,7 @@ func TestErrorOnly(t *testing.T) {
 
 func TestTimeout(t *testing.T) {
 	_, c, cleanup := newServer(t, MapAssigner{
-		"Stall": NewMethod(func(ctx context.Context) (bool, error) {
+		"Stall": NewHandler(func(ctx context.Context) (bool, error) {
 			t.Log("Stalling...")
 			select {
 			case <-ctx.Done():
@@ -268,7 +268,7 @@ func TestClientCancellation(t *testing.T) {
 	started := make(chan struct{})
 	stopped := make(chan bool, 1)
 	_, c, cleanup := newServer(t, MapAssigner{
-		"Hang": NewMethod(func(ctx context.Context) (bool, error) {
+		"Hang": NewHandler(func(ctx context.Context) (bool, error) {
 			close(started) // signal that the method handler is running
 			defer close(stopped)
 
@@ -321,7 +321,7 @@ func TestErrors(t *testing.T) {
 	const errData = `{"caroline":452}`
 	const errMessage = "error thingy"
 	_, c, cleanup := newServer(t, MapAssigner{
-		"Err": NewMethod(func(_ context.Context) (int, error) {
+		"Err": NewHandler(func(_ context.Context) (int, error) {
 			return 17, DataErrorf(errCode, json.RawMessage(errData), errMessage)
 		}),
 	}, nil)
@@ -365,7 +365,7 @@ func TestErrorCode(t *testing.T) {
 
 func TestServerInfo(t *testing.T) {
 	s, c, cleanup := newServer(t, MapAssigner{
-		"Metricize": NewMethod(func(ctx context.Context) (bool, error) {
+		"Metricize": NewHandler(func(ctx context.Context) (bool, error) {
 			m := ServerMetrics(ctx)
 			if m == nil {
 				t.Error("Request context does not contain a metrics writer")
@@ -428,7 +428,7 @@ func TestOtherClient(t *testing.T) {
 	// elicit a correct response.
 	srv, cli := channel.Pipe(channel.Line)
 	s := NewServer(MapAssigner{
-		"X": NewMethod(func(ctx context.Context) (string, error) {
+		"X": NewHandler(func(ctx context.Context) (string, error) {
 			return "OK", nil
 		}),
 	}, nil).Start(srv)
@@ -486,7 +486,7 @@ func TestServerNotify(t *testing.T) {
 	// got the right thing.
 	var notes []string
 	s, c, cleanup := newServer(t, MapAssigner{
-		"NoteMe": NewMethod(func(ctx context.Context) (bool, error) {
+		"NoteMe": NewHandler(func(ctx context.Context) (bool, error) {
 			// When this method is called, it posts a notification back to the
 			// client before returning.
 			if err := ServerPush(ctx, "method", nil); err != nil {
@@ -534,7 +534,7 @@ func TestContextPlumbing(t *testing.T) {
 	defer cancel()
 
 	_, c, cleanup := newServer(t, MapAssigner{
-		"X": NewMethod(func(ctx context.Context) (bool, error) {
+		"X": NewHandler(func(ctx context.Context) (bool, error) {
 			got, ok := ctx.Deadline()
 			if !ok {
 				return false, errors.New("no deadline was set")
@@ -557,8 +557,8 @@ func TestContextPlumbing(t *testing.T) {
 
 func TestSpecialMethods(t *testing.T) {
 	s := NewServer(MapAssigner{
-		"rpc.nonesuch": NewMethod(func(context.Context) (string, error) { return "OK", nil }),
-		"donkeybait":   NewMethod(func(context.Context) (bool, error) { return true, nil }),
+		"rpc.nonesuch": NewHandler(func(context.Context) (string, error) { return "OK", nil }),
+		"donkeybait":   NewHandler(func(context.Context) (bool, error) { return true, nil }),
 	}, nil)
 	for _, name := range []string{"rpc.serverInfo", "rpc.cancel", "donkeybait"} {
 		if got := s.assign(name); got == nil {
@@ -574,7 +574,7 @@ func TestSpecialMethods(t *testing.T) {
 
 func TestDisableBuiltin(t *testing.T) {
 	s := NewServer(MapAssigner{
-		"rpc.nonesuch": NewMethod(func(context.Context) (string, error) { return "OK", nil }),
+		"rpc.nonesuch": NewHandler(func(context.Context) (string, error) { return "OK", nil }),
 	}, &ServerOptions{DisableBuiltin: true})
 
 	// With builtins disabled, the default rpc.* methods should not get assigned.
@@ -592,7 +592,7 @@ func TestDisableBuiltin(t *testing.T) {
 	}
 }
 
-func TestNewMethod(t *testing.T) {
+func TestNewHandler(t *testing.T) {
 	tests := []struct {
 		v   interface{}
 		bad bool
@@ -620,15 +620,15 @@ func TestNewMethod(t *testing.T) {
 		{v: func(context.Context) (int, bool) { return 1, true }, bad: true},  // R2 is not error
 	}
 	for _, test := range tests {
-		got, err := newMethod(test.v)
+		got, err := newHandler(test.v)
 		if !test.bad && err != nil {
-			t.Errorf("newMethod(%T): unexpected error: %v", test.v, err)
+			t.Errorf("newHandler(%T): unexpected error: %v", test.v, err)
 		} else if test.bad && err == nil {
-			t.Errorf("newMethod(%T): got %+v, want error", test.v, got)
+			t.Errorf("newHandler(%T): got %+v, want error", test.v, got)
 		} else if _, ok := got.(methodFunc); !ok && got != nil {
-			t.Errorf("newMethod(%T): incorrect return type %T", test.v, got)
+			t.Errorf("newHandler(%T): incorrect return type %T", test.v, got)
 		} else {
-			t.Logf("newMethod(%T)=(%T, %v)", test.v, got, err)
+			t.Logf("newHandler(%T)=(%T, %v)", test.v, got, err)
 		}
 	}
 }
