@@ -43,11 +43,11 @@ func (Proxy) Names() []string { return nil }
 
 type handler struct{ client *jrpc2.Client }
 
-// Call implements the jrpc2.Handler interface. It handles any call or
+// Handle implements the jrpc2.Handler interface. It handles any call or
 // notification method name given, by forwarding it transparently to the remote
 // server. The only errors returned from the proxy itself are decoding errors,
 // or errors from the internals of the client's Call and Notify methods.
-func (h handler) Call(ctx context.Context, req *jrpc2.Request) (interface{}, error) {
+func (h handler) Handle(ctx context.Context, req *jrpc2.Request) (interface{}, error) {
 	// If the request has parameters, unpack them so we can pass them to the call.
 	var params interface{}
 	if req.HasParams() {

@@ -258,7 +258,7 @@ func (s *Server) setContext(t *task, id string, rawParams json.RawMessage) bool 
 
 // invoke invokes the handler m for the specified request type, and marshals
 // the return value into JSON if there is one.
-func (s *Server) invoke(base context.Context, m Handler, req *Request) (json.RawMessage, error) {
+func (s *Server) invoke(base context.Context, h Handler, req *Request) (json.RawMessage, error) {
 	ctx := context.WithValue(base, inboundRequestKey{}, req)
 	ctx = context.WithValue(ctx, serverMetricsKey{}, s.metrics)
 	if s.allowP {
@@ -269,7 +269,7 @@ func (s *Server) invoke(base context.Context, m Handler, req *Request) (json.Raw
 	}
 	defer s.sem.Release(1)
 
-	v, err := m.Call(ctx, req)
+	v, err := h.Handle(ctx, req)
 	if err != nil {
 		if req.IsNotification() {
 			s.log("Discarding error from notification to %q: %v", req.Method(), err)

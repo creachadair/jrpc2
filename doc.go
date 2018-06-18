@@ -7,9 +7,9 @@ Servers
 The *Server type implements a JSON-RPC server. A server communicates with a
 client over a channel.Channel, and dispatches client requests to user-defined
 method handlers.  Handlers satisfy the jrpc2.Handler interface by exporting a
-Call method with this signature:
+Handle method with this signature:
 
-   Call(ctx Context.Context, req *jrpc2.Request) (interface{}, error)
+   Handle(ctx Context.Context, req *jrpc2.Request) (interface{}, error)
 
 The jrpc2.NewHandler function helps adapt existing functions to this interface.
 A server finds the handler for a request by looking up its method name in a
