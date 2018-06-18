@@ -2,6 +2,7 @@ package channel
 
 import (
 	"io"
+	"strconv"
 	"testing"
 )
 
@@ -19,6 +20,17 @@ var tests = []struct {
 	{"RS", Split('\x1e')},
 }
 
+var messages = []string{
+	message1,
+	message2,
+	"null",
+	"17",
+	`"applejack"`,
+	"[]",
+	"{}",
+	"[null]",
+}
+
 func TestChannelTypes(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -26,10 +38,17 @@ func TestChannelTypes(t *testing.T) {
 			defer lhs.Close()
 			defer rhs.Close()
 
-			t.Logf("Testing lhs → rhs :: %s", message1)
-			testSendRecv(t, lhs, rhs, message1)
-			t.Logf("Testing rhs → lhs :: %s", message2)
-			testSendRecv(t, rhs, lhs, message2)
+			for i, msg := range messages {
+				n := strconv.Itoa(i + 1)
+				t.Run("LR-"+n, func(t *testing.T) {
+					t.Logf("Testing lhs → rhs :: %s", msg)
+					testSendRecv(t, lhs, rhs, message1)
+				})
+				t.Run("RL-"+n, func(t *testing.T) {
+					t.Logf("Testing rhs → lhs :: %s", msg)
+					testSendRecv(t, rhs, lhs, message2)
+				})
+			}
 		})
 	}
 }
