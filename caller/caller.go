@@ -180,11 +180,12 @@ func New(method string, opts Options) interface{} {
 		}
 	}
 
+	call := opts.caller()
 	return reflect.MakeFunc(funType, func(args []reflect.Value) []reflect.Value {
 		ctx := args[0].Interface().(context.Context)
 		cli := args[1].Interface().(*jrpc2.Client)
 
-		return result(cli.Call(ctx, method, param(args)))
+		return result(call(cli, ctx, method, param(args)))
 	}).Interface()
 }
 
@@ -213,4 +214,17 @@ type Options struct {
 	//
 	//    func(context.Context, *jrpc2.Client, X) (Y, error)
 	Variadic bool
+
+	// If true, the constructed function will send a notification instead of
+	// issuing a call.
+	Notify bool
+}
+
+func (o Options) caller() func(*jrpc2.Client, context.Context, string, interface{}) (*jrpc2.Response, error) {
+	if o.Notify {
+		return func(cli *jrpc2.Client, ctx context.Context, method string, params interface{}) (*jrpc2.Response, error) {
+			return nil, cli.Notify(ctx, method, params)
+		}
+	}
+	return (*jrpc2.Client).Call
 }

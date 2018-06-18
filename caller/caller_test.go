@@ -61,6 +61,16 @@ func TestNew(t *testing.T) {
 			}
 			return nil
 		}),
+		// A method that should only ever be called as a notification.  It
+		// generates a test error if it is sent a call expecting a reply.
+		"Note": jrpc2.NewMethod(func(_ context.Context, req *jrpc2.Request) error {
+			if !req.IsNotification() {
+				t.Errorf("Note called expecting a reply: %+v", req)
+				return errors.New("bad")
+			}
+			t.Logf("Note notified (OK): %+v", req)
+			return nil
+		}),
 	}
 
 	_, c, cleanup := newServer(t, ass, nil)
@@ -152,13 +162,27 @@ func TestNew(t *testing.T) {
 		}
 	})
 
+	// Verify that a stub flagged for notification actually sends a
+	// notification instead of a regular call.
+	t.Run("Notification", func(t *testing.T) {
+		notecaller := New("Note", Options{Params: []string(nil), Notify: true})
+		N, ok := notecaller.(func(context.Context, *jrpc2.Client, []string) error)
+		if !ok {
+			t.Fatalf("New (notify): wrong type: %T", notecaller)
+		}
+
+		if err := N(ctx, c, []string{"hello"}); err != nil {
+			t.Errorf("N(_, c, hello): unexpected error: %v", err)
+		}
+	})
+
 	// Verify that we can list the methods via the server hook.
 	t.Run("RPCServerInfo", func(t *testing.T) {
 		info, err := RPCServerInfo(ctx, c)
 		if err != nil {
 			t.Fatalf("rpc.serverInfo: unexpected error: %v", err)
 		}
-		want := []string{"ErrOnly", "F", "OK"}
+		want := []string{"ErrOnly", "F", "Note", "OK"}
 		if !reflect.DeepEqual(info.Methods, want) {
 			t.Errorf("rpc.serverInfo: got %+v, want %+q", info, want)
 		}
