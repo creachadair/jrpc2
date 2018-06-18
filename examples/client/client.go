@@ -43,6 +43,7 @@ var (
 
 	alert = caller.New("Post.Alert", caller.Options{
 		Params: msg{},
+		Notify: true,
 	}).(func(context.Context, *jrpc2.Client, msg) error)
 )
 
