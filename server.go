@@ -416,7 +416,12 @@ func (s *Server) read(ch channel.Receiver) {
 			} else if isRecoverableJSONError(err) {
 				s.pushError(nil, jerrorf(code.ParseError, "invalid JSON request message"))
 			} else {
-				s.stop(err)
+				// Don't remark on EOF or a closed pipe as a failure.
+				if isErrClosing(err) {
+					s.stop(io.EOF)
+				} else {
+					s.stop(err)
+				}
 				s.mu.Unlock()
 				return
 			}

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"bitbucket.org/creachadair/jrpc2/code"
 )
@@ -69,4 +70,12 @@ func DataErrorf(code code.Code, v interface{}, msg string, args ...interface{}) 
 		}
 	}
 	return e
+}
+
+// isErrClosing detects the internal error returned by a read from a pipe or
+// socket that is closed.
+func isErrClosing(err error) bool {
+	// That we must check the string here appears to be working as intended, or at least
+	// there is no intent to make it better.  https://github.com/golang/go/issues/4373
+	return err != nil && strings.Contains(err.Error(), "use of closed network connection")
 }

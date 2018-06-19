@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"strconv"
 	"sync"
 
@@ -68,8 +69,12 @@ func (c *Client) accept(ch channel.Receiver) error {
 		c.log("Recoverable decoding error: %v", err)
 		return nil
 	} else if err != nil {
-		c.log("Unrecoverable decoding error: %v", err)
-		c.stop(err)
+		if err == io.EOF || isErrClosing(err) {
+			c.stop(nil) // don't remark on this as a failure
+		} else {
+			c.log("Unrecoverable decoding error: %v", err)
+			c.stop(err)
+		}
 		return err
 	}
 
