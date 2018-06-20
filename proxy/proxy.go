@@ -25,8 +25,8 @@ func New(c *jrpc2.Client) *Proxy {
 }
 
 // A Proxy is a JSON-RPC transparent proxy. It implements a jrpc2.Assigner that
-// assigns each requested method to a handler that forwards the request to the
-// client.
+// assigns each requested method to a handler that forwards the request to a
+// server connected through a *jrpc2.Client.
 type Proxy struct{ h handler }
 
 // Close closes the underlying client for p and reports its result.
