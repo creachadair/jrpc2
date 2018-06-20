@@ -25,7 +25,11 @@ func Loop(lst net.Listener, assigner jrpc2.Assigner, opts *LoopOptions) error {
 	for {
 		conn, err := lst.Accept()
 		if err != nil {
-			log("Error accepting new connection: %v", err)
+			if channel.IsErrClosing(err) {
+				err = nil
+			} else {
+				log("Error accepting new connection: %v", err)
+			}
 			wg.Wait()
 			return err
 		}
