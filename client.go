@@ -69,7 +69,7 @@ func (c *Client) accept(ch channel.Receiver) error {
 		c.log("Recoverable decoding error: %v", err)
 		return nil
 	} else if err != nil {
-		if err == io.EOF || isErrClosing(err) {
+		if err == io.EOF || channel.IsErrClosing(err) {
 			c.stop(nil) // don't remark on this as a failure
 		} else {
 			c.log("Unrecoverable decoding error: %v", err)

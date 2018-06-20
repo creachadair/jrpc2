@@ -417,7 +417,7 @@ func (s *Server) read(ch channel.Receiver) {
 				s.pushError(nil, jerrorf(code.ParseError, "invalid JSON request message"))
 			} else {
 				// Don't remark on EOF or a closed pipe as a failure.
-				if isErrClosing(err) {
+				if channel.IsErrClosing(err) {
 					s.stop(io.EOF)
 				} else {
 					s.stop(err)
