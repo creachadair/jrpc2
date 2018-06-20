@@ -26,6 +26,7 @@ var (
 	clientFraming = flag.String("cf", "raw", "Client channel framing")
 	serverFraming = flag.String("sf", "raw", "Server channel framing")
 	doPipe        = flag.Bool("pipe", false, "Communicate with stdin/stdout")
+	doStderr      = flag.Bool("stderr", false, "Send subprocess stderr to proxy stderr")
 	doVerbose     = flag.Bool("v", false, "Enable verbose logging")
 
 	logger *log.Logger
@@ -128,7 +129,11 @@ func start(ctx context.Context, framing channel.Framing) (channel.Channel, error
 	out, err := proc.StdoutPipe()
 	if err != nil {
 		return nil, fmt.Errorf("connecting to stdout: %v", err)
-	} else if err := proc.Start(); err != nil {
+	}
+	if *doStderr {
+		proc.Stderr = os.Stderr
+	}
+	if err := proc.Start(); err != nil {
 		return nil, fmt.Errorf("starting server failed: %v", err)
 	}
 	go func() {
