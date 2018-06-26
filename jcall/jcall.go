@@ -55,10 +55,7 @@ func main() {
 	if flag.NArg() < 3 || flag.NArg()%2 == 0 {
 		log.Fatal("Arguments are <address> {<method> <params>}...")
 	}
-	nc := chanutil.Framing(*chanFraming)
-	if nc == nil {
-		log.Fatalf("Unknown channel framing %q", *chanFraming)
-	}
+
 	ctx := context.Background()
 	if *withMeta != "" {
 		mc, err := jctx.WithMetadata(ctx, json.RawMessage(*withMeta))
@@ -80,6 +77,27 @@ func main() {
 	}
 	defer conn.Close()
 
+	if *callTimeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, *callTimeout)
+		defer cancel()
+	}
+
+	cli := newClient(conn)
+	rsps, err := issueCalls(ctx, cli, flag.Args()[1:])
+	if err != nil {
+		log.Fatalf("Call failed: %v", err)
+	}
+	if ok := printResults(rsps); !ok {
+		os.Exit(1)
+	}
+}
+
+func newClient(conn net.Conn) *jrpc2.Client {
+	nc := chanutil.Framing(*chanFraming)
+	if nc == nil {
+		log.Fatalf("Unknown channel framing %q", *chanFraming)
+	}
 	opts := new(jrpc2.ClientOptions)
 	if *withContext {
 		opts.EncodeContext = jctx.Encode
@@ -87,35 +105,26 @@ func main() {
 	if *withLogging {
 		opts.Logger = log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile)
 	}
-	cli := jrpc2.NewClient(nc(conn, conn), opts)
+	return jrpc2.NewClient(nc(conn, conn), opts)
+}
 
-	if *callTimeout > 0 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, *callTimeout)
-		defer cancel()
-	}
-	rsps, err := issueCalls(ctx, cli, flag.Args()[1:])
-	if err != nil {
-		log.Fatalf("Call failed: %v", err)
-	}
-	failed := false
+func printResults(rsps []*jrpc2.Response) bool {
+	ok := true
 	for i, rsp := range rsps {
 		if rerr := rsp.Error(); rerr != nil {
 			log.Printf("Error (%d): %v", i+1, rerr)
-			failed = true
+			ok = false
 			continue
 		}
 		var result json.RawMessage
 		if err := rsp.UnmarshalResult(&result); err != nil {
 			log.Printf("Decoding (%d): %v", i+1, err)
-			failed = true
+			ok = false
 			continue
 		}
 		fmt.Println(string(result))
 	}
-	if failed {
-		os.Exit(1)
-	}
+	return ok
 }
 
 func issueCalls(ctx context.Context, cli *jrpc2.Client, args []string) ([]*jrpc2.Response, error) {
