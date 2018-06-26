@@ -42,6 +42,10 @@ func NewClient(ch channel.Channel, opts *ClientOptions) *Client {
 		// Lock-protected fields
 		ch:      ch,
 		pending: make(map[string]*Response),
+		nextID: 1,
+
+		// Note that we start the ID counter at 1 here to avoid issues with a
+		// server implementation that treats 0 as equivalent to null.
 	}
 
 	// The main client loop reads responses from the server and delivers them
