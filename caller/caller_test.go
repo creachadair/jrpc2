@@ -37,8 +37,8 @@ func newServer(t *testing.T, assigner jrpc2.Assigner, opts *jrpc2.ServerOptions)
 	}
 }
 
-func TestNew(t *testing.T) {
-	ass := jrpc2.MapAssigner{
+func newAssigner(t *testing.T) jrpc2.Assigner {
+	return jrpc2.MapAssigner{
 		// A dummy method that returns the length of its argument slice.
 		"F": jrpc2.NewHandler(func(_ context.Context, req []string) (int, error) {
 			t.Logf("Call to F with arguments %#v", req)
@@ -72,8 +72,10 @@ func TestNew(t *testing.T) {
 			return nil
 		}),
 	}
+}
 
-	_, c, cleanup := newServer(t, ass, nil)
+func TestNew(t *testing.T) {
+	_, c, cleanup := newServer(t, newAssigner(t), nil)
 	defer cleanup()
 	ctx := context.Background()
 
@@ -130,6 +132,16 @@ func TestNew(t *testing.T) {
 		}
 	})
 
+	type tester func(context.Context, *jrpc2.Client, *testing.T)
+
+	for _, fn := range []tester{
+		testOmitParams, testOmitResult, testNotification, testRPCServerInfo,
+	} {
+		fn(ctx, c, t)
+	}
+}
+
+func testOmitParams(ctx context.Context, c *jrpc2.Client, t *testing.T) {
 	// Verify that we can call through a stub without request parameters.
 	t.Run("OmitParams", func(t *testing.T) {
 		okcaller := New("OK", Options{Result: ""})
@@ -143,7 +155,9 @@ func TestNew(t *testing.T) {
 			t.Logf("OK(_, c): returned message %q", m)
 		}
 	})
+}
 
+func testOmitResult(ctx context.Context, c *jrpc2.Client, t *testing.T) {
 	// Verify that we can call through a stub without a result value.
 	t.Run("OmitResult", func(t *testing.T) {
 		errcaller := New("ErrOnly", Options{Params: []string(nil)})
@@ -161,7 +175,9 @@ func TestNew(t *testing.T) {
 			t.Logf("E(_, c, %q): got expected error %#v", message, e)
 		}
 	})
+}
 
+func testNotification(ctx context.Context, c *jrpc2.Client, t *testing.T) {
 	// Verify that a stub flagged for notification actually sends a
 	// notification instead of a regular call.
 	t.Run("Notification", func(t *testing.T) {
@@ -175,7 +191,9 @@ func TestNew(t *testing.T) {
 			t.Errorf("N(_, c, hello): unexpected error: %v", err)
 		}
 	})
+}
 
+func testRPCServerInfo(ctx context.Context, c *jrpc2.Client, t *testing.T) {
 	// Verify that we can list the methods via the server hook.
 	t.Run("RPCServerInfo", func(t *testing.T) {
 		info, err := RPCServerInfo(ctx, c)
