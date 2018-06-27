@@ -198,7 +198,7 @@ func newHandler(fn interface{}) (Handler, error) {
 		newinput = func(req *Request) ([]reflect.Value, error) {
 			in := reflect.New(argType).Interface()
 			if err := req.UnmarshalParams(in); err != nil {
-				return nil, Errorf(code.InvalidParams, "wrong argument type: %v", err)
+				return nil, Errorf(code.InvalidParams, "invalid parameters: %v", err)
 			}
 			arg := reflect.ValueOf(in)
 			return []reflect.Value{undo(arg)}, nil
