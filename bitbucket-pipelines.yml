@@ -11,3 +11,4 @@ pipelines:
           - go get -v
           - go build -v
           - go test -v -race
+          - go vet -v
