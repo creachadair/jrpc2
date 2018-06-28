@@ -197,7 +197,6 @@ func (s *Server) deliver(rsps jresponses, ch channel.Sender, elapsed time.Durati
 		return nil
 	}
 	s.log("Completed %d requests [%v elapsed]", len(rsps), elapsed)
-	s.log("Sending responses: %v", rsps)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
