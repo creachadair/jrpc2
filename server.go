@@ -33,6 +33,7 @@ type Server struct {
 	expctx bool                // whether to expect request context
 
 	mu      *sync.Mutex     // protects the fields below
+	start   time.Time       // when Start was called
 	err     error           // error from a previous operation
 	work    *sync.Cond      // for signaling message availability
 	inq     *list.List      // inbound requests awaiting processing
@@ -82,6 +83,7 @@ func (s *Server) Start(c channel.Channel) *Server {
 
 	// Set up the queues and condition variable used by the workers.
 	s.ch = c
+	s.start = time.Now().In(time.UTC)
 	s.work = sync.NewCond(s.mu)
 	s.inq = list.New()
 	s.used = make(map[string]context.CancelFunc)
@@ -321,6 +323,7 @@ func (s *Server) serverInfo() *ServerInfo {
 	info := &ServerInfo{
 		Methods:     s.mux.Names(),
 		UsesContext: s.expctx,
+		StartTime:   s.start,
 		Counter:     make(map[string]int64),
 		MaxValue:    make(map[string]int64),
 	}
@@ -446,6 +449,9 @@ type ServerInfo struct {
 	// Metric values defined by the evaluation of methods.
 	Counter  map[string]int64 `json:"counters,omitempty"`
 	MaxValue map[string]int64 `json:"maxValue,omitempty"`
+
+	// When the server started.
+	StartTime time.Time `json:"startTime,omitempty"`
 }
 
 // Handle the special rpc.cancel notification, that requests cancellation of a
