@@ -30,7 +30,7 @@ func newServer(t *testing.T, assigner Assigner, opts *testOptions) (*Server, *Cl
 	t.Logf("Server running on pipe %+v", spipe)
 
 	cli := NewClient(cpipe, opts.client)
-	t.Logf("Client running on pipe %v", cpipe)
+	t.Logf("Client running on pipe %+v", cpipe)
 
 	return srv, cli, func() {
 		t.Logf("Client close: err=%v", cli.Close())
