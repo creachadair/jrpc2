@@ -68,6 +68,7 @@ func NewServer(mux Assigner, opts *ServerOptions) *Server {
 		expctx:  exp,
 		mu:      new(sync.Mutex),
 		metrics: opts.metrics(),
+		start:   opts.startTime(),
 	}
 	return s
 }
@@ -83,7 +84,9 @@ func (s *Server) Start(c channel.Channel) *Server {
 
 	// Set up the queues and condition variable used by the workers.
 	s.ch = c
-	s.start = time.Now().In(time.UTC)
+	if s.start.IsZero() {
+		s.start = time.Now().In(time.UTC)
+	}
 	s.work = sync.NewCond(s.mu)
 	s.inq = list.New()
 	s.used = make(map[string]context.CancelFunc)

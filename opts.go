@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"runtime"
+	"time"
 
 	"bitbucket.org/creachadair/jrpc2/metrics"
 )
@@ -43,6 +44,10 @@ type ServerOptions struct {
 	// from the same options will share the same metrics collector.  If none is
 	// set, an empty collector will be created for each new server.
 	Metrics *metrics.M
+
+	// If nonzero this value as the server start time; otherwise, use the
+	// current time when Start is called.
+	StartTime time.Time
 }
 
 func (s *ServerOptions) logger() logger {
@@ -62,6 +67,13 @@ func (s *ServerOptions) concurrency() int64 {
 		return int64(runtime.NumCPU())
 	}
 	return int64(s.Concurrency)
+}
+
+func (s *ServerOptions) startTime() time.Time {
+	if s == nil {
+		return time.Time{}
+	}
+	return s.StartTime
 }
 
 type decoder = func(context.Context, json.RawMessage) (context.Context, json.RawMessage, error)
