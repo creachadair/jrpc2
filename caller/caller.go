@@ -21,7 +21,7 @@ The result can be asserted to this type and used as a normal function:
    sum, err := Add(ctx, cli, []int{1, 3, 5, 7})
    ...
 
-NewCaller can also optionally generate a variadic function:
+New can also optionally generate a variadic function:
 
    Mul := caller.New("Math.Mul", caller.Options{
       Params:   int(0),
