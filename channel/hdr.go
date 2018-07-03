@@ -29,6 +29,7 @@ import (
 //    \r\n
 //    123\n
 //
+// If mimeType == "", the Content-Type header is omitted.
 func Header(mimeType string) Framing {
 	return func(r io.Reader, wc io.WriteCloser) Channel {
 		return &hdr{
@@ -52,7 +53,9 @@ type hdr struct {
 // Send implements part of the Channel interface.
 func (h *hdr) Send(msg []byte) error {
 	h.buf.Reset()
-	fmt.Fprintf(h.buf, "Content-Type: %s\r\n", h.mtype)
+	if h.mtype != "" {
+		fmt.Fprintf(h.buf, "Content-Type: %s\r\n", h.mtype)
+	}
 	fmt.Fprintf(h.buf, "Content-Length: %d\r\n\r\n", len(msg))
 	h.buf.Write(msg)
 	_, err := h.wc.Write(h.buf.Next(h.buf.Len()))

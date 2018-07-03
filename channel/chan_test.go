@@ -14,6 +14,7 @@ var tests = []struct {
 	{"JSON", JSON},
 	{"LSP", LSP},
 	{"Header", Header("binary/octet-stream")},
+	{"NoMIME", Header("")},
 	{"Line", Line},
 	{"Varint", Varint},
 	{"NUL", Split('\x00')},
