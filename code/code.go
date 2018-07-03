@@ -7,6 +7,13 @@ import (
 )
 
 // A Code is an error response code, that satisfies the error interface.
+//
+// The error codes from and including -32768 to -32000 are reserved for
+// pre-defined errors.  Any code within this range, but not defined explicitly
+// below is reserved for future use.  The remainder of the space is available
+// for application defined errors.
+//
+// See also: https://www.jsonrpc.org/specification#error_object
 type Code int32
 
 func (c Code) Error() string {
@@ -29,14 +36,15 @@ const (
 	MethodNotFound Code = -32601 // The method does not exist or is unavailable
 	InvalidParams  Code = -32602 // Invalid method parameters
 	InternalError  Code = -32603 // Internal JSON-RPC error
+)
 
-	// The JSON-RPC 2.0 specification reserves the range -32000 to -32099 for
-	// implementation-defined server errors, such as the following:
-
-	NoError          Code = -32099 // Denotes a nil error
+// The JSON-RPC 2.0 specification reserves the range -32000 to -32099 for
+// implementation-defined server errors. These are used by the jrpc2 package.
+const (
+	NoError          Code = -32099 // Denotes a nil error (used by FromError)
 	SystemError      Code = -32098 // Errors from the operating environment
-	Cancelled        Code = -32097 // Request cancelled
-	DeadlineExceeded Code = -32096 // Request deadline exceeded
+	Cancelled        Code = -32097 // Request cancelled (context.Canceled)
+	DeadlineExceeded Code = -32096 // Request deadline exceeded (context.DeadlineExceeded)
 )
 
 var stdError = map[Code]string{
