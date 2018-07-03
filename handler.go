@@ -107,6 +107,7 @@ func (m ServiceMapper) Names() []string {
 //    func(context.Context, X) (Y, error)
 //    func(context.Context, ...X) (Y, error)
 //    func(context.Context, *jrpc2.Request) (Y, error)
+//    func(context.Context, *jrpc2.Request) (interface{}, error)
 //
 // for JSON-marshalable types X and Y. NewHandler will panic if the type of its
 // argument does not have one of these forms.  The resulting method will handle
