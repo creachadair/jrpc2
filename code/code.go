@@ -16,7 +16,7 @@ import (
 // See also: https://www.jsonrpc.org/specification#error_object
 type Code int32
 
-func (c Code) Error() string {
+func (c Code) String() string {
 	if s, ok := stdError[c]; ok {
 		return s
 	}
@@ -73,7 +73,6 @@ func Register(value int32, message string) Code {
 
 // FromError returns a Code to categorize the specified error.
 // If err == nil, it returns code.NoError.
-// If err is a Code, it returns that code.
 // If err is a Coder, it returns the reported code value.
 // If err is context.Canceled, it returns code.Cancelled.
 // If err is context.DeadlineExceeded, it returns code.DeadlineExceeded.
@@ -82,8 +81,6 @@ func FromError(err error) Code {
 	switch t := err.(type) {
 	case nil:
 		return NoError
-	case Code:
-		return t
 	case Coder:
 		return t.Code()
 	}
