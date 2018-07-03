@@ -3,6 +3,7 @@ package code
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"testing"
 )
@@ -49,6 +50,43 @@ func TestFromError(t *testing.T) {
 	for _, test := range tests {
 		if got := FromError(test.input); got != test.want {
 			t.Errorf("FromError(%v): got %v, want %v", test.input, got, test.want)
+		}
+	}
+}
+
+func TestErr(t *testing.T) {
+	eqv := func(e1, e2 error) bool {
+		return e1 == e2 || (e1 != nil && e2 != nil && e1.Error() == e2.Error())
+	}
+	type test struct {
+		code Code
+		want error
+	}
+	Register(1, "look for the bear necessities")
+	Register(2, "the simple bear necessities")
+	tests := []test{
+		{NoError, nil},
+		{0, errors.New("error code 0")},
+		{-17, errors.New("error code -17")},
+	}
+
+	// Make sure all the pre-defined errors get their messages hit.
+	for code, msg := range stdError {
+		if code == NoError {
+			continue
+		}
+		s := fmt.Sprintf("[%d] %s", code, msg)
+		tests = append(tests, test{
+			code: code,
+			want: errors.New(s),
+		})
+	}
+	for _, test := range tests {
+		got := test.code.Err()
+		if !eqv(got, test.want) {
+			t.Errorf("Code(%d).Err(): got %#v, want %#v", test.code, got, test.want)
+		} else {
+			t.Logf("Code(%d).Err() ok: %v", test.code, got)
 		}
 	}
 }

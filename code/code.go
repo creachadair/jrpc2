@@ -3,6 +3,7 @@ package code
 
 import (
 	"context"
+	"errors"
 	"fmt"
 )
 
@@ -26,6 +27,17 @@ func (c Code) String() string {
 // A Coder is a value that can report an error code value.
 type Coder interface {
 	Code() Code
+}
+
+// Err converts c to an error value, which is nil for code.NoError and
+// otherwise an error value constructed by fmt.Errorf.
+func (c Code) Err() error {
+	if c == NoError {
+		return nil
+	} else if s, ok := stdError[c]; ok {
+		return fmt.Errorf("[%d] %s", c, s)
+	}
+	return errors.New(c.String())
 }
 
 // Pre-defined error codes, including the standard ones from the JSON-RPC
