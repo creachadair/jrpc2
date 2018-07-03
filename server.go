@@ -578,7 +578,7 @@ func (ts tasks) responses() jresponses {
 		} else if e, ok := task.err.(*Error); ok {
 			rsp.E = e.tojerror()
 		} else if c := code.FromError(task.err); c != code.NoError {
-			rsp.E = jerrorf(c, "%v: %v", c.Error(), task.err)
+			rsp.E = jerrorf(c, "%v: %v", c.String(), task.err)
 		} else {
 			rsp.E = jerrorf(code.InternalError, "internal error: %v", task.err)
 		}

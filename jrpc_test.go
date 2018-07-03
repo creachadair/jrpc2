@@ -354,7 +354,8 @@ func TestErrorCode(t *testing.T) {
 		{nil, code.NoError},                               // no error (success)
 		{errors.New("bad"), code.SystemError},             // an unrelated error
 		{Errorf(code.ParseError, "bad"), code.ParseError}, // a package error
-		{code.InvalidParams, code.InvalidParams},          // a naked code
+		{context.Canceled, code.Cancelled},                // a context error
+		{context.DeadlineExceeded, code.DeadlineExceeded}, // "
 	}
 	for _, test := range tests {
 		if got := code.FromError(test.err); got != test.want {
