@@ -55,6 +55,6 @@ func ServerPush(ctx context.Context, method string, params interface{}) error {
 
 type serverPushKey struct{}
 
-// ErrNotifyUnsupported is returned by ServerNotify if server notifications are
+// ErrNotifyUnsupported is returned by ServerPush if server notifications are
 // not enabled in the specified context.
 var ErrNotifyUnsupported = errors.New("server notifications are not enabled")
