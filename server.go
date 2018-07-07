@@ -329,10 +329,12 @@ func (s *Server) serverInfo() *ServerInfo {
 		StartTime:   s.start,
 		Counter:     make(map[string]int64),
 		MaxValue:    make(map[string]int64),
+		Label:       make(map[string]string),
 	}
 	s.metrics.Snapshot(metrics.Snapshot{
 		Counter:  info.Counter,
 		MaxValue: info.MaxValue,
+		Label:    info.Label,
 	})
 	return info
 }
@@ -450,8 +452,9 @@ type ServerInfo struct {
 	UsesContext bool `json:"usesContext"`
 
 	// Metric values defined by the evaluation of methods.
-	Counter  map[string]int64 `json:"counters,omitempty"`
-	MaxValue map[string]int64 `json:"maxValue,omitempty"`
+	Counter  map[string]int64  `json:"counters,omitempty"`
+	MaxValue map[string]int64  `json:"maxValue,omitempty"`
+	Label    map[string]string `json:"labels,omitempty"`
 
 	// When the server started.
 	StartTime time.Time `json:"startTime,omitempty"`

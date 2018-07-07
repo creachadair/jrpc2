@@ -14,6 +14,7 @@ type M struct {
 	mu      sync.Mutex
 	counter map[string]int64
 	maxVal  map[string]int64
+	label   map[string]string
 }
 
 // New creates a new, empty metrics collector.
@@ -56,6 +57,20 @@ func (m *M) CountAndSetMax(name string, n int64) {
 	}
 }
 
+// SetLabel sets the specified label to value. If value == "" the label is
+// removed from the set.
+func (m *M) SetLabel(name, value string) {
+	if m != nil {
+		m.mu.Lock()
+		defer m.mu.Unlock()
+		if value == "" {
+			delete(m.label, name)
+		} else {
+			m.label[name] = value
+		}
+	}
+}
+
 // Snapshot copies an atomic snapshot of the collected metrics into the non-nil
 // fields of the provided snapshot value. Only the fields of snap that are not
 // nil are snapshotted.
@@ -73,6 +88,11 @@ func (m *M) Snapshot(snap Snapshot) {
 				v[name] = val
 			}
 		}
+		if v := snap.Label; v != nil {
+			for name, val := range m.label {
+				v[name] = val
+			}
+		}
 	}
 }
 
@@ -81,6 +101,7 @@ func (m *M) Snapshot(snap Snapshot) {
 type Snapshot struct {
 	Counter  map[string]int64
 	MaxValue map[string]int64
+	Label    map[string]string
 }
 
 // Int64 is a named metric sample with an int64 value.
