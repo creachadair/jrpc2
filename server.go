@@ -482,6 +482,29 @@ func (s *Server) handleRPCServerInfo(context.Context, *Request) (interface{}, er
 	return s.serverInfo(), nil
 }
 
+// Handle the special rpc.count and rpc.maxValue notifications, that modify
+// server metrics.  This only works if issued as a notification.
+func (s *Server) handleRPCMetric(_ context.Context, req *Request) (interface{}, error) {
+	if !req.IsNotification() {
+		return nil, Errorf(code.MethodNotFound, "no such method")
+	}
+	var ctr metrics.Int64
+	if err := req.UnmarshalParams(&ctr); err != nil {
+		return nil, err
+	}
+	if ctr.Name != "" && !strings.HasPrefix(ctr.Name, "rpc.") {
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		switch req.Method() {
+		case "rpc.count":
+			s.metrics.Count(ctr.Name, ctr.Value)
+		case "rpc.maxValue":
+			s.metrics.SetMaxValue(ctr.Name, ctr.Value)
+		}
+	}
+	return nil, nil
+}
+
 // assign returns a Handler to handle the specified name, or nil.
 // The caller must hold s.mu.
 func (s *Server) assign(name string) Handler {
@@ -495,6 +518,9 @@ func (s *Server) assign(name string) Handler {
 			// Handle client-requested cancellation of a pending method. This only
 			// works if issued as a notification.
 			return methodFunc(s.handleRPCCancel)
+
+		case "rpc.count", "rpc.maxValue":
+			return methodFunc(s.handleRPCMetric)
 
 		default:
 			// Spec: "Method names that begin with rpc. are reserved for system

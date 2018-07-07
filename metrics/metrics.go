@@ -37,7 +37,7 @@ func (m *M) SetMaxValue(name string, n int64) {
 	if m != nil {
 		m.mu.Lock()
 		defer m.mu.Unlock()
-		if n > m.maxVal[name] {
+		if old, ok := m.maxVal[name]; !ok || n > old {
 			m.maxVal[name] = n
 		}
 	}
@@ -49,7 +49,7 @@ func (m *M) CountAndSetMax(name string, n int64) {
 	if m != nil {
 		m.mu.Lock()
 		defer m.mu.Unlock()
-		if n > m.maxVal[name] {
+		if old, ok := m.maxVal[name]; !ok || n > old {
 			m.maxVal[name] = n
 		}
 		m.counter[name] += n
@@ -81,4 +81,10 @@ func (m *M) Snapshot(snap Snapshot) {
 type Snapshot struct {
 	Counter  map[string]int64
 	MaxValue map[string]int64
+}
+
+// Int64 is a named metric sample with an int64 value.
+type Int64 struct {
+	Name  string `json:"name"`
+	Value int64  `json:"value"`
 }

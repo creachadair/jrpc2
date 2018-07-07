@@ -13,6 +13,7 @@ import (
 	"bitbucket.org/creachadair/jrpc2/channel"
 	"bitbucket.org/creachadair/jrpc2/code"
 	"bitbucket.org/creachadair/jrpc2/jctx"
+	"bitbucket.org/creachadair/jrpc2/metrics"
 )
 
 type testOptions struct {
@@ -570,6 +571,42 @@ func TestSpecialMethods(t *testing.T) {
 	}
 	if got := s.assign("rpc.nonesuch"); got != nil {
 		t.Errorf("s.assign(rpc.nonesuch): got %v, want nil", got)
+	}
+}
+
+func TestClientMetrics(t *testing.T) {
+	s, c, cleanup := newServer(t, make(MapAssigner), nil)
+
+	before := s.ServerInfo()
+	if got := before.Counter["foo"]; got != 0 {
+		t.Errorf("Counter foo before: got %d, want 0", got)
+	}
+	if got := before.MaxValue["bar"]; got != 0 {
+		t.Errorf("MaxValue bar before: got %d, want 0", got)
+	}
+
+	if err := c.Notify(context.Background(), "rpc.count", metrics.Int64{
+		Name:  "foo",
+		Value: 15,
+	}); err != nil {
+		t.Fatalf("Notify (count) failed: %v", err)
+	}
+	if err := c.Notify(context.Background(), "rpc.maxValue", metrics.Int64{
+		Name:  "bar",
+		Value: -19,
+	}); err != nil {
+		t.Fatalf("Notify (maxValue) failed: %v", err)
+	}
+
+	// Make sure the server has processed all its requests.
+	cleanup()
+
+	after := s.ServerInfo()
+	if got := after.Counter["foo"]; got != 15 {
+		t.Errorf("Counter foo after: got %d, want 15", got)
+	}
+	if got := after.MaxValue["bar"]; got != -19 {
+		t.Errorf("MaxValue bar after: got %d, want -19", got)
 	}
 }
 
