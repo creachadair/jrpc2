@@ -10,15 +10,16 @@ var tests = []struct {
 	name    string
 	framing Framing
 }{
-	{"RawJSON", RawJSON},
+	{"Decimal", Decimal},
+	{"Header", Header("binary/octet-stream")},
 	{"JSON", JSON},
 	{"LSP", LSP},
-	{"Header", Header("binary/octet-stream")},
-	{"NoMIME", Header("")},
 	{"Line", Line},
-	{"Varint", Varint},
 	{"NUL", Split('\x00')},
+	{"NoMIME", Header("")},
 	{"RS", Split('\x1e')},
+	{"RawJSON", RawJSON},
+	{"Varint", Varint},
 }
 
 var messages = []string{
