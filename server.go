@@ -370,7 +370,7 @@ func (s *Server) stop(err error) {
 		for _, req := range cur.Value.(jrequests) {
 			if req.ID == nil {
 				keep = append(keep, req)
-				s.log("Retaining notification %+v", req)
+				s.log("Retaining notification %p", req)
 			} else {
 				s.cancel(string(req.ID))
 			}
