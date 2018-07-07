@@ -67,11 +67,12 @@ func (h *hdr) Recv() ([]byte, error) {
 	p := make(map[string]string)
 	for {
 		raw, err := h.rd.ReadString('\n')
-		if len(raw) == 0 && err == io.EOF {
-			return nil, err
+		if err == io.EOF && raw != "" {
+			// handle a partial line at EOF
 		} else if err != nil {
 			return nil, err
-		} else if line := strings.TrimRight(raw, "\r\n"); line == "" {
+		}
+		if line := strings.TrimRight(raw, "\r\n"); line == "" {
 			break
 		} else if parts := strings.SplitN(line, ":", 2); len(parts) == 2 {
 			p[strings.ToLower(parts[0])] = strings.TrimSpace(parts[1])
