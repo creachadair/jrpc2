@@ -19,9 +19,10 @@ type Client struct {
 	done chan struct{} // closed when the reader is done at shutdown time
 
 	log    func(string, ...interface{}) // write debug logs here
-	allow1 bool                         // tolerate v1 replies with no version marker
 	enctx  func(context.Context, json.RawMessage) (json.RawMessage, error)
 	snote  func(*jresponse) bool
+	allow1 bool // tolerate v1 replies with no version marker
+	allowC bool // send rpc.cancel when a request context ends
 
 	mu      sync.Mutex           // protects the fields below
 	ch      channel.Channel      // channel to the server
@@ -36,6 +37,7 @@ func NewClient(ch channel.Channel, opts *ClientOptions) *Client {
 		done:   make(chan struct{}),
 		log:    opts.logger(),
 		allow1: opts.allowV1(),
+		allowC: opts.allowCancel(),
 		enctx:  opts.encodeContext(),
 		snote:  opts.handleNotification(),
 
@@ -238,9 +240,11 @@ func (c *Client) waitComplete(pctx context.Context, id string, p *Response) {
 
 	// Inform the server, best effort only. N.B. Use a background context here,
 	// as the original context has ended by the time we get here.
-	cleanup = func() {
-		c.log("Sending rpc.cancel for id %q to the server", id)
-		c.Notify(context.Background(), "rpc.cancel", []json.RawMessage{json.RawMessage(id)})
+	if c.allowC {
+		cleanup = func() {
+			c.log("Sending rpc.cancel for id %q to the server", id)
+			c.Notify(context.Background(), "rpc.cancel", []json.RawMessage{json.RawMessage(id)})
+		}
 	}
 }
 

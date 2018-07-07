@@ -104,6 +104,10 @@ type ClientOptions struct {
 	// required "jsonrpc" version marker.
 	AllowV1 bool
 
+	// Instructs the client not to send rpc.cancel notifications to the server
+	// when the context for an in-flight request terminates.
+	DisableCancel bool
+
 	// If set, this function is called with the context and encoded request
 	// parameters before the request is sent to the server. Its return value
 	// replaces the request parameters. This allows the client to send context
@@ -126,7 +130,8 @@ func (c *ClientOptions) logger() logger {
 	return func(msg string, args ...interface{}) { logger.Output(2, fmt.Sprintf(msg, args...)) }
 }
 
-func (c *ClientOptions) allowV1() bool { return c != nil && c.AllowV1 }
+func (c *ClientOptions) allowV1() bool     { return c != nil && c.AllowV1 }
+func (c *ClientOptions) allowCancel() bool { return c == nil || !c.DisableCancel }
 
 type encoder = func(context.Context, json.RawMessage) (json.RawMessage, error)
 
