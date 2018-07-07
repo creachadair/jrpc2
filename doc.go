@@ -133,6 +133,7 @@ want to do anything for a notification, it can query the request:
       return 0, nil  // ignore notifications
    }
 
+
 Cancellation
 
 The *Client and *Server types support a nonstandard cancellation protocol, that
@@ -151,6 +152,7 @@ send an "rpc.cancel" notification to the server for that request's ID:
 
 The "rpc.cancel" method is automatically handled by the *Server implementation
 from this package.
+
 
 Services with Multiple Methods
 
@@ -189,6 +191,28 @@ method name on the first period ("."), and you may nest ServiceMappers more
 deeply if you require a more complex hierarchy.
 
 See the "caller" package for a convenient way to generate client call wrappers.
+
+
+Non-Standard Custom Methods
+
+By default a jrpc2.Server exports the following built-in non-standard custom
+methods:
+
+  rpc.serverInfo (null)
+  Returns a jrpc2.ServerInfo value giving server metrics.
+
+  rpc.cancel ([]int)  [notification only]
+  Request cancellation of the specified in-flight request IDs.
+
+  rpc.count, rpc.maxValue (metrics.Int64)  [notification only]
+  Update server-side counters or max-value trackers.
+
+The methods marked "notification only" work only as notifications, and will
+report an error if called as ordinary methods.
+
+These methods are enabled by default, but may be disabled by setting the
+DisableBuiltin server option to true when constructing the server.
+
 */
 package jrpc2
 
