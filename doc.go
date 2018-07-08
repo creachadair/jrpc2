@@ -207,6 +207,9 @@ methods:
   rpc.count, rpc.maxValue (metrics.Int64)  [notification only]
   Update server-side counters or max-value trackers.
 
+  rpc.setLabel (metrics.Label)  [notification only]
+  Update server-side label metrics.
+
 The methods marked "notification only" work only as notifications, and will
 report an error if called as ordinary methods.
 
