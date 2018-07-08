@@ -107,15 +107,3 @@ type Snapshot struct {
 	MaxValue map[string]int64
 	Label    map[string]string
 }
-
-// Int64 is a named metric sample with an int64 value.
-type Int64 struct {
-	Name  string `json:"name"`
-	Value int64  `json:"value"`
-}
-
-// Label represents a named string metric.
-type Label struct {
-	Name  string `json:"name"`
-	Value string `json:"value"`
-}

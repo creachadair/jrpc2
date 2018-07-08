@@ -204,17 +204,10 @@ methods:
   rpc.cancel ([]int)  [notification only]
   Request cancellation of the specified in-flight request IDs.
 
-  rpc.count, rpc.maxValue (metrics.Int64)  [notification only]
-  Update server-side counters or max-value trackers.
-
-  rpc.setLabel (metrics.Label)  [notification only]
-  Update server-side label metrics.
-
 The methods marked "notification only" work only as notifications, and will
-report an error if called as ordinary methods.
-
-These methods are enabled by default, but may be disabled by setting the
-DisableBuiltin server option to true when constructing the server.
+report an error if called as ordinary methods.  These methods are enabled by
+default, but may be disabled by setting the DisableBuiltin server option to
+true when constructing the server.
 
 */
 package jrpc2
