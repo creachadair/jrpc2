@@ -27,10 +27,12 @@ type Server struct {
 	sem    *semaphore.Weighted // bounds concurrent execution (default 1)
 	allow1 bool                // allow v1 requests with no version marker
 	allowP bool                // allow server notifications to the client
-	allowB bool                // enable built-in rpc.* methods
 	log    logger              // write debug logs here
 	dectx  decoder             // decode context from request
 	expctx bool                // whether to expect request context
+
+	// If rpc.* method handlers are enabled, these are their handlers.
+	rpcHandlers map[string]Handler
 
 	mu      *sync.Mutex     // protects the fields below
 	start   time.Time       // when Start was called
@@ -62,13 +64,15 @@ func NewServer(mux Assigner, opts *ServerOptions) *Server {
 		sem:     semaphore.NewWeighted(opts.concurrency()),
 		allow1:  opts.allowV1(),
 		allowP:  opts.allowPush(),
-		allowB:  opts.allowBuiltin(),
 		log:     opts.logger(),
 		dectx:   dc,
 		expctx:  exp,
 		mu:      new(sync.Mutex),
 		metrics: opts.metrics(),
 		start:   opts.startTime(),
+	}
+	if opts.allowBuiltin() {
+		s.installBuiltins()
 	}
 	return s
 }
@@ -460,81 +464,13 @@ type ServerInfo struct {
 	StartTime time.Time `json:"startTime,omitempty"`
 }
 
-// Handle the special rpc.cancel notification, that requests cancellation of a
-// set of pending methods. This only works if issued as a notification.
-func (s *Server) handleRPCCancel(_ context.Context, req *Request) (interface{}, error) {
-	if !req.IsNotification() {
-		return nil, Errorf(code.MethodNotFound, "no such method")
-	}
-	var ids []json.RawMessage
-	if err := req.UnmarshalParams(&ids); err != nil {
-		return nil, err
-	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	for _, raw := range ids {
-		id := string(raw)
-		if s.cancel(id) {
-			s.log("Cancelled request %s by client order", id)
-		}
-	}
-	return nil, nil
-}
-
-func (s *Server) handleRPCServerInfo(context.Context, *Request) (interface{}, error) {
-	return s.serverInfo(), nil
-}
-
-// Handle the special rpc.count and rpc.maxValue notifications, that modify
-// server metrics.  This only works if issued as a notification.
-func (s *Server) handleRPCMetric(_ context.Context, req *Request) (interface{}, error) {
-	if !req.IsNotification() {
-		return nil, Errorf(code.MethodNotFound, "no such method")
-	}
-	var ctr metrics.Int64
-	if err := req.UnmarshalParams(&ctr); err != nil {
-		return nil, err
-	}
-	if ctr.Name != "" && !strings.HasPrefix(ctr.Name, "rpc.") {
-		s.mu.Lock()
-		defer s.mu.Unlock()
-		switch req.Method() {
-		case "rpc.count":
-			s.metrics.Count(ctr.Name, ctr.Value)
-		case "rpc.maxValue":
-			s.metrics.SetMaxValue(ctr.Name, ctr.Value)
-		}
-	}
-	return nil, nil
-}
-
 // assign returns a Handler to handle the specified name, or nil.
 // The caller must hold s.mu.
 func (s *Server) assign(name string) Handler {
-	if s.allowB {
-		// Built-in handlers enabled by default.
-		switch name {
-		case "rpc.serverInfo":
-			return methodFunc(s.handleRPCServerInfo)
-
-		case "rpc.cancel":
-			// Handle client-requested cancellation of a pending method. This only
-			// works if issued as a notification.
-			return methodFunc(s.handleRPCCancel)
-
-		case "rpc.count", "rpc.maxValue":
-			return methodFunc(s.handleRPCMetric)
-
-		default:
-			// Spec: "Method names that begin with rpc. are reserved for system
-			// extensions, and MUST NOT be used for anything else."
-			//
-			// When built-in handlers are enabled, names with the rpc.* prefix
-			// are filtered from user handlers and reported as missing.
-			if strings.HasPrefix(name, "rpc.") {
-				return nil
-			}
-		}
+	if h, ok := s.rpcHandlers[name]; ok {
+		return h
+	} else if strings.HasPrefix(name, "rpc.") && s.rpcHandlers != nil {
+		return nil
 	}
 	return s.mux.Assign(name)
 }
