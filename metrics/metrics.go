@@ -19,7 +19,11 @@ type M struct {
 
 // New creates a new, empty metrics collector.
 func New() *M {
-	return &M{counter: make(map[string]int64), maxVal: make(map[string]int64)}
+	return &M{
+		counter: make(map[string]int64),
+		maxVal:  make(map[string]int64),
+		label:   make(map[string]string),
+	}
 }
 
 // Count adds n to the current value of the counter named, defining the counter
