@@ -22,7 +22,7 @@ import (
 //    <payload>
 //
 // The length (nbytes) is encoded as decimal digits. For example, given a
-// ContentType value "application/json", the message "123\n" is transmitted as:
+// mimeType value "application/json", the message "123\n" is transmitted as:
 //
 //    Content-Type: application/json\r\n
 //    Content-Length: 4\r\n
