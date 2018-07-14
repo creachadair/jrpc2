@@ -7,18 +7,20 @@ import "bitbucket.org/creachadair/jrpc2/channel"
 // Framing returns a channel.Framing described by the specified name, or nil if
 // the name is unknown. The framing types currently understood are:
 //
-//    json   -- corresponds to channel.JSON
-//    line   -- corresponds to channel.Line
-//    lsp    -- corresponds to channel.LSP
-//    raw    -- corresponds to channel.RawJSON
-//    varint -- corresponds to channel.Varint
+//    decimal -- corresponds to channel.Decimal
+//    json    -- corresponds to channel.JSON
+//    line    -- corresponds to channel.Line
+//    lsp     -- corresponds to channel.LSP
+//    raw     -- corresponds to channel.RawJSON
+//    varint  -- corresponds to channel.Varint
 //
 func Framing(name string) channel.Framing { return framings[name] }
 
 var framings = map[string]channel.Framing{
-	"json":   channel.JSON,
-	"line":   channel.Line,
-	"lsp":    channel.LSP,
-	"raw":    channel.RawJSON,
-	"varint": channel.Varint,
+	"decimal": channel.Decimal,
+	"json":    channel.JSON,
+	"line":    channel.Line,
+	"lsp":     channel.LSP,
+	"raw":     channel.RawJSON,
+	"varint":  channel.Varint,
 }
