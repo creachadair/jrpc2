@@ -27,6 +27,10 @@ type ServerOptions struct {
 	AllowPush bool
 
 	// Instructs the server to disable the built-in rpc.* handler methods.
+	//
+	// By default, a server reserves all rpc.* methods, even if the given
+	// assigner maps them. When this option is true, rpc.* methods are passed
+	// along to the given assigner.
 	DisableBuiltin bool
 
 	// Allows up to the specified number of concurrent goroutines to execute
