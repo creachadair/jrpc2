@@ -53,7 +53,7 @@ func (m methodFunc) Handle(ctx context.Context, req *Request) (interface{}, erro
 }
 
 // A MapAssigner is a trivial implementation of the Assigner interface that
-// looks up literal method names in a map of static Handlers.
+// looks up method names in a map of static Handlers.
 type MapAssigner map[string]Handler
 
 // Assign implements part of the Assigner interface.
