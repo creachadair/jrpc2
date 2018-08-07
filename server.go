@@ -22,25 +22,26 @@ type logger = func(string, ...interface{})
 // responses on a channel.Channel provided by the caller, and dispatches
 // requests to user-defined Handlers.
 type Server struct {
-	wg     sync.WaitGroup      // ready when workers are done at shutdown time
-	mux    Assigner            // associates method names with handlers
-	sem    *semaphore.Weighted // bounds concurrent execution (default 1)
-	allow1 bool                // allow v1 requests with no version marker
-	allowP bool                // allow server notifications to the client
-	log    logger              // write debug logs here
-	dectx  decoder             // decode context from request
-	expctx bool                // whether to expect request context
+	wg      sync.WaitGroup      // ready when workers are done at shutdown time
+	mux     Assigner            // associates method names with handlers
+	sem     *semaphore.Weighted // bounds concurrent execution (default 1)
+	allow1  bool                // allow v1 requests with no version marker
+	allowP  bool                // allow server notifications to the client
+	log     logger              // write debug logs here
+	dectx   decoder             // decode context from request
+	expctx  bool                // whether to expect request context
+	metrics *metrics.M          // metrics collected during execution
+	start   time.Time           // when Start was called
 
 	// If rpc.* method handlers are enabled, these are their handlers.
 	rpcHandlers map[string]Handler
 
-	mu      *sync.Mutex     // protects the fields below
-	start   time.Time       // when Start was called
-	err     error           // error from a previous operation
-	work    *sync.Cond      // for signaling message availability
-	inq     *list.List      // inbound requests awaiting processing
-	ch      channel.Channel // the channel to the client
-	metrics *metrics.M      // metrics collected during execution
+	mu *sync.Mutex // protects the fields below
+
+	err  error           // error from a previous operation
+	work *sync.Cond      // for signaling message availability
+	inq  *list.List      // inbound requests awaiting processing
+	ch   channel.Channel // the channel to the client
 
 	// For each request ID currently in-flight, this map carries a cancel
 	// function attached to the context that was sent to the handler.
