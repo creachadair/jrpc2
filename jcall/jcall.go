@@ -29,6 +29,7 @@ var (
 	withContext = flag.Bool("c", false, "Send context with request")
 	chanFraming = flag.String("f", "raw", `Channel framing ("json", "line", "lsp", "raw", "varint")`)
 	doSeq       = flag.Bool("seq", false, "Issue calls sequentially rather than as a batch")
+	doTiming    = flag.Bool("T", false, "Print call timing stats")
 	withLogging = flag.Bool("v", false, "Enable verbose logging")
 	withMeta    = flag.String("meta", "", "Attach this JSON value as request metadata (implies -c)")
 )
@@ -67,6 +68,7 @@ func main() {
 	}
 
 	// Connect to the server and establish a client.
+	start := time.Now()
 	ntype, addr := "tcp", flag.Arg(0)
 	if !strings.Contains(addr, ":") {
 		ntype = "unix"
@@ -75,6 +77,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Dial %q: %v", addr, err)
 	}
+	tdial := time.Now()
 	defer conn.Close()
 
 	if *callTimeout > 0 {
@@ -88,8 +91,14 @@ func main() {
 	if err != nil {
 		log.Fatalf("Call failed: %v", err)
 	}
+	tcall := time.Now()
 	if ok := printResults(rsps); !ok {
 		os.Exit(1)
+	}
+	tprint := time.Now()
+	if *doTiming {
+		fmt.Fprintf(os.Stderr, "%v elapsed: %v dial, %v call, %v print\n",
+			tprint.Sub(start), tdial.Sub(start), tcall.Sub(tdial), tprint.Sub(tcall))
 	}
 }
 
