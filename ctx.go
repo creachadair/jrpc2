@@ -7,10 +7,6 @@ import (
 	"bitbucket.org/creachadair/jrpc2/metrics"
 )
 
-// serverContextKey is the concrete type of the context keys used to dispatch
-// server-side context values in to handlers.
-type serverContextKey string
-
 // ServerMetrics returns the server metrics collector associated with the given
 // context, or nil if ctx doees not have a collector attached.  The context
 // passed to a handler by *jrpc2.Server will include this value.
