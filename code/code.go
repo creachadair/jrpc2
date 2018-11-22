@@ -7,10 +7,10 @@ import (
 	"fmt"
 )
 
-// A Code is an error response code, that satisfies the error interface.
+// A Code is an error response code.
 //
-// The error codes from and including -32768 to -32000 are reserved for
-// pre-defined errors.  Any code within this range, but not defined explicitly
+// Code values from and including -32768 to -32000 are reserved for pre-defined
+// JSON-RPC errors.  Any code within this range, but not defined explicitly
 // below is reserved for future use.  The remainder of the space is available
 // for application defined errors.
 //
