@@ -277,6 +277,9 @@ func (c *Client) CallResult(ctx context.Context, method string, params, result i
 // CallRaw invokes a batch of concurrent requests parsed from a JSON value
 // describing a request object or a list of request objects. This function
 // blocks until all the responses return.
+//
+// Any error returned is from sending the request; the caller must check each
+// response for errors from the server.
 func (c *Client) CallRaw(ctx context.Context, raw []byte) ([]*Response, error) {
 	var jreq jrequests
 	if err := json.Unmarshal(raw, &jreq); err != nil {
@@ -296,7 +299,7 @@ func (c *Client) CallRaw(ctx context.Context, raw []byte) ([]*Response, error) {
 // original specs, omitting notifications.
 //
 // Any error returned is from sending the batch; the caller must check each
-// response for errors from the server in each response.
+// response for errors from the server.
 func (c *Client) Batch(ctx context.Context, specs []Spec) ([]*Response, error) {
 	reqs := make(jrequests, len(specs))
 	for i, spec := range specs {
