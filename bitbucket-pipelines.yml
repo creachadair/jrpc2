@@ -1,4 +1,4 @@
-image: golang:1.11
+image: golang:1.11.2
 
 pipelines:
   default:  # run on each push
