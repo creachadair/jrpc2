@@ -288,9 +288,13 @@ func TestClientCancellation(t *testing.T) {
 	// Start a call that will hang around until a timer expires or an explicit
 	// cancellation is received.
 	ctx, cancel := context.WithCancel(context.Background())
-	rsp, err := c.issue(ctx, "Hang", nil)
+	req, err := c.req(ctx, "Hang", nil)
 	if err != nil {
-		t.Fatalf("issue failed: %v", err)
+		t.Fatalf("c.req(Hang) failed: %v", err)
+	}
+	rsps, err := c.send(ctx, jrequests{req})
+	if err != nil {
+		t.Fatalf("c.send(Hang) failed: %v", err)
 	}
 
 	// Wait for the handler to start so that we don't race with calling the
@@ -299,6 +303,7 @@ func TestClientCancellation(t *testing.T) {
 	cancel()
 
 	// The call should fail client side, in the usual way for a cancellation.
+	rsp := rsps[0]
 	rsp.wait()
 	if err := rsp.Error(); err != nil {
 		if err.code != code.Cancelled {

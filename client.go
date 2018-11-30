@@ -226,19 +226,6 @@ func (c *Client) waitComplete(pctx context.Context, id string, p *Response) {
 	}
 }
 
-// issue initiates a single request.  It blocks until the request is sent.
-func (c *Client) issue(ctx context.Context, method string, params interface{}) (*Response, error) {
-	req, err := c.req(ctx, method, params)
-	if err != nil {
-		return nil, err
-	}
-	ps, err := c.send(ctx, jrequests{req})
-	if err != nil {
-		return nil, err
-	}
-	return ps[0], nil
-}
-
 // Call initiates a single request and blocks until the response returns.  If
 // err != nil then rsp == nil. Errors from the server have concrete type
 // *jrpc2.Error.
@@ -254,12 +241,16 @@ func (c *Client) issue(ctx context.Context, method string, params interface{}) (
 //    handleValidResponse(rsp)
 //
 func (c *Client) Call(ctx context.Context, method string, params interface{}) (*Response, error) {
-	rsp, err := c.issue(ctx, method, params)
+	req, err := c.req(ctx, method, params)
 	if err != nil {
 		return nil, err
 	}
-	rsp.wait()
-	if err := rsp.Error(); err != nil {
+	rsp, err := c.send(ctx, jrequests{req})
+	if err != nil {
+		return nil, err
+	}
+	rsp[0].wait()
+	if err := rsp[0].Error(); err != nil {
 		switch err.code {
 		case code.Cancelled:
 			return nil, context.Canceled
@@ -269,7 +260,7 @@ func (c *Client) Call(ctx context.Context, method string, params interface{}) (*
 			return nil, err
 		}
 	}
-	return rsp, nil
+	return rsp[0], nil
 }
 
 // CallResult invokes Call with the given method and params. If it succeeds,
