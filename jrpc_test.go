@@ -1,11 +1,13 @@
 package jrpc2
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"reflect"
 	"testing"
 	"time"
@@ -173,6 +175,73 @@ func TestCallResult(t *testing.T) {
 		t.Logf("CallResult %q %v returned %d", test.method, test.params, got)
 		if got != test.want {
 			t.Errorf("CallResult %q: got %v, want %v", test.method, got, test.want)
+		}
+	}
+}
+
+func TestCallRaw(t *testing.T) {
+	_, c, cleanup := newServer(t, ServiceMapper{
+		"Test": NewService(dummy{}),
+	}, &testOptions{
+		server: &ServerOptions{Concurrency: 4},
+	})
+	defer cleanup()
+	ctx := context.Background()
+
+	// Test the individual requests from the sample set.  While doing so, build
+	// up a combined message in the buffer, to use to test batch handling.
+	var buf bytes.Buffer
+	buf.WriteByte('[')
+	for i, test := range callTests {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		req, err := c.req(ctx, test.method, test.params)
+		if err != nil {
+			log.Fatalf("Invalid request for %q %+v", test.method, test.params)
+		}
+		raw, err := json.Marshal(req)
+		if err != nil {
+			log.Fatalf("Marshaling %q request: %v", test.method, err)
+		}
+		t.Logf("CallRaw: request message: %#q", string(raw))
+		buf.Write(raw)
+
+		rsp, err := c.CallRaw(ctx, raw)
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+			continue
+		} else if len(rsp) != 1 {
+			t.Errorf("got %d responses, wanted 1", len(rsp))
+			continue
+		}
+		var got int
+		if err := rsp[0].UnmarshalResult(&got); err != nil {
+			t.Errorf("unmarshaling result: %v", err)
+			continue
+		}
+		t.Logf("Return value: %d", got)
+		if got != test.want {
+			t.Errorf("Return value: got %v, want %v", got, test.want)
+		}
+	}
+	buf.WriteByte(']')
+
+	// Check that a batch version of the same calls works.
+	t.Logf("CallRaw batch request: %#q", buf.String())
+	rsps, err := c.CallRaw(ctx, buf.Bytes())
+	if err != nil {
+		t.Fatalf("CallRaw on batch failed: %v", err)
+	}
+	for i, rsp := range rsps {
+		test := callTests[i]
+		t.Logf("Checking result %d: %q %+v", i+1, test.method, test.params)
+
+		var got int
+		if err := rsp.UnmarshalResult(&got); err != nil {
+			t.Errorf("unmarshaling result: %v", err)
+		} else if got != test.want {
+			t.Errorf("Return value: got %v, want %v", got, test.want)
 		}
 	}
 }

@@ -274,6 +274,23 @@ func (c *Client) CallResult(ctx context.Context, method string, params, result i
 	return rsp.UnmarshalResult(result)
 }
 
+// CallRaw invokes a batch of concurrent requests parsed from a JSON value
+// describing a request object or a list of request objects. This function
+// blocks until all the responses return.
+func (c *Client) CallRaw(ctx context.Context, raw []byte) ([]*Response, error) {
+	var jreq jrequests
+	if err := json.Unmarshal(raw, &jreq); err != nil {
+		return nil, err
+	}
+	pends, err := c.send(ctx, jreq)
+	if err == nil {
+		for _, rsp := range pends {
+			rsp.wait()
+		}
+	}
+	return pends, nil
+}
+
 // Batch initiates a batch of concurrent requests, and blocks until all the
 // responses return. The responses are returned in the same order as the
 // original specs, omitting notifications.
