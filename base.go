@@ -67,6 +67,19 @@ func (r *Response) UnmarshalResult(v interface{}) error {
 	return json.Unmarshal(r.result, v)
 }
 
+// MarshalJSON converts the request to equivalent JSON.
+func (r *Response) MarshalJSON() ([]byte, error) {
+	jr := &jresponse{
+		V:  Version,
+		ID: json.RawMessage(r.id),
+		R:  r.result,
+	}
+	if r.err != nil {
+		jr.E = r.err.tojerror()
+	}
+	return json.Marshal(jr)
+}
+
 // wait blocks until p is complete. It is safe to call this multiple times and
 // from concurrent goroutines.
 func (r *Response) wait() {
