@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"strconv"
 	"sync"
@@ -121,7 +120,7 @@ func (c *Client) deliver(rsp *jresponse) {
 
 // req constructs a fresh request for the specified method and parameters.
 // This does not transmit the request to the server; use c.send to do so.
-func (c *Client) req(ctx context.Context, method string, params interface{}) (*Request, error) {
+func (c *Client) req(ctx context.Context, method string, params interface{}) (*jrequest, error) {
 	bits, err := c.marshalParams(ctx, params)
 	if err != nil {
 		return nil, err
@@ -131,20 +130,21 @@ func (c *Client) req(ctx context.Context, method string, params interface{}) (*R
 	defer c.mu.Unlock()
 	id := json.RawMessage(strconv.FormatInt(c.nextID, 10))
 	c.nextID++
-	return &Request{
-		id:     id,
-		method: method,
-		params: bits,
+	return &jrequest{
+		V:  Version,
+		ID: id,
+		M:  method,
+		P:  bits,
 	}, nil
 }
 
 // note constructs a notification request for the specified method and parameters.
-func (c *Client) note(ctx context.Context, method string, params interface{}) (*Request, error) {
+func (c *Client) note(ctx context.Context, method string, params interface{}) (*jrequest, error) {
 	bits, err := c.marshalParams(ctx, params)
 	if err != nil {
 		return nil, err
 	}
-	return &Request{method: method, params: bits}, nil
+	return &jrequest{V: Version, M: method, P: bits}, nil
 }
 
 // send transmits the specified requests to the server and returns a slice of
@@ -155,7 +155,7 @@ func (c *Client) note(ctx context.Context, method string, params interface{}) (*
 // the requests are notifications, the slice will be empty.
 //
 // This method blocks until the entire batch of requests has been transmitted.
-func (c *Client) send(ctx context.Context, reqs ...*Request) ([]*Response, error) {
+func (c *Client) send(ctx context.Context, reqs jrequests) ([]*Response, error) {
 	if len(reqs) == 0 {
 		return nil, errors.New("empty request batch")
 	}
@@ -165,12 +165,8 @@ func (c *Client) send(ctx context.Context, reqs ...*Request) ([]*Response, error
 	if c.err != nil {
 		return nil, c.err
 	}
-	batch, err := c.newBatch(reqs)
-	if err != nil {
-		return nil, err
-	}
 
-	b, err := json.Marshal(batch)
+	b, err := json.Marshal(reqs)
 	if err != nil {
 		c.log("Marshal failed: %v", err)
 	} else {
@@ -185,7 +181,7 @@ func (c *Client) send(ctx context.Context, reqs ...*Request) ([]*Response, error
 	// leave us with dead pending requests awaiting responses.
 	var pends []*Response
 	for _, req := range reqs {
-		if id := req.ID(); id != "" {
+		if id := string(req.ID); id != "" {
 			pctx, p := newPending(ctx, id)
 			c.pending[id] = p
 			pends = append(pends, p)
@@ -193,24 +189,6 @@ func (c *Client) send(ctx context.Context, reqs ...*Request) ([]*Response, error
 		}
 	}
 	return pends, nil
-}
-
-// newBatch assembles wire-format requests for the given requests.  It requires
-// that the caller hold c.mu.
-func (c *Client) newBatch(reqs []*Request) (jrequests, error) {
-	batch := make(jrequests, len(reqs))
-	for i, req := range reqs {
-		if id := req.ID(); id != "" && c.pending[id] != nil {
-			return nil, fmt.Errorf("duplicate request ID %q", id)
-		}
-		batch[i] = &jrequest{
-			V:  Version,
-			ID: req.id,
-			M:  req.method,
-			P:  req.params,
-		}
-	}
-	return batch, nil
 }
 
 // waitComplete waits for completion of the context governing p. When the
@@ -254,7 +232,7 @@ func (c *Client) issue(ctx context.Context, method string, params interface{}) (
 	if err != nil {
 		return nil, err
 	}
-	ps, err := c.send(ctx, req)
+	ps, err := c.send(ctx, jrequests{req})
 	if err != nil {
 		return nil, err
 	}
@@ -312,7 +290,7 @@ func (c *Client) CallResult(ctx context.Context, method string, params, result i
 // Any error returned is from sending the batch; the caller must check each
 // response for errors from the server in each response.
 func (c *Client) Batch(ctx context.Context, specs []Spec) ([]*Response, error) {
-	reqs := make([]*Request, len(specs))
+	reqs := make(jrequests, len(specs))
 	for i, spec := range specs {
 		if spec.Notify {
 			req, err := c.note(ctx, spec.Method, spec.Params)
@@ -326,7 +304,7 @@ func (c *Client) Batch(ctx context.Context, specs []Spec) ([]*Response, error) {
 			reqs[i] = req
 		}
 	}
-	rsps, err := c.send(ctx, reqs...)
+	rsps, err := c.send(ctx, reqs)
 	if err != nil {
 		return nil, err
 	}
@@ -351,7 +329,7 @@ func (c *Client) Notify(ctx context.Context, method string, params interface{}) 
 	if err != nil {
 		return err
 	}
-	_, err = c.send(ctx, req)
+	_, err = c.send(ctx, jrequests{req})
 	return err
 }
 
