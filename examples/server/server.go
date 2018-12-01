@@ -24,14 +24,15 @@ import (
 
 // The math type defines several arithmetic methods we can expose via the
 // service. The exported methods having appropriate types can be automatically
-// exported by jrpc2.NewService.
+// exposed to the server by jrpc2.NewService.
 type math struct{}
 
-// A binop is carries a pair of integers for use as parameters.
+// A binop carries a pair of integers for use as parameters.
 type binop struct {
 	X, Y int
 }
 
+// Add returns the sum of vs, or 0 if len(vs) == 0.
 func (math) Add(ctx context.Context, vs []int) (int, error) {
 	sum := 0
 	for _, v := range vs {
@@ -40,14 +41,17 @@ func (math) Add(ctx context.Context, vs []int) (int, error) {
 	return sum, nil
 }
 
+// Sub returns the difference arg.X - arg.Y.
 func (math) Sub(ctx context.Context, arg binop) (int, error) {
 	return arg.X - arg.Y, nil
 }
 
+// Mul returns the product arg.X * arg.Y.
 func (math) Mul(ctx context.Context, arg binop) (int, error) {
 	return arg.X * arg.Y, nil
 }
 
+// Div converts its arguments to floating point and returns their ratio.
 func (math) Div(ctx context.Context, arg binop) (float64, error) {
 	if arg.Y == 0 {
 		return 0, jrpc2.Errorf(code.InvalidParams, "zero divisor")
@@ -55,6 +59,8 @@ func (math) Div(ctx context.Context, arg binop) (float64, error) {
 	return float64(arg.X) / float64(arg.Y), nil
 }
 
+// Status simulates a health check, reporting "OK" to all callers.  It also
+// demonstrates the use of server-side push.
 func (math) Status(ctx context.Context) (string, error) {
 	if err := jrpc2.ServerPush(ctx, "pushback", []string{"hello, friend"}); err != nil {
 		return "BAD", err
