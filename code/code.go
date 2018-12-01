@@ -73,10 +73,11 @@ var stdError = map[Code]string{
 }
 
 // Register adds a new Code value with the specified message string.  This
-// function will panic if the proposed value is already registered.
+// function will panic if the proposed value is already registered with a
+// different string.
 func Register(value int32, message string) Code {
 	code := Code(value)
-	if s, ok := stdError[code]; ok {
+	if s, ok := stdError[code]; ok && s != message {
 		panic(fmt.Sprintf("code %d is already registered for %q", code, s))
 	}
 	stdError[code] = message
