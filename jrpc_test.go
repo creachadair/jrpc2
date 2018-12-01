@@ -1,13 +1,11 @@
 package jrpc2
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"reflect"
 	"testing"
 	"time"
@@ -157,10 +155,7 @@ func TestCallResult(t *testing.T) {
 	_, c, cleanup := newServer(t, ServiceMapper{
 		"Test": NewService(dummy{}),
 	}, &testOptions{
-		server: &ServerOptions{
-			AllowV1:     true,
-			Concurrency: 16,
-		},
+		server: &ServerOptions{Concurrency: 16},
 	})
 	defer cleanup()
 	ctx := context.Background()
@@ -188,24 +183,17 @@ func TestCallRaw(t *testing.T) {
 	defer cleanup()
 	ctx := context.Background()
 
-	// Test the individual requests from the sample set.  While doing so, build
-	// up a combined message in the buffer, to use to test batch handling.
-	var buf bytes.Buffer
-	buf.WriteByte('[')
-	for i, test := range callTests {
-		if i > 0 {
-			buf.WriteByte(',')
-		}
+	// Test the individual requests from the sample set.
+	for _, test := range callTests {
 		req, err := c.req(ctx, test.method, test.params)
 		if err != nil {
-			log.Fatalf("Invalid request for %q %+v", test.method, test.params)
+			t.Fatalf("Invalid request for %q %+v", test.method, test.params)
 		}
 		raw, err := json.Marshal(req)
 		if err != nil {
-			log.Fatalf("Marshaling %q request: %v", test.method, err)
+			t.Fatalf("Marshaling %q request: %v", test.method, err)
 		}
 		t.Logf("CallRaw: request message: %#q", string(raw))
-		buf.Write(raw)
 
 		rsp, err := c.CallRaw(ctx, raw)
 		if err != nil {
@@ -225,11 +213,22 @@ func TestCallRaw(t *testing.T) {
 			t.Errorf("Return value: got %v, want %v", got, test.want)
 		}
 	}
-	buf.WriteByte(']')
 
 	// Check that a batch version of the same calls works.
-	t.Logf("CallRaw batch request: %#q", buf.String())
-	rsps, err := c.CallRaw(ctx, buf.Bytes())
+	var reqs jrequests
+	for _, test := range callTests {
+		req, err := c.req(ctx, test.method, test.params)
+		if err != nil {
+			t.Fatalf("Invalid request for %q %+v", test.method, test.params)
+		}
+		reqs = append(reqs, req)
+	}
+	batch, err := json.Marshal(reqs)
+	if err != nil {
+		t.Fatalf("Marshaling request batch: %v", err)
+	}
+	t.Logf("CallRaw batch request: %#q", string(batch))
+	rsps, err := c.CallRaw(ctx, batch)
 	if err != nil {
 		t.Fatalf("CallRaw on batch failed: %v", err)
 	}

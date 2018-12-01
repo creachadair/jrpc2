@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"strconv"
 	"sync"
@@ -166,12 +167,19 @@ func (c *Client) send(ctx context.Context, reqs jrequests) ([]*Response, error) 
 		return nil, c.err
 	}
 
+	// Verify that there are no duplicate request IDs in this batch.  If there
+	// are, flag it now before we waste time encoding.
+	for _, req := range reqs {
+		if id := string(req.ID); id != "" && c.pending[id] != nil {
+			return nil, fmt.Errorf("duplicate request ID %q", id)
+		}
+	}
+
 	b, err := json.Marshal(reqs)
 	if err != nil {
-		c.log("Marshal failed: %v", err)
-	} else {
-		c.log("Outgoing batch: %s", string(b))
+		return nil, fmt.Errorf("marshaling request failed: %v", err)
 	}
+	c.log("Outgoing batch: %s", string(b))
 	if err := c.ch.Send(b); err != nil {
 		return nil, err
 	}
