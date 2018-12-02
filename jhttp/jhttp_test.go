@@ -49,9 +49,33 @@ func TestBridge(t *testing.T) {
 			t.Errorf("Reading POST body: %v", err)
 		}
 
-		const exp = `{"jsonrpc":"2.0","id":1,"result":"a foolish consistency is the hobgoblin"}`
-		if got := string(body); got != exp {
-			t.Errorf("POST body: got %#q, want %#q", got, exp)
+		const want = `{"jsonrpc":"2.0","id":1,"result":"a foolish consistency is the hobgoblin"}`
+		if got := string(body); got != want {
+			t.Errorf("POST body: got %#q, want %#q", got, want)
+		}
+	})
+
+	// Verify that the bridge will accept a batch.
+	t.Run("PostBatchOK", func(t *testing.T) {
+		rsp, err := http.Post(hsrv.URL, "application/json", strings.NewReader(`[
+  {"jsonrpc":"2.0", "id": 3, "method": "Test", "params": ["first"]},
+  {"jsonrpc":"2.0", "id": 7, "method": "Test", "params": ["among", "equals"]}
+]
+`))
+		if err != nil {
+			t.Fatalf("POST request failed: %v", err)
+		} else if got, want := rsp.StatusCode, http.StatusOK; got != want {
+			t.Errorf("POST response code: got %v, want %v", got, want)
+		}
+		body, err := ioutil.ReadAll(rsp.Body)
+		if err != nil {
+			t.Errorf("Reading POST body: %v", err)
+		}
+
+		const want = `[{"jsonrpc":"2.0","id":3,"result":"first"},` +
+			`{"jsonrpc":"2.0","id":7,"result":"among equals"}]`
+		if got := string(body); got != want {
+			t.Errorf("POST body: got %#q, want %#q", got, want)
 		}
 	})
 
