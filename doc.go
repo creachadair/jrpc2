@@ -97,9 +97,10 @@ To issue a batch of requests all at once, use the Batch method:
       {"Math.Max", []int{-1, 5, 3, 0, 1}},
    })
 
-The Batch method waits until all the responses are received.  The caller must
-check each response separately for errors. The responses will be returned in
-the same order as the Spec values, save that notifications are omitted.
+The Batch method waits until all the responses are received.  An error from the
+Batch call reflects an error in sending the request: The caller must check each
+response separately for errors from the server. The responses will be returned
+in the same order as the Spec values, save that notifications are omitted.
 
 To decode the result from a successful response use its UnmarshalResult method:
 
@@ -142,16 +143,9 @@ to be cancelled. Upon receiving this notification, the server will cancel the
 context of each method handler whose ID is named.
 
 When the context associated with a client request is cancelled, the client will
-send an "rpc.cancel" notification to the server for that request's ID:
-
-   ctx, cancel := context.WithCancel(ctx)
-   p, err := cli.Call(ctx, "MethodName", params)
-   ...
-   cancel()
-   rsp := p.Wait()
-
-The "rpc.cancel" method is automatically handled by the *Server implementation
-from this package.
+send an "rpc.cancel" notification to the server for that request's ID.  The
+"rpc.cancel" method is automatically handled (unless disabled) by the *Server
+implementation from this package.
 
 
 Services with Multiple Methods
