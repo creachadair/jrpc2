@@ -706,3 +706,61 @@ func TestNewHandler(t *testing.T) {
 		}
 	}
 }
+
+func TestAuth(t *testing.T) {
+	const wantToken = "applesauce"
+	const wantResponse = "Hey girl"
+
+	_, c, cleanup := newServer(t, MapAssigner{
+		"Test": NewHandler(func(ctx context.Context) (string, error) {
+			return wantResponse, nil
+		}),
+	}, &testOptions{
+		// Enable auth checking and context decoding for the server.
+		server: &ServerOptions{
+			DecodeContext: jctx.Decode,
+			CheckAuth: func(method string, token, params []byte) error {
+				if method != "Test" {
+					return fmt.Errorf("wrong method: %q", method)
+				} else if s := string(token); s != wantToken {
+					return fmt.Errorf("wrong token: %q", s)
+				}
+				return nil
+			},
+		},
+
+		// Enable context encoding for the client.
+		client: &ClientOptions{
+			EncodeContext: jctx.Encode,
+		},
+	})
+	defer cleanup()
+
+	// Call without a token and verify that we get an error.
+	t.Run("NoToken", func(t *testing.T) {
+		var rsp string
+		err := c.CallResult(context.Background(), "Test", nil, &rsp)
+		if err == nil {
+			t.Errorf("Call(Test): got %q, wanted error", rsp)
+		} else if ec := code.FromError(err); ec != code.NotAuthorized {
+			t.Errorf("Call(Test): got code %v, want %v", ec, code.NotAuthorized)
+		} else {
+			t.Logf("Call(Test): got expected error: %v", err)
+		}
+	})
+
+	// Call with a token and verify that we get a response.
+	t.Run("WithToken", func(t *testing.T) {
+		ctx := jctx.WithAuthorizer(context.Background(), func(string, []byte) ([]byte, error) {
+			return []byte(wantToken), nil
+		})
+		var rsp string
+		err := c.CallResult(ctx, "Test", nil, &rsp)
+		if err != nil {
+			t.Errorf("Call(Test): unexpected error: %v", err)
+		}
+		if rsp != wantResponse {
+			t.Errorf("Call(Test): got %q, want %q", rsp, wantResponse)
+		}
+	})
+}
