@@ -57,6 +57,7 @@ const (
 	SystemError      Code = -32098 // Errors from the operating environment
 	Cancelled        Code = -32097 // Request cancelled (context.Canceled)
 	DeadlineExceeded Code = -32096 // Request deadline exceeded (context.DeadlineExceeded)
+	NotAuthorized    Code = -32095 // Request is not authorized
 )
 
 var stdError = map[Code]string{
@@ -70,6 +71,7 @@ var stdError = map[Code]string{
 	SystemError:      "system error",
 	Cancelled:        "request cancelled",
 	DeadlineExceeded: "deadline exceeded",
+	NotAuthorized:    "request not authorized",
 }
 
 // Register adds a new Code value with the specified message string.  This

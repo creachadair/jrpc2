@@ -42,6 +42,7 @@ func TestFromError(t *testing.T) {
 		{nil, NoError},
 		{testCoder(ParseError), ParseError},
 		{testCoder(InvalidRequest), InvalidRequest},
+		{testCoder(NotAuthorized), NotAuthorized},
 		{context.Canceled, Cancelled},
 		{context.DeadlineExceeded, DeadlineExceeded},
 		{errors.New("other"), SystemError},
