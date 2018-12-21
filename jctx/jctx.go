@@ -17,6 +17,7 @@
 //      "jctx": "1",
 //      "payload":  <original-params>,
 //      "deadline": <rfc-3339-timestamp>,
+//      "auth":     <opaque-bytes>,
 //      "meta":     <json-value>
 //    }
 //
@@ -45,8 +46,6 @@ import (
 	"time"
 )
 
-type metadataKey struct{}
-
 const wireVersion = "1"
 
 // wireContext is the encoded representation of a context value. It includes
@@ -58,21 +57,37 @@ type wireContext struct {
 
 	Deadline *time.Time      `json:"deadline,omitempty"` // encoded in UTC
 	Payload  json.RawMessage `json:"payload,omitempty"`
+	Token    []byte          `json:"auth,omitempty"`
 	Metadata json.RawMessage `json:"meta,omitempty"`
 }
 
 // Encode encodes the specified context and request parameters for transmission.
 // If a deadline is set on ctx, it is converted to UTC before encoding.
 // If metadata are set on ctx (see jctx.WithMetadata), they are included.
+// If an authorizer is set on ctx (see jctx.WithAuthorizer), it is invoked and
+// the token it returns (if any) is attached.
 func Encode(ctx context.Context, method string, params json.RawMessage) (json.RawMessage, error) {
 	c := wireContext{V: wireVersion, Payload: params}
 	if dl, ok := ctx.Deadline(); ok {
 		utcdl := dl.In(time.UTC)
 		c.Deadline = &utcdl
 	}
+
+	// If there is an authorizer, use it to generate a token for this request.
+	if v := ctx.Value(authorizerKey{}); v != nil {
+		auth := v.(Authorizer)
+		tok, err := auth(method, []byte(params))
+		if err != nil {
+			return nil, err
+		}
+		c.Token = tok
+	}
+
+	// If there are metadata in the context, attach them.
 	if v := ctx.Value(metadataKey{}); v != nil {
 		c.Metadata = v.(json.RawMessage)
 	}
+
 	return json.Marshal(c)
 }
 
@@ -85,6 +100,9 @@ func Encode(ctx context.Context, method string, params json.RawMessage) (json.Ra
 //
 // If the request includes context metadata, they are attached and can be
 // recovered using jctx.UnmarshalMetadata.
+//
+// If the request includes an authorization token, it is attached and can be
+// recovered using jctx.AuthToken.
 func Decode(ctx context.Context, method string, req json.RawMessage) (context.Context, json.RawMessage, error) {
 	if len(req) == 0 {
 		return ctx, req, nil // an empty message has no wrapper
@@ -101,6 +119,9 @@ func Decode(ctx context.Context, method string, req json.RawMessage) (context.Co
 	if c.Metadata != nil {
 		ctx = context.WithValue(ctx, metadataKey{}, c.Metadata)
 	}
+	if len(c.Token) != 0 {
+		ctx = context.WithValue(ctx, authTokenKey{}, c.Token)
+	}
 	if c.Deadline != nil && !c.Deadline.IsZero() {
 		var ignored context.CancelFunc
 		ctx, ignored = context.WithDeadline(ctx, (*c.Deadline).In(time.UTC))
@@ -109,6 +130,8 @@ func Decode(ctx context.Context, method string, req json.RawMessage) (context.Co
 
 	return ctx, c.Payload, nil
 }
+
+type metadataKey struct{}
 
 // WithMetadata attaches the specified metadata value to the context.  The meta
 // value must support encoding to JSON. In case of error, the original value of
@@ -133,3 +156,26 @@ func UnmarshalMetadata(ctx context.Context, meta interface{}) error {
 // ErrNoMetadata is returned by the Metadata function if the context does not
 // contain a metadata value.
 var ErrNoMetadata = errors.New("context metadata not present")
+
+type authorizerKey struct{}
+
+// An Authorizer generates an authorization token for a request, given the
+// method name and request parameters to be authorized. If the authorizer
+// returns an empty token without error, no token is attached to the request.
+type Authorizer func(method string, params []byte) ([]byte, error)
+
+// WithAuthorizer attaches the specified authorizer to the context.
+func WithAuthorizer(ctx context.Context, auth Authorizer) context.Context {
+	return context.WithValue(ctx, authorizerKey{}, auth)
+}
+
+type authTokenKey struct{}
+
+// AuthToken reports whether there is an authorization token attached to ctx,
+// and if so returns its contents.
+func AuthToken(ctx context.Context) ([]byte, bool) {
+	if v := ctx.Value(authTokenKey{}); v != nil {
+		return v.([]byte), true
+	}
+	return nil, false
+}
