@@ -19,7 +19,7 @@ type Client struct {
 	done chan struct{} // closed when the reader is done at shutdown time
 
 	log    func(string, ...interface{}) // write debug logs here
-	enctx  func(context.Context, json.RawMessage) (json.RawMessage, error)
+	enctx  encoder
 	snote  func(*jresponse) bool
 	allow1 bool // tolerate v1 replies with no version marker
 	allowC bool // send rpc.cancel when a request context ends
@@ -122,7 +122,7 @@ func (c *Client) deliver(rsp *jresponse) {
 // req constructs a fresh request for the specified method and parameters.
 // This does not transmit the request to the server; use c.send to do so.
 func (c *Client) req(ctx context.Context, method string, params interface{}) (*jrequest, error) {
-	bits, err := c.marshalParams(ctx, params)
+	bits, err := c.marshalParams(ctx, method, params)
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +141,7 @@ func (c *Client) req(ctx context.Context, method string, params interface{}) (*j
 
 // note constructs a notification request for the specified method and parameters.
 func (c *Client) note(ctx context.Context, method string, params interface{}) (*jrequest, error) {
-	bits, err := c.marshalParams(ctx, params)
+	bits, err := c.marshalParams(ctx, method, params)
 	if err != nil {
 		return nil, err
 	}
@@ -386,9 +386,9 @@ func (c *Client) versionOK(v string) bool {
 // marshalParams validates and marshals params to JSON for a request.  It's
 // okay for the parameters to be empty, but if they are not they must be valid
 // JSON. We check for the required structural properties also.
-func (c *Client) marshalParams(ctx context.Context, params interface{}) (json.RawMessage, error) {
+func (c *Client) marshalParams(ctx context.Context, method string, params interface{}) (json.RawMessage, error) {
 	if params == nil {
-		return c.enctx(ctx, nil) // no parameters, that is OK
+		return c.enctx(ctx, method, nil) // no parameters, that is OK
 	}
 	pbits, err := json.Marshal(params)
 	if err != nil {
@@ -399,7 +399,7 @@ func (c *Client) marshalParams(ctx context.Context, params interface{}) (json.Ra
 		// an array or an object
 		return nil, Errorf(code.InvalidRequest, "invalid parameters: array or object required")
 	}
-	bits, err := c.enctx(ctx, pbits)
+	bits, err := c.enctx(ctx, method, pbits)
 	if err != nil {
 		return nil, err
 	}

@@ -37,12 +37,12 @@ type ServerOptions struct {
 	// when processing requests. A value less than 1 uses runtime.NumCPU().
 	Concurrency int
 
-	// If set, this function is called with the encoded request parameters
-	// received from the client, before they are delivered to the handler.  Its
-	// return value replaces the context and argument values. This allows the
-	// server to decode context metadata sent by the client. If unset, ctx and
-	// params are used as given.
-	DecodeContext func(context.Context, json.RawMessage) (context.Context, json.RawMessage, error)
+	// If set, this function is called with the method name and encoded request
+	// parameters received from the client, before they are delivered to the
+	// handler. Its return value replaces the context and argument values. This
+	// allows the server to decode context metadata sent by the client.
+	// If unset, ctx and params are used as given.
+	DecodeContext func(context.Context, string, json.RawMessage) (context.Context, json.RawMessage, error)
 
 	// If set, use this value to record server metrics. All servers created
 	// from the same options will share the same metrics collector.  If none is
@@ -80,11 +80,11 @@ func (s *ServerOptions) startTime() time.Time {
 	return s.StartTime
 }
 
-type decoder = func(context.Context, json.RawMessage) (context.Context, json.RawMessage, error)
+type decoder = func(context.Context, string, json.RawMessage) (context.Context, json.RawMessage, error)
 
 func (s *ServerOptions) decodeContext() (decoder, bool) {
 	if s == nil || s.DecodeContext == nil {
-		return func(ctx context.Context, params json.RawMessage) (context.Context, json.RawMessage, error) {
+		return func(ctx context.Context, method string, params json.RawMessage) (context.Context, json.RawMessage, error) {
 			return ctx, params, nil
 		}, false
 	}
@@ -112,11 +112,12 @@ type ClientOptions struct {
 	// when the context for an in-flight request terminates.
 	DisableCancel bool
 
-	// If set, this function is called with the context and encoded request
-	// parameters before the request is sent to the server. Its return value
-	// replaces the request parameters. This allows the client to send context
-	// metadata along with the request. If unset, the parameters are unchanged.
-	EncodeContext func(context.Context, json.RawMessage) (json.RawMessage, error)
+	// If set, this function is called with the context, method name, and
+	// encoded request parameters before the request is sent to the server.
+	// Its return value replaces the request parameters. This allows the client
+	// to send context metadata along with the request. If unset, the parameters
+	// are unchanged.
+	EncodeContext func(context.Context, string, json.RawMessage) (json.RawMessage, error)
 
 	// If set, this function is called if a notification is received from the
 	// server. If unset, server notifications are logged and discarded.  At
@@ -137,11 +138,13 @@ func (c *ClientOptions) logger() logger {
 func (c *ClientOptions) allowV1() bool     { return c != nil && c.AllowV1 }
 func (c *ClientOptions) allowCancel() bool { return c == nil || !c.DisableCancel }
 
-type encoder = func(context.Context, json.RawMessage) (json.RawMessage, error)
+type encoder = func(context.Context, string, json.RawMessage) (json.RawMessage, error)
 
 func (c *ClientOptions) encodeContext() encoder {
 	if c == nil || c.EncodeContext == nil {
-		return func(_ context.Context, params json.RawMessage) (json.RawMessage, error) { return params, nil }
+		return func(_ context.Context, methods string, params json.RawMessage) (json.RawMessage, error) {
+			return params, nil
+		}
 	}
 	return c.EncodeContext
 }

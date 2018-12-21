@@ -37,7 +37,7 @@ func TestEncoding(t *testing.T) {
 				ctx, cancel = context.WithDeadline(ctx, test.deadline)
 				defer cancel()
 			}
-			raw, err := Encode(ctx, json.RawMessage(test.params))
+			raw, err := Encode(ctx, "dummy", json.RawMessage(test.params))
 			if err != nil {
 				t.Errorf("Encoding %q failed: %v", test.params, err)
 			} else if got := string(raw); got != test.want {
@@ -70,7 +70,7 @@ func TestDecoding(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
 			ctx := context.Background()
-			gotctx, params, err := Decode(ctx, json.RawMessage(test.input))
+			gotctx, params, err := Decode(ctx, "dummy", json.RawMessage(test.input))
 			if err != nil {
 				t.Fatalf("Decode(_, %q): error: %v", test.input, err)
 			}
@@ -120,9 +120,9 @@ func TestMetadata(t *testing.T) {
 
 	// Simulate transmission -- encode, then decode.
 	var dec context.Context
-	if enc, err := Encode(ctx, nil); err != nil {
+	if enc, err := Encode(ctx, "dummy", nil); err != nil {
 		t.Fatalf("Encoding context failed: %v", err)
-	} else if dec, _, err = Decode(base, enc); err != nil {
+	} else if dec, _, err = Decode(base, "dummy", enc); err != nil {
 		t.Fatalf("Decoding context failed: %v", err)
 	}
 

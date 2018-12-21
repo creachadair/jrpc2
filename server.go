@@ -236,7 +236,7 @@ func (s *Server) checkAndAssign(next jrequests) tasks {
 			t.err = Errorf(code.InvalidRequest, "empty method name")
 		} else if m := s.assign(req.M); m == nil {
 			t.err = Errorf(code.MethodNotFound, "no such method %q", req.M)
-		} else if s.setContext(t, id, req.P) {
+		} else if s.setContext(t, id, req.M, req.P) {
 			t.m = m
 		}
 		if t.err != nil {
@@ -250,8 +250,8 @@ func (s *Server) checkAndAssign(next jrequests) tasks {
 
 // setContext constructs and attaches a request context to t, and reports
 // whether this succeeded.
-func (s *Server) setContext(t *task, id string, rawParams json.RawMessage) bool {
-	base, params, err := s.dectx(context.Background(), rawParams)
+func (s *Server) setContext(t *task, id, method string, rawParams json.RawMessage) bool {
+	base, params, err := s.dectx(context.Background(), method, rawParams)
 	if err != nil {
 		t.err = Errorf(code.InternalError, "invalid request context: %v", err)
 	} else if id != "" {

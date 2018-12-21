@@ -64,7 +64,7 @@ type wireContext struct {
 // Encode encodes the specified context and request parameters for transmission.
 // If a deadline is set on ctx, it is converted to UTC before encoding.
 // If metadata are set on ctx (see jctx.WithMetadata), they are included.
-func Encode(ctx context.Context, params json.RawMessage) (json.RawMessage, error) {
+func Encode(ctx context.Context, method string, params json.RawMessage) (json.RawMessage, error) {
 	c := wireContext{V: wireVersion, Payload: params}
 	if dl, ok := ctx.Deadline(); ok {
 		utcdl := dl.In(time.UTC)
@@ -85,7 +85,7 @@ func Encode(ctx context.Context, params json.RawMessage) (json.RawMessage, error
 //
 // If the request includes context metadata, they are attached and can be
 // recovered using jctx.UnmarshalMetadata.
-func Decode(ctx context.Context, req json.RawMessage) (context.Context, json.RawMessage, error) {
+func Decode(ctx context.Context, method string, req json.RawMessage) (context.Context, json.RawMessage, error) {
 	if len(req) == 0 {
 		return ctx, req, nil // an empty message has no wrapper
 	}

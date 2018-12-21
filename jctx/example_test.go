@@ -13,7 +13,7 @@ import (
 
 func ExampleEncode_basic() {
 	ctx := context.Background()
-	enc, err := jctx.Encode(ctx, json.RawMessage(`[1,2,3]`))
+	enc, err := jctx.Encode(ctx, "methodName", json.RawMessage(`[1,2,3]`))
 	if err != nil {
 		log.Fatalln("Encode:", err)
 	}
@@ -28,7 +28,7 @@ func ExampleEncode_deadline() {
 	ctx, cancel := context.WithDeadline(context.Background(), deadline)
 	defer cancel()
 
-	enc, err := jctx.Encode(ctx, json.RawMessage(`{"A":"#1"}`))
+	enc, err := jctx.Encode(ctx, "methodName", json.RawMessage(`{"A":"#1"}`))
 	if err != nil {
 		log.Fatalln("Encode:", err)
 	}
@@ -46,7 +46,7 @@ func ExampleEncode_deadline() {
 func ExampleDecode() {
 	const input = `{"jctx":"1","deadline":"2018-06-09T20:45:33.000000001Z","payload":["a", "b", "c"]}`
 
-	ctx, param, err := jctx.Decode(context.Background(), json.RawMessage(input))
+	ctx, param, err := jctx.Decode(context.Background(), "methodName", json.RawMessage(input))
 	if err != nil {
 		log.Fatalln("Decode:", err)
 	}
@@ -72,7 +72,7 @@ func ExampleWithMetadata() {
 		log.Fatalln("WithMetadata:", err)
 	}
 
-	enc, err := jctx.Encode(ctx, nil)
+	enc, err := jctx.Encode(ctx, "methodName", nil)
 	if err != nil {
 		log.Fatal("Encode:", err)
 	}
