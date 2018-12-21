@@ -12,6 +12,7 @@ import (
 
 	"bitbucket.org/creachadair/jrpc2/channel"
 	"bitbucket.org/creachadair/jrpc2/code"
+	"bitbucket.org/creachadair/jrpc2/jctx"
 	"bitbucket.org/creachadair/jrpc2/metrics"
 	"golang.org/x/sync/semaphore"
 )
@@ -29,6 +30,7 @@ type Server struct {
 	allowP  bool                // allow server notifications to the client
 	log     logger              // write debug logs here
 	dectx   decoder             // decode context from request
+	ckauth  verifier            // check request authorization
 	expctx  bool                // whether to expect request context
 	metrics *metrics.M          // metrics collected during execution
 	start   time.Time           // when Start was called
@@ -67,6 +69,7 @@ func NewServer(mux Assigner, opts *ServerOptions) *Server {
 		allowP:  opts.allowPush(),
 		log:     opts.logger(),
 		dectx:   dc,
+		ckauth:  opts.checkAuth(),
 		expctx:  exp,
 		mu:      new(sync.Mutex),
 		metrics: opts.metrics(),
@@ -252,17 +255,29 @@ func (s *Server) checkAndAssign(next jrequests) tasks {
 // whether this succeeded.
 func (s *Server) setContext(t *task, id, method string, rawParams json.RawMessage) bool {
 	base, params, err := s.dectx(context.Background(), method, rawParams)
+	t.params = params
 	if err != nil {
 		t.err = Errorf(code.InternalError, "invalid request context: %v", err)
-	} else if id != "" {
+		return false
+	}
+
+	// Check authorization.
+	token, _ := jctx.AuthToken(base)
+	if err := s.ckauth(method, token, []byte(params)); err != nil {
+		t.err = Errorf(code.NotAuthorized, "%v", err)
+		return false
+	}
+
+	// Store the cancellation for a request that needs a reply, so that we can
+	// respond to rpc.cancel requests.
+	if id != "" {
 		ctx, cancel := context.WithCancel(base)
 		s.used[id] = cancel
 		t.ctx = ctx
 	} else {
 		t.ctx = base
 	}
-	t.params = params
-	return err == nil
+	return true
 }
 
 // invoke invokes the handler m for the specified request type, and marshals
