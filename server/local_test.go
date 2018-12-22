@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"io"
 	"testing"
 
 	"bitbucket.org/creachadair/jrpc2"
@@ -28,7 +27,7 @@ func TestLocal(t *testing.T) {
 
 	// Close the client and wait for the server to stop.
 	cli.Close()
-	if err := wait(); err != io.EOF {
-		t.Errorf("Server wait: got %v, want %v", err, io.EOF)
+	if err := wait(); err != nil {
+		t.Errorf("Server wait: got %v, want nil", err)
 	}
 }

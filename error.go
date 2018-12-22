@@ -44,7 +44,7 @@ func (e Error) tojerror() *jerror {
 var ErrNoData = errors.New("no data to unmarshal")
 
 // errServerStopped is returned by Server.Wait when the server was shut down by
-// an explicit call to its Stop method.
+// an explicit call to its Stop method or orderly termination of its channel.
 var errServerStopped = errors.New("the server has been stopped")
 
 // errClientStopped is the error reported when a client is shut down by an

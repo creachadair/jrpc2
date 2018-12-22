@@ -369,6 +369,9 @@ func (s *Server) Wait() error {
 	s.wg.Wait()
 	s.work = nil
 	s.used = nil
+	if s.err == errServerStopped {
+		return nil
+	}
 	return s.err
 }
 
@@ -441,8 +444,8 @@ func (s *Server) read(ch channel.Receiver) {
 				s.pushError(nil, jerrorf(code.ParseError, "invalid JSON request message"))
 			} else {
 				// Don't remark on EOF or a closed pipe as a failure.
-				if channel.IsErrClosing(err) {
-					s.stop(io.EOF)
+				if err == io.EOF || channel.IsErrClosing(err) {
+					s.stop(errServerStopped)
 				} else {
 					s.stop(err)
 				}

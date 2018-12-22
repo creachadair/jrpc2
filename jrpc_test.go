@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"reflect"
 	"testing"
 	"time"
@@ -35,7 +34,7 @@ func newServer(t *testing.T, assigner Assigner, opts *testOptions) (*Server, *Cl
 			t.Logf("Warning: client close returned %v", err)
 		}
 		srv.Stop()
-		if err := srv.Wait(); err != io.EOF {
+		if err := srv.Wait(); err != nil {
 			t.Logf("Warning: server wait returned %v", err)
 		}
 	}
@@ -500,7 +499,7 @@ func TestOtherClient(t *testing.T) {
 	}, nil).Start(srv)
 	defer func() {
 		cli.Close()
-		if err := s.Wait(); err != io.EOF {
+		if err := s.Wait(); err != nil {
 			t.Errorf("Server wait: unexpected error %v", err)
 		}
 	}()
