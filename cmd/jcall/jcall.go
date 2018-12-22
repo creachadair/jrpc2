@@ -19,6 +19,7 @@ import (
 
 	"bitbucket.org/creachadair/jrpc2"
 	"bitbucket.org/creachadair/jrpc2/channel/chanutil"
+	"bitbucket.org/creachadair/jrpc2/jauth"
 	"bitbucket.org/creachadair/jrpc2/jctx"
 )
 
@@ -31,6 +32,7 @@ var (
 	doSeq       = flag.Bool("seq", false, "Issue calls sequentially rather than as a batch")
 	doTiming    = flag.Bool("T", false, "Print call timing stats")
 	withLogging = flag.Bool("v", false, "Enable verbose logging")
+	withAuth    = flag.String("auth", "", "Use this user:key to generate an auth token (implies -c)")
 	withMeta    = flag.String("meta", "", "Attach this JSON value as request metadata (implies -c)")
 )
 
@@ -64,6 +66,17 @@ func main() {
 			log.Fatalf("Invalid request metadata: %v", err)
 		}
 		ctx = mc
+		*withContext = true
+	}
+	if *withAuth != "" {
+		ukey := strings.SplitN(*withAuth, ":", 2)
+		if len(ukey) != 2 || ukey[0] == "" || ukey[1] == "" {
+			log.Fatalf("Invalid user:key for auth: %q", *withAuth)
+		}
+		ctx = jctx.WithAuthorizer(ctx, jauth.User{
+			Name: ukey[0],
+			Key:  []byte(ukey[1]),
+		}.Token)
 		*withContext = true
 	}
 
