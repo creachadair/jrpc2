@@ -751,16 +751,29 @@ func TestAuthHooks(t *testing.T) {
 		}
 	})
 
-	// Call with a token and verify that we get a response.
-	t.Run("WithToken", func(t *testing.T) {
+	// Call with a valid token and verify that we get a response.
+	t.Run("GoodToken", func(t *testing.T) {
 		ctx := jctx.WithAuthorizer(context.Background(), user.Token)
 		var rsp string
-		err := c.CallResult(ctx, "Test", nil, &rsp)
-		if err != nil {
+		if err := c.CallResult(ctx, "Test", nil, &rsp); err != nil {
 			t.Errorf("Call(Test): unexpected error: %v", err)
 		}
 		if rsp != wantResponse {
 			t.Errorf("Call(Test): got %q, want %q", rsp, wantResponse)
+		}
+	})
+
+	// Call with an invalid token and verify that we get an error.
+	t.Run("BadToken", func(t *testing.T) {
+		bad := jauth.User{Name: "Cristòffa", Key: []byte("DD5E95D8-7C7A-4F0B-A06C-8672611C74AE")}
+		ctx := jctx.WithAuthorizer(context.Background(), bad.Token)
+		var rsp string
+		if err := c.CallResult(ctx, "Test", nil, &rsp); err == nil {
+			t.Errorf("Call(Test): got %q, wanted error", rsp)
+		} else if ec := code.FromError(err); ec != code.NotAuthorized {
+			t.Errorf("Call(Test): got code %v, want %v", ec, code.NotAuthorized)
+		} else {
+			t.Logf("Call(Test): got expected error: %v", err)
 		}
 	})
 }
