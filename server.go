@@ -224,7 +224,7 @@ func (s *Server) deliver(rsps jresponses, ch channel.Sender, elapsed time.Durati
 // checkAndAssign resolves all the task handlers for the given batch, or
 // records errors for them as appropriate. The caller must hold s.mu.
 func (s *Server) checkAndAssign(next jrequests) tasks {
-	var tasks tasks
+	var ts tasks
 	for _, req := range next {
 		s.log("Checking request for %q: %s", req.M, string(req.P))
 		t := &task{reqID: req.ID, reqM: req.M}
@@ -244,9 +244,9 @@ func (s *Server) checkAndAssign(next jrequests) tasks {
 			s.log("Task error: %v", t.err)
 			s.metrics.Count("rpc.errors", 1)
 		}
-		tasks = append(tasks, t)
+		ts = append(ts, t)
 	}
-	return tasks
+	return ts
 }
 
 // setContext constructs and attaches a request context to t, and reports
