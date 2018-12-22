@@ -50,12 +50,7 @@ type Response struct {
 func (r *Response) ID() string { return r.id }
 
 // Error returns a non-nil *Error if the response contains an error.
-func (r *Response) Error() *Error {
-	if r.err != nil {
-		return r.err
-	}
-	return nil
-}
+func (r *Response) Error() *Error { return r.err }
 
 // UnmarshalResult decodes the result message into v. If the request failed,
 // UnmarshalResult returns the *Error value that would also be returned by
