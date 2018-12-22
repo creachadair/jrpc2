@@ -28,15 +28,16 @@ func newServer(t *testing.T, assigner Assigner, opts *testOptions) (*Server, *Cl
 	}
 	cpipe, spipe := channel.Pipe(channel.RawJSON)
 	srv := NewServer(assigner, opts.server).Start(spipe)
-	t.Logf("Server running on pipe %+v", spipe)
-
 	cli := NewClient(cpipe, opts.client)
-	t.Logf("Client running on pipe %+v", cpipe)
 
 	return srv, cli, func() {
-		t.Logf("Client close: err=%v", cli.Close())
+		if err := cli.Close(); err != errClientStopped {
+			t.Logf("Warning: client close returned %v", err)
+		}
 		srv.Stop()
-		t.Logf("Server wait: err=%v", srv.Wait())
+		if err := srv.Wait(); err != io.EOF {
+			t.Logf("Warning: server wait returned %v", err)
+		}
 	}
 }
 
@@ -141,11 +142,9 @@ func TestCall(t *testing.T) {
 			t.Errorf("Unmarshaling result: %v", err)
 			continue
 		}
-		t.Logf("Call %q %v returned %d", test.method, test.params, got)
 		if got != test.want {
-			t.Errorf("Call %q: got %v, want %v", test.method, got, test.want)
+			t.Errorf("Call %q %v: got %v, want %v", test.method, test.params, got, test.want)
 		}
-
 		if err := c.Notify(ctx, test.method, test.params); err != nil {
 			t.Errorf("Notify %q %v: unexpected error: %v", test.method, test.params, err)
 		}
@@ -168,9 +167,8 @@ func TestCallResult(t *testing.T) {
 			t.Errorf("CallResult %q %v: unexpected error: %v", test.method, test.params, err)
 			continue
 		}
-		t.Logf("CallResult %q %v returned %d", test.method, test.params, got)
 		if got != test.want {
-			t.Errorf("CallResult %q: got %v, want %v", test.method, got, test.want)
+			t.Errorf("CallResult %q %v: got %v, want %v", test.method, test.params, got, test.want)
 		}
 	}
 }
@@ -194,24 +192,22 @@ func TestCallRaw(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Marshaling %q request: %v", test.method, err)
 		}
-		t.Logf("CallRaw: request message: %#q", string(raw))
 
 		rsp, err := c.CallRaw(ctx, raw)
 		if err != nil {
-			t.Errorf("unexpected error: %v", err)
+			t.Errorf("CallRaw(%#q): unexpected error: %v", string(raw), err)
 			continue
 		} else if len(rsp) != 1 {
-			t.Errorf("got %d responses, wanted 1", len(rsp))
+			t.Errorf("CallRaw(%#q): got %d responses, wanted 1", string(raw), len(rsp))
 			continue
 		}
 		var got int
 		if err := rsp[0].UnmarshalResult(&got); err != nil {
-			t.Errorf("unmarshaling result: %v", err)
+			t.Errorf("CallRaw(%#q): unmarshaling result: %v", string(raw), err)
 			continue
 		}
-		t.Logf("Return value: %d", got)
 		if got != test.want {
-			t.Errorf("Return value: got %v, want %v", got, test.want)
+			t.Errorf("CallRaw(%#q): return value: got %v, want %v", string(raw), got, test.want)
 		}
 	}
 
@@ -228,20 +224,18 @@ func TestCallRaw(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Marshaling request batch: %v", err)
 	}
-	t.Logf("CallRaw batch request: %#q", string(batch))
 	rsps, err := c.CallRaw(ctx, batch)
 	if err != nil {
-		t.Fatalf("CallRaw on batch failed: %v", err)
+		t.Fatalf("CallRaw on batch %#q failed: %v", string(batch), err)
 	}
 	for i, rsp := range rsps {
 		test := callTests[i]
-		t.Logf("Checking result %d: %q %+v", i+1, test.method, test.params)
 
 		var got int
 		if err := rsp.UnmarshalResult(&got); err != nil {
-			t.Errorf("unmarshaling result: %v", err)
+			t.Errorf("Batch call %q %+v: unmarshaling result: %v", test.method, test.params, err)
 		} else if got != test.want {
-			t.Errorf("Return value: got %v, want %v", got, test.want)
+			t.Errorf("Batch call %q %+v: return value: got %v, want %v", test.method, test.params, got, test.want)
 		}
 	}
 }
@@ -277,7 +271,6 @@ func TestBatch(t *testing.T) {
 			t.Errorf("Umarshaling result %d: %v", i+1, err)
 			continue
 		}
-		t.Logf("Response %d (%q) contains %d", i+1, rsp.ID(), got)
 		if got != callTests[i].want {
 			t.Errorf("Response %d (%q): got %v, want %v", i+1, rsp.ID(), got, callTests[i].want)
 		}
@@ -405,7 +398,6 @@ func TestErrors(t *testing.T) {
 	if err == nil {
 		t.Errorf("Call: got %#v, wanted error", got)
 	} else if e, ok := err.(*Error); ok {
-		t.Logf("Response error is %+v", e)
 		if e.code != errCode {
 			t.Errorf("Error code: got %d, want %d", e.code, errCode)
 		}
@@ -491,9 +483,8 @@ func TestServerInfo(t *testing.T) {
 			t.Errorf("Metric %q is not defined, but was expected", test.name)
 			continue
 		}
-		t.Logf("Metric %q is defined with value %d", test.name, got)
 		if test.want >= 0 && got != test.want {
-			t.Errorf("Wrong value for %q: want %d", test.name, test.want)
+			t.Errorf("Wrong value for metric %q: got %d, want %d", test.name, got, test.want)
 		}
 	}
 }
@@ -638,8 +629,6 @@ func TestSpecialMethods(t *testing.T) {
 	for _, name := range []string{"rpc.serverInfo", "rpc.cancel", "donkeybait"} {
 		if got := s.assign(name); got == nil {
 			t.Errorf("s.assign(%s): no method assigned", name)
-		} else {
-			t.Logf("s.assign(%s): got %v OK", name, got)
 		}
 	}
 	if got := s.assign("rpc.nonesuch"); got != nil {
@@ -662,8 +651,6 @@ func TestDisableBuiltin(t *testing.T) {
 	// However, user-assigned methods with this prefix should now work.
 	if got := s.assign("rpc.nonesuch"); got == nil {
 		t.Error("s.assign(rpc.nonesuch): missing assignment")
-	} else {
-		t.Logf("s.assign(rpc.nonesuch): got assignment %+v", got)
 	}
 }
 
@@ -702,8 +689,6 @@ func TestNewHandler(t *testing.T) {
 			t.Errorf("newHandler(%T): got %+v, want error", test.v, got)
 		} else if _, ok := got.(methodFunc); !ok && got != nil {
 			t.Errorf("newHandler(%T): incorrect return type %T", test.v, got)
-		} else {
-			t.Logf("newHandler(%T)=(%T, %v)", test.v, got, err)
 		}
 	}
 }
@@ -726,7 +711,7 @@ func TestAuthHooks(t *testing.T) {
 			DecodeContext: jctx.Decode,
 			CheckAuth: func(ctx context.Context, method string, params []byte) error {
 				token, ok := jctx.AuthToken(ctx)
-				t.Logf("Auth token %v: %#q", ok, string(token))
+				t.Logf("Auth token present=%v, value=%#q", ok, string(token))
 				return user.Verify(token, method, params)
 			},
 		},
@@ -746,8 +731,6 @@ func TestAuthHooks(t *testing.T) {
 			t.Errorf("Call(Test): got %q, wanted error", rsp)
 		} else if ec := code.FromError(err); ec != code.NotAuthorized {
 			t.Errorf("Call(Test): got code %v, want %v", ec, code.NotAuthorized)
-		} else {
-			t.Logf("Call(Test): got expected error: %v", err)
 		}
 	})
 
@@ -772,8 +755,6 @@ func TestAuthHooks(t *testing.T) {
 			t.Errorf("Call(Test): got %q, wanted error", rsp)
 		} else if ec := code.FromError(err); ec != code.NotAuthorized {
 			t.Errorf("Call(Test): got code %v, want %v", ec, code.NotAuthorized)
-		} else {
-			t.Logf("Call(Test): got expected error: %v", err)
 		}
 	})
 }
