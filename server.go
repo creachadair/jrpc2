@@ -263,7 +263,7 @@ func (s *Server) setContext(t *task, id, method string, rawParams json.RawMessag
 
 	// Check authorization.
 	token, _ := jctx.AuthToken(base)
-	if err := s.ckauth(method, token, []byte(params)); err != nil {
+	if err := s.ckauth(token, method, []byte(params)); err != nil {
 		t.err = Errorf(code.NotAuthorized, "%v", err)
 		return false
 	}
