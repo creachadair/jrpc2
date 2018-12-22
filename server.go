@@ -261,7 +261,7 @@ func (s *Server) setContext(t *task, id, method string, rawParams json.RawMessag
 
 	// Check authorization.
 	if err := s.ckauth(base, method, []byte(params)); err != nil {
-		t.err = Errorf(code.NotAuthorized, "%v", err)
+		t.err = Errorf(code.NotAuthorized, "%v: %v", code.NotAuthorized.String(), err)
 		return false
 	}
 
