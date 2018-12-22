@@ -12,6 +12,7 @@ import (
 
 	"bitbucket.org/creachadair/jrpc2/channel"
 	"bitbucket.org/creachadair/jrpc2/code"
+	"bitbucket.org/creachadair/jrpc2/jauth"
 	"bitbucket.org/creachadair/jrpc2/jctx"
 )
 
@@ -707,9 +708,13 @@ func TestNewHandler(t *testing.T) {
 	}
 }
 
-func TestAuth(t *testing.T) {
-	const wantToken = "applesauce"
+func TestAuthHooks(t *testing.T) {
 	const wantResponse = "Hey girl"
+
+	user := jauth.User{
+		Name: "Bartolomé",
+		Key:  []byte("8A27D68F-AD87-4DE0-957B-33E9A0A74222"),
+	}
 
 	_, c, cleanup := newServer(t, MapAssigner{
 		"Test": NewHandler(func(ctx context.Context) (string, error) {
@@ -720,13 +725,9 @@ func TestAuth(t *testing.T) {
 		server: &ServerOptions{
 			DecodeContext: jctx.Decode,
 			CheckAuth: func(ctx context.Context, method string, params []byte) error {
-				token, _ := jctx.AuthToken(ctx)
-				if method != "Test" {
-					return fmt.Errorf("wrong method: %q", method)
-				} else if s := string(token); s != wantToken {
-					return fmt.Errorf("wrong token: %q", s)
-				}
-				return nil
+				token, ok := jctx.AuthToken(ctx)
+				t.Logf("Auth token %v: %#q", ok, string(token))
+				return user.Verify(token, method, params)
 			},
 		},
 
@@ -752,9 +753,7 @@ func TestAuth(t *testing.T) {
 
 	// Call with a token and verify that we get a response.
 	t.Run("WithToken", func(t *testing.T) {
-		ctx := jctx.WithAuthorizer(context.Background(), func(string, []byte) ([]byte, error) {
-			return []byte(wantToken), nil
-		})
+		ctx := jctx.WithAuthorizer(context.Background(), user.Token)
 		var rsp string
 		err := c.CallResult(ctx, "Test", nil, &rsp)
 		if err != nil {
