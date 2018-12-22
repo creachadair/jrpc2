@@ -36,6 +36,14 @@
 // wire during a JSON-RPC call. The recipient can decode this value from the
 // context using the jctx.UnmarshalMetadata function.
 //
+// Authorization
+//
+// The jctx.WithAuthorizer function attaches an Authorizer to a context.  This
+// is a function that, when present, is used to generate an authorization token
+// for a method and attach that token to the outbound context. After decoding,
+// the auth token is available via the jctx.AuthToken helper. The structure of
+// an auth token is implementation-defined; it may be JSON or not, but this
+// package handles the value as an opaque byte string.
 package jctx
 
 import (
