@@ -719,7 +719,8 @@ func TestAuth(t *testing.T) {
 		// Enable auth checking and context decoding for the server.
 		server: &ServerOptions{
 			DecodeContext: jctx.Decode,
-			CheckAuth: func(token []byte, method string, params []byte) error {
+			CheckAuth: func(ctx context.Context, method string, params []byte) error {
+				token, _ := jctx.AuthToken(ctx)
 				if method != "Test" {
 					return fmt.Errorf("wrong method: %q", method)
 				} else if s := string(token); s != wantToken {

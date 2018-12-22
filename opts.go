@@ -44,11 +44,11 @@ type ServerOptions struct {
 	// If unset, ctx and params are used as given.
 	DecodeContext func(context.Context, string, json.RawMessage) (context.Context, json.RawMessage, error)
 
-	// If set, this function is called with the auth token, method name, and
+	// If set, this function is called with the context, method name, and
 	// decoded request parameters received from the client, before they are
 	// delivered to the handler. If it reports a non-nil error, the request is
 	// failed reporting code.NotAuthorized.
-	CheckAuth func(token []byte, method string, params []byte) error
+	CheckAuth func(ctx context.Context, method string, params []byte) error
 
 	// If set, use this value to record server metrics. All servers created
 	// from the same options will share the same metrics collector.  If none is
@@ -97,11 +97,11 @@ func (s *ServerOptions) decodeContext() (decoder, bool) {
 	return s.DecodeContext, true
 }
 
-type verifier = func([]byte, string, []byte) error
+type verifier = func(context.Context, string, []byte) error
 
 func (s *ServerOptions) checkAuth() verifier {
 	if s == nil || s.CheckAuth == nil {
-		return func([]byte, string, []byte) error { return nil }
+		return func(context.Context, string, []byte) error { return nil }
 	}
 	return s.CheckAuth
 }
