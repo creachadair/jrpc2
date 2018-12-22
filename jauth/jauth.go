@@ -62,14 +62,19 @@ func (u User) Token(method string, params []byte) ([]byte, error) {
 // signature does not match the signature provided in the token.
 var ErrInvalidSignature = errors.New("invalid signature")
 
+// ErrInvalidToken is returned by Verify to indicate that the token is
+// syntactically invalid.
+var ErrInvalidToken = errors.New("invalid token syntax")
+
 // Verify decodes the specified token and checks whether its signature is valid
 // for the given request. If the signature is valid, Verify returns nil. If the
+// token is syntactically invalid, Verify returns ErrInvalidToken. If the
 // computed signature does not match the token signature, Verify returns
-// ErrInvalidSignature. Any other error indicates an invalid token.
+// ErrInvalidSignature.
 func (u User) Verify(token []byte, method string, params []byte) error {
 	tok, err := ParseToken(token)
 	if err != nil {
-		return err
+		return ErrInvalidToken
 	}
 	want := u.Signature(method, params)
 	if subtle.ConstantTimeCompare(tok.Sig, want) != 1 {

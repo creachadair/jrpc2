@@ -59,10 +59,9 @@ func TestRoundTrip(t *testing.T) {
 		`{"sig":"d2hhdGV2ZXI="}`,                      // missing user name
 		`{"user":"foobar"}`,                           // missing signature
 	} {
-		if err := user.Verify([]byte(bad), method, []byte(params)); err == nil {
+		err := user.Verify([]byte(bad), method, []byte(params))
+		if err != ErrInvalidToken {
 			t.Errorf("Verify(%#q) unexpectedly succeeded", bad)
-		} else {
-			t.Logf("Verify(%#q): successfully failed: %v", bad, err)
 		}
 	}
 }
