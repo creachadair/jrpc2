@@ -32,7 +32,7 @@ var (
 	doSeq       = flag.Bool("seq", false, "Issue calls sequentially rather than as a batch")
 	doTiming    = flag.Bool("T", false, "Print call timing stats")
 	withLogging = flag.Bool("v", false, "Enable verbose logging")
-	withAuth    = flag.String("auth", "", "Use this user:key to generate an auth token (implies -c)")
+	withAuth    = flag.String("auth", "", "Identity for auth token (user:key or key; implies -c)")
 	withMeta    = flag.String("meta", "", "Attach this JSON value as request metadata (implies -c)")
 )
 
