@@ -70,12 +70,13 @@ func main() {
 	}
 	if *withAuth != "" {
 		ukey := strings.SplitN(*withAuth, ":", 2)
-		if len(ukey) != 2 || ukey[0] == "" || ukey[1] == "" {
-			log.Fatalf("Invalid user:key for auth: %q", *withAuth)
+		user, key := os.Getenv("USER"), ukey[0]
+		if len(ukey) == 2 {
+			user, key = ukey[0], ukey[1]
 		}
 		ctx = jctx.WithAuthorizer(ctx, jauth.User{
-			Name: ukey[0],
-			Key:  []byte(ukey[1]),
+			Name: user,
+			Key:  []byte(key),
 		}.Token)
 		*withContext = true
 	}
