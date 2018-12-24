@@ -417,24 +417,6 @@ func TestErrors(t *testing.T) {
 	}
 }
 
-func TestErrorCode(t *testing.T) {
-	tests := []struct {
-		err  error
-		want code.Code
-	}{
-		{nil, code.NoError},                               // no error (success)
-		{errors.New("bad"), code.SystemError},             // an unrelated error
-		{Errorf(code.ParseError, "bad"), code.ParseError}, // a package error
-		{context.Canceled, code.Cancelled},                // a context error
-		{context.DeadlineExceeded, code.DeadlineExceeded}, // "
-	}
-	for _, test := range tests {
-		if got := code.FromError(test.err); got != test.want {
-			t.Errorf("ErrorCode(%v): got %v, want %v", test.err, got, test.want)
-		}
-	}
-}
-
 // Verify that metrics are correctly propagated to server info.
 func TestServerInfo(t *testing.T) {
 	s, c, cleanup := newServer(t, MapAssigner{
