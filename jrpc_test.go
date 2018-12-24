@@ -276,6 +276,8 @@ func TestBatch(t *testing.T) {
 	}
 }
 
+// Verify that a method that returns only an error (no result payload) is set
+// up and handled correctly.
 func TestErrorOnly(t *testing.T) {
 	const message = "the bogosity is real"
 	_, c, cleanup := newServer(t, MapAssigner{
@@ -296,6 +298,8 @@ func TestErrorOnly(t *testing.T) {
 	}
 }
 
+// Verify that a timeout set on the context is respected by the server and
+// propagates back to the client as an error.
 func TestTimeout(t *testing.T) {
 	_, c, cleanup := newServer(t, MapAssigner{
 		"Stall": NewHandler(func(ctx context.Context) (bool, error) {
@@ -325,6 +329,8 @@ func TestTimeout(t *testing.T) {
 	}
 }
 
+// Verify that if the client context terminates during a request, the client
+// will terminate and report failure.
 func TestClientCancellation(t *testing.T) {
 	started := make(chan struct{})
 	stopped := make(chan bool, 1)
@@ -380,9 +386,9 @@ func TestClientCancellation(t *testing.T) {
 	}
 }
 
+// Test that an error with data attached to it is correctly propagated back
+// from the server to the client, in a value of concrete type *Error.
 func TestErrors(t *testing.T) {
-	// Test that an error with data attached to it is correctly propagated back
-	// from the server to the client, in a value of concrete type *Error.
 	const errCode = -32000
 	const errData = `{"caroline":452}`
 	const errMessage = "error thingy"
@@ -429,6 +435,7 @@ func TestErrorCode(t *testing.T) {
 	}
 }
 
+// Verify that metrics are correctly propagated to server info.
 func TestServerInfo(t *testing.T) {
 	s, c, cleanup := newServer(t, MapAssigner{
 		"Metricize": NewHandler(func(ctx context.Context) (bool, error) {
@@ -488,9 +495,10 @@ func TestServerInfo(t *testing.T) {
 	}
 }
 
+// Ensure that a correct request not sent via the *Client type will still
+// elicit a correct response from the server. Here we simulate a "different"
+// client by writing requests directly into the channel.
 func TestOtherClient(t *testing.T) {
-	// Ensure that a correct request not sent via the *Client type will still
-	// elicit a correct response.
 	srv, cli := channel.Pipe(channel.Line)
 	s := NewServer(MapAssigner{
 		"X": NewHandler(func(ctx context.Context) (string, error) {
@@ -545,6 +553,7 @@ func TestOtherClient(t *testing.T) {
 	}
 }
 
+// Verify that server-side push notifications work.
 func TestServerNotify(t *testing.T) {
 	// Set up a server and client with server-side notification support.  Here
 	// we're just capturing the name of the notification method, as a sign we
@@ -593,6 +602,7 @@ func TestServerNotify(t *testing.T) {
 	}
 }
 
+// Verify that the context encoding/decoding hooks work.
 func TestContextPlumbing(t *testing.T) {
 	want := time.Now().Add(10 * time.Second)
 	ctx, cancel := context.WithDeadline(context.Background(), want)
@@ -635,6 +645,8 @@ func TestSpecialMethods(t *testing.T) {
 	}
 }
 
+// Verify that the option to remove the special behaviour of rpc.* methods can
+// be correctly disabled by the server options.
 func TestDisableBuiltin(t *testing.T) {
 	s := NewServer(MapAssigner{
 		"rpc.nonesuch": NewHandler(func(context.Context) (string, error) { return "OK", nil }),
@@ -653,6 +665,8 @@ func TestDisableBuiltin(t *testing.T) {
 	}
 }
 
+// Verify that the NewHandler function correctly handles the various type
+// signatures it's advertised to support, and not others.
 func TestNewHandler(t *testing.T) {
 	tests := []struct {
 		v   interface{}
@@ -692,6 +706,8 @@ func TestNewHandler(t *testing.T) {
 	}
 }
 
+// Verify that the authorization hooks work, generating tokens on the client
+// side and verifying them on the server side.
 func TestAuthHooks(t *testing.T) {
 	const wantResponse = "Hey girl"
 
@@ -758,6 +774,8 @@ func TestAuthHooks(t *testing.T) {
 	})
 }
 
+// Verify that calling a wrapped method which takes no parameters, but in which
+// the caller provided parameters, will correctly report an error.
 func TestNoParams(t *testing.T) {
 	_, c, cleanup := newServer(t, MapAssigner{
 		"Test": NewHandler(func(ctx context.Context) (string, error) {
