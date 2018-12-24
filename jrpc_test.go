@@ -757,3 +757,19 @@ func TestAuthHooks(t *testing.T) {
 		}
 	})
 }
+
+func TestNoParams(t *testing.T) {
+	_, c, cleanup := newServer(t, MapAssigner{
+		"Test": NewHandler(func(ctx context.Context) (string, error) {
+			return "OK", nil // this should not be reached
+		}),
+	}, nil)
+	defer cleanup()
+
+	var rsp string
+	if err := c.CallResult(context.Background(), "Test", []int{1, 2, 3}, &rsp); err == nil {
+		t.Errorf("Call(Test): got %q, wanted error", rsp)
+	} else if ec := code.FromError(err); ec != code.InvalidParams {
+		t.Errorf("Call(Test): got code %v, wanted %v", ec, code.InvalidParams)
+	}
+}

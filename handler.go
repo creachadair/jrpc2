@@ -173,7 +173,13 @@ func newHandler(fn interface{}) (Handler, error) {
 
 	if typ.NumIn() == 1 {
 		// Case 1: The function does not want any request parameters.
-		newinput = func(req *Request) ([]reflect.Value, error) { return nil, nil }
+		// Nothing needs to be decoded, but verify no parameters were passed.
+		newinput = func(req *Request) ([]reflect.Value, error) {
+			if req.HasParams() {
+				return nil, Errorf(code.InvalidParams, "no parameters accepted")
+			}
+			return nil, nil
+		}
 
 	} else if a := typ.In(1); a == reqType {
 		// Case 2: The function wants the underlying *Request value.
