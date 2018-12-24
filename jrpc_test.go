@@ -279,23 +279,40 @@ func TestBatch(t *testing.T) {
 // Verify that a method that returns only an error (no result payload) is set
 // up and handled correctly.
 func TestErrorOnly(t *testing.T) {
-	const message = "the bogosity is real"
+	const errMessage = "not enough strings"
 	_, c, cleanup := newServer(t, MapAssigner{
 		"ErrorOnly": NewHandler(func(_ context.Context, ss []string) error {
-			return Errorf(15, ss[0])
+			if len(ss) == 0 {
+				return Errorf(1, errMessage)
+			}
+			t.Logf("ErrorOnly succeeds on input %q", ss)
+			return nil
 		}),
 	}, nil)
 	defer cleanup()
 
 	ctx := context.Background()
-	rsp, err := c.Call(ctx, "ErrorOnly", []string{message, "arg"})
-	if err == nil {
-		t.Errorf("ErrorOnly: got %+v, want error", rsp)
-	} else if e, ok := err.(*Error); !ok {
-		t.Errorf("ErrorOnly: got %v, want *Error", err)
-	} else if e.code != 15 || e.message != "the bogosity is real" {
-		t.Errorf("ErrorOnly: got (%s, %s), want (15, %s)", e.code, e.message, message)
-	}
+	t.Run("CallExpectingError", func(t *testing.T) {
+		rsp, err := c.Call(ctx, "ErrorOnly", []string{})
+		if err == nil {
+			t.Errorf("ErrorOnly: got %+v, want error", rsp)
+		} else if e, ok := err.(*Error); !ok {
+			t.Errorf("ErrorOnly: got %v, want *Error", err)
+		} else if e.code != 1 || e.message != errMessage {
+			t.Errorf("ErrorOnly: got (%s, %s), want (1, %s)", e.code, e.message, errMessage)
+		}
+	})
+	t.Run("CallExpectingOK", func(t *testing.T) {
+		rsp, err := c.Call(ctx, "ErrorOnly", []string{"aiutami!"})
+		if err != nil {
+			t.Errorf("ErrorOnly: unexpected error: %v", err)
+		}
+		// Per https://www.jsonrpc.org/specification#response_object, a "result"
+		// field is required on success, so verify that it is set null.
+		if r := string(rsp.result); r != "null" {
+			t.Errorf("ErrorOnly response: got %q, want null", r)
+		}
+	})
 }
 
 // Verify that a timeout set on the context is respected by the server and
