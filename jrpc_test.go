@@ -517,6 +517,10 @@ func TestOtherClient(t *testing.T) {
 		{`{"jsonrpc":"2.0", "id": 4, "method": "X", "params": "bogus"}`,
 			`{"jsonrpc":"2.0","id":4,"error":{"code":-32600,"message":"parameters must be list or object"}}`},
 
+		// The parameters are absent, but as null.
+		{`{"jsonrpc": "2.0", "id": 6, "method": "X", "params": null}`,
+			`{"jsonrpc":"2.0","id":6,"result":"OK"}`},
+
 		// A correct request.
 		{`{"jsonrpc":"2.0","id": 5, "method": "X"}`,
 			`{"jsonrpc":"2.0","id":5,"result":"OK"}`},

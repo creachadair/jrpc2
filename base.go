@@ -128,6 +128,11 @@ func (j *jrequest) UnmarshalJSON(data []byte) error {
 	type stub jrequest
 	if err := json.Unmarshal(data, (*stub)(j)); err != nil {
 		return err
+	}
+
+	// As a special case, reduce "null" to nil.
+	if string(j.P) == "null" {
+		j.P = nil
 	} else if len(j.P) != 0 && j.P[0] != '[' && j.P[0] != '{' {
 		return DataErrorf(code.InvalidRequest, j.ID, "parameters must be list or object")
 	}
