@@ -21,6 +21,12 @@ func Loop(lst net.Listener, assigner jrpc2.Assigner, opts *LoopOptions) error {
 	if serverOpts != nil && serverOpts.Logger != nil {
 		log = serverOpts.Logger.Printf
 	}
+
+	// Maintain a pool of servers to save the server setup cost.
+	pool := &sync.Pool{
+		New: func() interface{} { return jrpc2.NewServer(assigner, serverOpts) },
+	}
+
 	var wg sync.WaitGroup
 	for {
 		conn, err := lst.Accept()
@@ -37,7 +43,8 @@ func Loop(lst net.Listener, assigner jrpc2.Assigner, opts *LoopOptions) error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			srv := jrpc2.NewServer(assigner, serverOpts).Start(ch)
+			srv := pool.Get().(*jrpc2.Server).Start(ch)
+			defer pool.Put(srv)
 			if err := srv.Wait(); err != nil && err != io.EOF {
 				log("Server exit: %v", err)
 			}
