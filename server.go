@@ -72,7 +72,10 @@ func NewServer(mux Assigner, opts *ServerOptions) *Server {
 		mu:      new(sync.Mutex),
 		metrics: opts.metrics(),
 		start:   opts.startTime(),
+		inq:     list.New(),
+		used:    make(map[string]context.CancelFunc),
 	}
+	s.work = sync.NewCond(s.mu)
 	if opts.allowBuiltin() {
 		s.installBuiltins()
 	}
@@ -93,9 +96,6 @@ func (s *Server) Start(c channel.Channel) *Server {
 	if s.start.IsZero() {
 		s.start = time.Now().In(time.UTC)
 	}
-	s.work = sync.NewCond(s.mu)
-	s.inq = list.New()
-	s.used = make(map[string]context.CancelFunc)
 
 	// Reset all the I/O structures and start up the workers.
 	s.err = nil
@@ -365,10 +365,14 @@ func (s *Server) Stop() {
 }
 
 // Wait blocks until the connection terminates and returns the resulting error.
+// After Wait returns, whether or not there was an error, it is safe to call
+// s.Start again to restart the server with a fresh channel.
 func (s *Server) Wait() error {
 	s.wg.Wait()
-	s.work = nil
-	s.used = nil
+	// Sanity check.
+	if s.inq.Len() != 0 {
+		panic("s.inq is not empty at shutdown")
+	}
 	// Don't remark on a closed channel or EOF as a noteworthy failure.
 	if s.err == io.EOF || channel.IsErrClosing(s.err) || s.err == errServerStopped {
 		return nil
@@ -404,6 +408,18 @@ func (s *Server) stop(err error) {
 		s.inq.Remove(cur)
 	}
 	s.work.Broadcast()
+
+	// Cancel any in-flight requests that made it out of the queue.
+	for id, cancel := range s.used {
+		cancel()
+		delete(s.used, id)
+	}
+
+	// Sanity check.
+	if len(s.used) != 0 {
+		panic("s.used is not empty at shutdown")
+	}
+
 	s.err = err
 	s.ch = nil
 }
