@@ -346,6 +346,41 @@ func TestTimeout(t *testing.T) {
 	}
 }
 
+// Verify that stopping the server terminates in-flight requests.
+func TestServerStopCancellation(t *testing.T) {
+	started := make(chan struct{})
+	stopped := make(chan error, 1)
+	s, c, cleanup := newServer(t, MapAssigner{
+		"Hang": NewHandler(func(ctx context.Context) (bool, error) {
+			close(started) // signal that the method handler is running
+			<-ctx.Done()
+			return true, ctx.Err()
+		}),
+	}, nil)
+	defer cleanup()
+
+	// Call the server. The method will hang until its context is cancelled,
+	// which should happen when the server stops.
+	go func() {
+		defer close(stopped)
+		_, err := c.Call(context.Background(), "Hang", nil)
+		stopped <- err
+	}()
+
+	// Wait until the client method is running so we know we are testing at the
+	// right time, i.e., with a request in flight.
+	<-started
+	s.Stop()
+	select {
+	case <-time.After(30 * time.Second):
+		t.Error("Timed out waiting for service handler to fail")
+	case err := <-stopped:
+		if ec := code.FromError(err); ec != code.Cancelled {
+			t.Errorf("Client error: got %v (%v), wanted code %v", err, ec, code.Cancelled)
+		}
+	}
+}
+
 // Verify that if the client context terminates during a request, the client
 // will terminate and report failure.
 func TestClientCancellation(t *testing.T) {
