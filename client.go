@@ -75,12 +75,8 @@ func (c *Client) accept(ch channel.Receiver) error {
 		c.log("Recoverable decoding error: %v", err)
 		return nil
 	} else if err != nil {
-		if err == io.EOF || channel.IsErrClosing(err) {
-			c.stop(nil) // don't remark on this as a failure
-		} else {
-			c.log("Unrecoverable decoding error: %v", err)
-			c.stop(err)
-		}
+		c.log("Unrecoverable decoding error: %v", err)
+		c.stop(err)
 		return err
 	}
 
@@ -358,6 +354,10 @@ func (c *Client) Close() error {
 	c.stop(errClientStopped)
 	c.mu.Unlock()
 	<-c.done
+	// Dont' remark on a closed channel or EOF as a noteworthy failure.
+	if c.err == io.EOF || channel.IsErrClosing(c.err) || c.err == errClientStopped {
+		return nil
+	}
 	return c.err
 }
 
