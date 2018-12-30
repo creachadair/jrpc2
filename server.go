@@ -232,7 +232,7 @@ func (s *Server) checkAndAssign(next jrequests) tasks {
 		if id := string(req.ID); id != "" && s.used[id] != nil {
 			t.err = Errorf(code.InvalidRequest, "duplicate request id %q", id)
 		} else if !s.versionOK(req.V) {
-			t.err = Errorf(code.InvalidRequest, "incorrect version marker")
+			t.err = ErrInvalidVersion
 		} else if req.M == "" {
 			t.err = Errorf(code.InvalidRequest, "empty method name")
 		} else if m := s.assign(req.M); m == nil {
