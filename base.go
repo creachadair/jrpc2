@@ -32,6 +32,36 @@ func (r *Request) HasParams() bool { return len(r.params) != 0 }
 // UnmarshalParams decodes the parameters into v.
 func (r *Request) UnmarshalParams(v interface{}) error { return json.Unmarshal(r.params, v) }
 
+// ErrInvalidVersion is returned by ParseRequests if one or more of the
+// requests in the input has a missing or invalid version marker.
+var ErrInvalidVersion = Errorf(code.InvalidRequest, "incorrect version marker")
+
+// ParseRequests parses a single request or a batch of requests from JSON.
+// The result parameters are either nil or have concrete type json.RawMessage.
+//
+// If any of the requests is missing or has an invalid JSON-RPC version, it
+// returns ErrInvalidVersion along with the parsed results. Otherwise, no
+// validation apart from basic structure is performed on the results.
+func ParseRequests(msg []byte) ([]*Request, error) {
+	var req jrequests
+	if err := json.Unmarshal(msg, &req); err != nil {
+		return nil, err
+	}
+	var err error
+	out := make([]*Request, len(req))
+	for i, req := range req {
+		if req.V != Version {
+			err = ErrInvalidVersion
+		}
+		out[i] = &Request{
+			id:     fixID(req.ID),
+			method: req.M,
+			params: req.P,
+		}
+	}
+	return out, err
+}
+
 // A Response is a response message from a server to a client.
 type Response struct {
 	id     string

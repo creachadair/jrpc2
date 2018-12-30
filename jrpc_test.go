@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kylelemons/godebug/pretty"
+
 	"bitbucket.org/creachadair/jrpc2/channel"
 	"bitbucket.org/creachadair/jrpc2/code"
 	"bitbucket.org/creachadair/jrpc2/jauth"
@@ -168,6 +170,54 @@ func TestCallResult(t *testing.T) {
 		}
 		if got != test.want {
 			t.Errorf("CallResult %q %v: got %v, want %v", test.method, test.params, got, test.want)
+		}
+	}
+}
+
+func TestParseRequests(t *testing.T) {
+	tests := []struct {
+		input string
+		want  []*Request
+		err   error
+	}{
+		// An empty batch is valid and produces no results.
+		{`[]`, nil, nil},
+
+		// An empty single request is invalid but
+		{`{}`, []*Request{{}}, ErrInvalidVersion},
+
+		// A valid notification.
+		{`{"jsonrpc":"2.0", "method": "foo", "params":[1, 2, 3]}`, []*Request{{
+			method: "foo",
+			params: json.RawMessage(`[1, 2, 3]`),
+		}}, nil},
+
+		// A valid request, with nil parameters.
+		{`{"jsonrpc":"2.0", "method": "foo", "id":10332, "params":null}`, []*Request{{
+			id: json.RawMessage("10332"), method: "foo",
+		}}, nil},
+
+		// A valid mixed batch.
+		{`[ {"jsonrpc": "2.0", "id": 1, "method": "A", "params": {}},
+          {"jsonrpc": "2.0", "params": [5], "method": "B"} ]`, []*Request{
+			{method: "A", id: json.RawMessage(`1`), params: json.RawMessage(`{}`)},
+			{method: "B", params: json.RawMessage(`[5]`)},
+		}, nil},
+
+		// An invalid batch.
+		{`[{"id": 37, "method": "complain", "params":[]}]`, []*Request{
+			{method: "complain", id: json.RawMessage(`37`), params: json.RawMessage(`[]`)},
+		}, ErrInvalidVersion},
+	}
+	for _, test := range tests {
+		got, err := ParseRequests([]byte(test.input))
+		if err != test.err {
+			t.Errorf("ParseRequests(%#q): got error %v, want%v", test.input, err, test.err)
+			continue
+		}
+
+		if diff := pretty.Compare(got, test.want); diff != "" {
+			t.Errorf("ParseRequests(%#q): wrong result (-got +want):\n%s", test.input, diff)
 		}
 	}
 }
