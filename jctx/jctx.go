@@ -169,7 +169,8 @@ type authorizerKey struct{}
 
 // An Authorizer generates an authorization token for a request, given the
 // method name and request parameters to be authorized. If the authorizer
-// returns an empty token without error, no token is attached to the request.
+// returns an error, context encoding fails. If it returns an empty token
+// without error, no token is attached to the context.
 type Authorizer func(method string, params []byte) ([]byte, error)
 
 // WithAuthorizer attaches the specified authorizer to the context.
