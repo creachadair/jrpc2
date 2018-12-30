@@ -123,4 +123,25 @@ func TestBridge(t *testing.T) {
 			t.Errorf("POST body: got %#q, want %#q", got, exp)
 		}
 	})
+
+	// Verify that a notification returns an empty success.
+	t.Run("PostNotification", func(t *testing.T) {
+		rsp, err := http.Post(hsrv.URL, "application/json", strings.NewReader(`{
+  "jsonrpc": "2.0",
+  "method": "TakeNotice",
+  "params": []
+}`))
+		if err != nil {
+			t.Fatalf("POST request failed: %v", err)
+		} else if got, want := rsp.StatusCode, http.StatusNoContent; got != want {
+			t.Errorf("POST status: got %v, want %v", got, want)
+		}
+		body, err := ioutil.ReadAll(rsp.Body)
+		if err != nil {
+			t.Errorf("Reading POST body: %v", err)
+		}
+		if got := string(body); got != "" {
+			t.Errorf("POST body: got %q, want empty", got)
+		}
+	})
 }
