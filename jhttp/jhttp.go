@@ -40,41 +40,82 @@ func (b *Bridge) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusUnsupportedMediaType)
 		return
 	}
-	var body, reply []byte
-	var rsp []*jrpc2.Response
+	if err := b.serveInternal(w, req); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintln(w, err.Error())
+	}
+}
 
+func (b *Bridge) serveInternal(w http.ResponseWriter, req *http.Request) error {
 	body, err := ioutil.ReadAll(req.Body)
 	if err != nil {
-		goto failed
+		return err
 	}
-	rsp, err = b.cli.CallRaw(req.Context(), body)
+	jreq, err := jrpc2.ParseRequests(body)
 	if err != nil {
-		goto failed
+		return err
+	}
+
+	// Because the bridge shares the JSON-RPC client between potentially many
+	// HTTP clients, we must virtualize the ID space for requests to preserve
+	// the HTTP client's assignment of IDs.
+	//
+	// To do this, we keep track of the inbound ID for each request so that we
+	// can map the responses back. This takes advantage of the fact that the
+	// *jrpc2.Client detangles batch order so that responses come back in the
+	// same order (modulo notifications) even if the server response did not
+	// preserve order.
+
+	// Generate request specifications for the client.
+	var inboundID []string                // for requests
+	spec := make([]jrpc2.Spec, len(jreq)) // requests & notifications
+	for i, req := range jreq {
+		spec[i] = jrpc2.Spec{
+			Method: req.Method(),
+			Notify: req.IsNotification(),
+		}
+		if req.HasParams() {
+			var p json.RawMessage
+			req.UnmarshalParams(&p)
+			spec[i].Params = p
+		}
+		if !spec[i].Notify {
+			inboundID = append(inboundID, req.ID())
+		}
+	}
+
+	rsps, err := b.cli.Batch(req.Context(), spec)
+	if err != nil {
+		return err
 	}
 
 	// If all the requests were notifications, report success without responses.
-	if len(rsp) == 0 {
+	if len(rsps) == 0 {
 		w.WriteHeader(http.StatusNoContent)
-		return
+		return nil
 	}
 
-	// Otherwise, marshal the response back into the body.
-	if len(rsp) == 1 && !bytes.HasPrefix(body, []byte("[")) {
-		reply, err = json.Marshal(rsp[0])
+	// Otherwise, map the responses back to their original IDs, and marshal the
+	// response back into the body.
+	for i, rsp := range rsps {
+		rsp.SetID(inboundID[i])
+	}
+
+	// If the original request was a single message, make sure we encode the
+	// response the same way.
+	var reply []byte
+	if len(rsps) == 1 && !bytes.HasPrefix(body, []byte("[")) {
+		reply, err = json.Marshal(rsps[0])
 	} else {
-		reply, err = json.Marshal(rsp)
+		reply, err = json.Marshal(rsps)
 	}
 	if err != nil {
-		goto failed
+		return err
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Content-Length", strconv.Itoa(len(reply)))
 	w.Write(reply)
-
-	return
-failed:
-	w.WriteHeader(http.StatusInternalServerError)
-	fmt.Fprintln(w, err.Error())
+	return nil
 }
 
 // Close shuts down the client associated with b and reports the result from
