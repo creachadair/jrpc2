@@ -32,7 +32,7 @@ func newServer(t *testing.T, assigner Assigner, opts *testOptions) (*Server, *Cl
 	cli := NewClient(cpipe, opts.client)
 
 	return srv, cli, func() {
-		if err := cli.Close(); err != errClientStopped {
+		if err := cli.Close(); err != nil {
 			t.Logf("Warning: client close returned %v", err)
 		}
 		srv.Stop()
