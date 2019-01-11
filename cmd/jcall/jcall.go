@@ -38,7 +38,7 @@ var (
 
 func init() {
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, `Usage: [options] %s <address> {<method> <params>}...
+		fmt.Fprintf(os.Stderr, `Usage: %s [options] <address> {<method> <params>}...
 
 Connect to the specified address and transmit the specified JSON-RPC method
 calls (as a batch, if more than one is provided).  The resulting response
