@@ -94,7 +94,7 @@ To issue a batch of requests all at once, use the Batch method:
    rsps, err := cli.Batch(ctx, []jrpc2.Spec{
       {Method: "Math.Add", Params: []int{1, 2, 3}},
       {Method: "Math.Mul", Params: []int{4, 5, 6}},
-      {Methood: "Math.Max", Params: []int{-1, 5, 3, 0, 1}},
+      {Method: "Math.Max", Params: []int{-1, 5, 3, 0, 1}},
    })
 
 The Batch method waits until all the responses are received.  An error from the
