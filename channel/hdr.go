@@ -32,8 +32,13 @@ import (
 // If mimeType == "", the Content-Type header is omitted.
 func Header(mimeType string) Framing {
 	return func(r io.Reader, wc io.WriteCloser) Channel {
+		var ctype string
+		if mimeType != "" {
+			ctype = "Content-Type: " + mimeType + "\r\n"
+		}
 		return &hdr{
 			mtype: mimeType,
+			ctype: ctype,
 			wc:    wc,
 			rd:    bufio.NewReader(r),
 			buf:   bytes.NewBuffer(nil),
@@ -45,6 +50,7 @@ func Header(mimeType string) Framing {
 // header/body transaction, similar to HTTP.
 type hdr struct {
 	mtype string
+	ctype string
 	wc    io.WriteCloser
 	rd    *bufio.Reader
 	buf   *bytes.Buffer
@@ -53,10 +59,10 @@ type hdr struct {
 // Send implements part of the Channel interface.
 func (h *hdr) Send(msg []byte) error {
 	h.buf.Reset()
-	if h.mtype != "" {
-		fmt.Fprintf(h.buf, "Content-Type: %s\r\n", h.mtype)
+	if h.ctype != "" {
+		h.buf.WriteString(h.ctype)
 	}
-	fmt.Fprintf(h.buf, "Content-Length: %d\r\n\r\n", len(msg))
+	h.buf.WriteString("Content-Length: " + strconv.Itoa(len(msg)) + "\r\n\r\n")
 	h.buf.Write(msg)
 	_, err := h.wc.Write(h.buf.Next(h.buf.Len()))
 	return err
