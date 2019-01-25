@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
 	"strconv"
 	"strings"
@@ -99,10 +98,8 @@ func (h *hdr) Recv() ([]byte, error) {
 		return nil, errors.New("missing required content-length")
 	}
 	size, err := strconv.Atoi(clen)
-	if err != nil {
-		return nil, fmt.Errorf("invalid content-length: %v", err)
-	} else if size < 0 {
-		return nil, errors.New("negative content-length")
+	if err != nil || size < 0 {
+		return nil, errors.New("invalid content-length")
 	}
 
 	// We need to use ReadFull here because the buffered reader may not have a
