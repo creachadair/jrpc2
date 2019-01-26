@@ -7,9 +7,9 @@ import (
 	"io"
 )
 
-// Line is a framing that transmits and receives messages on r and wc with line
-// framing.  Each message is terminated by a Unicode LF (10). This framing has
-// the constraint that outbound records may not contain any LF characters.
+// Line is a framing that transmits and receives messages on r and wc each
+// message terminated by a Unicode LF (10). This framing has the constraint
+// that outbound records may not contain any LF characters.
 var Line = Split('\n')
 
 // Split returns a framing in which each message is terminated by the specified

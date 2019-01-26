@@ -18,7 +18,7 @@ func Pipe(framing Framing) (client, server Channel) {
 type Framing func(io.Reader, io.WriteCloser) Channel
 
 // WithTrigger returns a Channel that delegates I/O operations to ch, and when
-// a receive operation returns io.EOF it calls the trigger.
+// a Recv operation on ch returns io.EOF it synchronously calls the trigger.
 func WithTrigger(ch Channel, trigger func()) Channel {
 	return triggered{ch: ch, trigger: trigger}
 }
