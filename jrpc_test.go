@@ -105,6 +105,7 @@ var callTests = []struct {
 	{"Test.Max", []int{3, 1, 8, 4, 2, 0, -5}, 8},
 	{"Test.Ctx", nil, 1},
 	{"Test.Nil", nil, 42},
+	{"Test.Nil", json.RawMessage("null"), 42},
 }
 
 func TestMethodNames(t *testing.T) {
@@ -183,7 +184,7 @@ func TestParseRequests(t *testing.T) {
 		// An empty batch is valid and produces no results.
 		{`[]`, nil, nil},
 
-		// An empty single request is invalid but
+		// An empty single request is invalid but returned anyway.
 		{`{}`, []*Request{{}}, ErrInvalidVersion},
 
 		// A valid notification.
