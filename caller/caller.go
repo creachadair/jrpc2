@@ -1,5 +1,5 @@
 /*
-Package caller provides a function to construct JRPC2 client call wrappers.
+Package caller provides a function to construct JSON-RPC client call wrappers.
 
 The New function reflectively constructs wrapper functions for calls through a
 *jrpc2.Client. This makes it easier to provide a natural function signature for
