@@ -136,10 +136,10 @@ want to do anything for a notification, it can query the request:
 
 Cancellation
 
-The *Client and *Server types support a nonstandard cancellation protocol, that
-consists of a notification method "rpc.cancel" taking an array of request IDs
-to be cancelled. Upon receiving this notification, the server will cancel the
-context of each method handler whose ID is named.
+The *Client and *Server types support a non-standard cancellation protocol,
+that consists of a notification method "rpc.cancel" taking an array of request
+IDs to be cancelled. Upon receiving this notification, the server will cancel
+the context of each method handler whose ID is named.
 
 When the context associated with a client request is cancelled, the client will
 send an "rpc.cancel" notification to the server for that request's ID.  The
@@ -202,6 +202,19 @@ report an error if called as ordinary methods.  These methods are enabled by
 default, but may be disabled by setting the DisableBuiltin server option to
 true when constructing the server.
 
+
+Server Notifications
+
+The AllowPush option in jrpc2.ServerOptions enables the server to "push"
+notifications back to the client. This is a non-standard feature of JSON-RPC
+used by some applications such as the Language Server Protocol (LSP). The Push
+method sends a notification back to the client, if this feature is enabled:
+
+  if err := s.Push(ctx, "methodName", params); err == jrpc2.ErrNotifyUnsupported {
+    // server notifications are not enabled
+  }
+
+A method handler may use jrpc2.ServerPush to access this functionality.
 */
 package jrpc2
 
