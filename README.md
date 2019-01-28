@@ -21,6 +21,9 @@ client and server.
 *  Package [code](http://godoc.org/bitbucket.org/creachadair/jrpc2/code)
    defines standard error codes as defined by the JSON-RPC 2.0 protocol.
 
+*  Package [handler](http://godoc.org/bitbucket.org/creachadair/jrpc2/handler)
+   defines support for adapting functions to service methods.
+
 *  Package [jctx](http://godoc.org/bitbucket.org/creachadair/jrpc2/jctx)
    implements an encoder and decoder for request context values, allowing
    context metadata to be propagated through JSON-RPC requests.

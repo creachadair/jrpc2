@@ -11,7 +11,7 @@ Handle method with this signature:
 
    Handle(ctx Context.Context, req *jrpc2.Request) (interface{}, error)
 
-The jrpc2.NewHandler function helps adapt existing functions to this interface.
+The handler package helps adapt existing functions to this interface.
 A server finds the handler for a request by looking up its method name in a
 jrpc2.Assigner provided when the server is set up.
 
@@ -27,17 +27,16 @@ to export it as a JSON-RPC method:
       return sum, nil
    }
 
-To convert Add to a jrpc2.Handler, call the jrpc2.NewHandler function, which
-uses reflection to lift its argument into the jrpc2.Handler interface:
+To convert Add to a jrpc2.Handler, call the handler.New function, which uses
+reflection to lift its argument into the jrpc2.Handler interface:
 
-   h := jrpc2.NewHandler(Add)  // h is a jrpc2.Handler that invokes Add
+   h := handler.New(Add)  // h is a jrpc2.Handler that invokes Add
 
 We will advertise this function under the name "Add".  For static assignments
-we can use a jrpc2.MapAssigner, which finds methods by looking them up in a Go
-map:
+we can use a handler.Map, which finds methods by looking them up in a Go map:
 
-   assigner := jrpc2.MapAssigner{
-      "Add": jrpc2.NewHandler(Add),
+   assigner := handler.Map{
+      "Add": handler.New(Add),
    }
 
 Equipped with an Assigner we can now construct a Server:
@@ -150,22 +149,22 @@ implementation from this package.
 
 Services with Multiple Methods
 
-The examples above show a server with only one method using NewHandler; you
-will often want to expose more than one. The NewService function supports this
-by applying NewHandler to all the exported methods of a concrete value to
-produce a MapAssigner for those methods:
+The examples above show a server with only one method using handler.New; you
+will often want to expose more than one. The handler.NewService function
+supports this by applying New to all the exported methods of a concrete value
+to produce a MapAssigner for those methods:
 
    type math struct{}
 
    func (math) Add(ctx context.Context, vals ...int) (int, error) { ... }
    func (math) Mul(ctx context.Context, vals []int) (int, error) { ... }
 
-   assigner := jrpc2.NewService(math{})
+   assigner := handler.NewService(math{})
 
 This assigner maps the name "Add" to the Add method, and the name "Mul" to the
 Mul method, of the math value.
 
-This may be further combined with the ServiceMapper type to allow different
+This may be further combined with the ServiceMap type to allow different
 services to work together:
 
    type status struct{}
@@ -174,15 +173,15 @@ services to work together:
       return "all is well", nil
    }
 
-   assigner := jrpc2.ServiceMapper{
-      "Math":   jrpc2.NewService(math{}),
-      "Status": jrpc2.NewService(status{}),
+   assigner := handler.ServiceMap{
+      "Math":   handler.NewService(math{}),
+      "Status": handler.NewService(status{}),
    }
 
 This assigner dispatches "Math.Add" and "Math.Mul" to the math value's methods,
-and "Status.Get" to the status value's method. A ServiceMapper splits the
-method name on the first period ("."), and you may nest ServiceMappers more
-deeply if you require a more complex hierarchy.
+and "Status.Get" to the status value's method. A ServiceMap splits the method
+name on the first period ("."), and you may nest ServiceMaps more deeply if you
+require a more complex hierarchy.
 
 See the "caller" package for a convenient way to generate client call wrappers.
 
