@@ -13,11 +13,11 @@ import (
 	"bitbucket.org/creachadair/stringset"
 )
 
-// A methodFunc adapts a function having the correct signature to a
-// jrpc2.Handler.
-type methodFunc func(context.Context, *jrpc2.Request) (interface{}, error)
+// A Func adapts a function having the correct signature to a jrpc2.Handler.
+type Func func(context.Context, *jrpc2.Request) (interface{}, error)
 
-func (m methodFunc) Handle(ctx context.Context, req *jrpc2.Request) (interface{}, error) {
+// Handle implements the jrpc2.Handler interface by calling m.
+func (m Func) Handle(ctx context.Context, req *jrpc2.Request) (interface{}, error) {
 	return m(ctx, req)
 }
 
@@ -127,7 +127,7 @@ func newHandler(fn interface{}) (jrpc2.Handler, error) {
 	// Special case: If fn has the exact signature of the Handle method, don't do
 	// any (additional) reflection at all.
 	if f, ok := fn.(func(context.Context, *jrpc2.Request) (interface{}, error)); ok {
-		return methodFunc(f), nil
+		return Func(f), nil
 	}
 
 	// Check that fn is a function of one of the correct forms.
@@ -210,7 +210,7 @@ func newHandler(fn interface{}) (jrpc2.Handler, error) {
 		call = f.CallSlice
 	}
 
-	return methodFunc(func(ctx context.Context, req *jrpc2.Request) (interface{}, error) {
+	return Func(func(ctx context.Context, req *jrpc2.Request) (interface{}, error) {
 		rest, ierr := newinput(req)
 		if ierr != nil {
 			return nil, ierr
