@@ -1,7 +1,7 @@
 // Package jctx implements an encoder and decoder for request context values,
 // allowing context metadata to be propagated through JSON-RPC.
 //
-// A context.Context type carries request-scoped values across API boundaries
+// A context.Context value carries request-scoped values across API boundaries
 // and between processes. The jrpc2 package has hooks to allow clients and
 // servers to propagate context values transparently through JSON-RPC calls.
 // The jctx package provides functions that implement these hooks.
