@@ -5,14 +5,15 @@ import (
 	"testing"
 
 	"bitbucket.org/creachadair/jrpc2"
+	"bitbucket.org/creachadair/jrpc2/handler"
 	"bitbucket.org/creachadair/jrpc2/server"
 )
 
 func BenchmarkRoundTrip(b *testing.B) {
 	// Benchmark the round-trip call cycle for a method that does no useful
 	// work, as a proxy for overhead for client and server maintenance.
-	cli, wait := server.Local(jrpc2.MapAssigner{
-		"void": jrpc2.NewHandler(func(context.Context, *jrpc2.Request) (interface{}, error) {
+	cli, wait := server.Local(handler.Map{
+		"void": handler.New(func(context.Context, *jrpc2.Request) (interface{}, error) {
 			return nil, nil
 		}),
 	}, &server.LocalOptions{

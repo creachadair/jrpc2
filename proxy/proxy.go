@@ -21,13 +21,13 @@ import (
 //    })
 //
 func New(c *jrpc2.Client) *Proxy {
-	return &Proxy{h: handler{c}}
+	return &Proxy{h: proxHandler{c}}
 }
 
 // A Proxy is a JSON-RPC transparent proxy. It implements a jrpc2.Assigner that
 // assigns each requested method to a handler that forwards the request to a
 // server connected through a *jrpc2.Client.
-type Proxy struct{ h handler }
+type Proxy struct{ h proxHandler }
 
 // Close closes the underlying client for p and reports its result.
 func (p *Proxy) Close() error { return p.h.client.Close() }
@@ -41,13 +41,13 @@ func (p *Proxy) Assign(_ string) jrpc2.Handler { return p.h }
 // nil, since the resolution of method names is delegated to the remote server.
 func (Proxy) Names() []string { return nil }
 
-type handler struct{ client *jrpc2.Client }
+type proxHandler struct{ client *jrpc2.Client }
 
 // Handle implements the jrpc2.Handler interface. It handles any call or
 // notification method name given, by forwarding it transparently to the remote
 // server. The only errors returned from the proxy itself are decoding errors,
 // or errors from the internals of the client's Call and Notify methods.
-func (h handler) Handle(ctx context.Context, req *jrpc2.Request) (interface{}, error) {
+func (h proxHandler) Handle(ctx context.Context, req *jrpc2.Request) (interface{}, error) {
 	// If the request has parameters, unpack them so we can pass them to the call.
 	var params interface{}
 	if req.HasParams() {

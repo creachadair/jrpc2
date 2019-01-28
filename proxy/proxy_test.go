@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"bitbucket.org/creachadair/jrpc2"
+	"bitbucket.org/creachadair/jrpc2/handler"
 	"bitbucket.org/creachadair/jrpc2/server"
 )
 
@@ -12,8 +13,8 @@ func TestProxy(t *testing.T) {
 	const remoteAnswer = "the weasel has landed"
 
 	// Set up a "remote" server that exports a method we can dispatch to.
-	remote, cleanup := server.Local(jrpc2.MapAssigner{
-		"Test": jrpc2.NewHandler(func(_ context.Context) (string, error) {
+	remote, cleanup := server.Local(handler.Map{
+		"Test": handler.New(func(_ context.Context) (string, error) {
 			return remoteAnswer, nil
 		}),
 	}, nil)

@@ -9,9 +9,13 @@ import (
 
 // Handle the special rpc.cancel notification, that requests cancellation of a
 // set of pending methods. This only works if issued as a notification.
-func (s *Server) handleRPCCancel(ctx context.Context, ids []json.RawMessage) error {
+func (s *Server) handleRPCCancel(ctx context.Context, req *Request) (interface{}, error) {
 	if !InboundRequest(ctx).IsNotification() {
-		return code.MethodNotFound.Err()
+		return nil, code.MethodNotFound.Err()
+	}
+	var ids []json.RawMessage
+	if err := req.UnmarshalParams(&ids); err != nil {
+		return nil, err
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -21,17 +25,23 @@ func (s *Server) handleRPCCancel(ctx context.Context, ids []json.RawMessage) err
 			s.log("Cancelled request %s by client order", id)
 		}
 	}
-	return nil
+	return nil, nil
+}
+
+type methodFunc func(context.Context, *Request) (interface{}, error)
+
+func (m methodFunc) Handle(ctx context.Context, req *Request) (interface{}, error) {
+	return m(ctx, req)
 }
 
 // Handle the special rpc.serverInfo method, that requests server vitals.
-func (s *Server) handleRPCServerInfo(context.Context) (*ServerInfo, error) {
+func (s *Server) handleRPCServerInfo(context.Context, *Request) (interface{}, error) {
 	return s.serverInfo(), nil
 }
 
 func (s *Server) installBuiltins() {
 	s.rpcHandlers = map[string]Handler{
-		"rpc.cancel":     NewHandler(s.handleRPCCancel),
-		"rpc.serverInfo": NewHandler(s.handleRPCServerInfo),
+		"rpc.cancel":     methodFunc(s.handleRPCCancel),
+		"rpc.serverInfo": methodFunc(s.handleRPCServerInfo),
 	}
 }

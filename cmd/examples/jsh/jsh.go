@@ -20,6 +20,7 @@ import (
 
 	"bitbucket.org/creachadair/jrpc2"
 	"bitbucket.org/creachadair/jrpc2/code"
+	"bitbucket.org/creachadair/jrpc2/handler"
 	"bitbucket.org/creachadair/jrpc2/jctx"
 	"bitbucket.org/creachadair/jrpc2/server"
 )
@@ -98,8 +99,8 @@ func main() {
 	}
 	log.Printf("Listening for connections at %s...", lst.Addr())
 
-	server.Loop(lst, jrpc2.MapAssigner{
-		"Run": jrpc2.NewHandler(Run),
+	server.Loop(lst, handler.Map{
+		"Run": handler.New(Run),
 	}, &server.LoopOptions{
 		ServerOptions: &jrpc2.ServerOptions{
 			AllowV1:       true,

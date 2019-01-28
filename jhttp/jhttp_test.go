@@ -10,13 +10,14 @@ import (
 
 	"bitbucket.org/creachadair/jrpc2"
 	"bitbucket.org/creachadair/jrpc2/channel"
+	"bitbucket.org/creachadair/jrpc2/handler"
 )
 
 func TestBridge(t *testing.T) {
 	// Set up a JSON-RPC server to answer requests bridged from HTTP.
 	cc, cs := channel.Pipe(channel.Varint)
-	srv := jrpc2.NewServer(jrpc2.MapAssigner{
-		"Test": jrpc2.NewHandler(func(ctx context.Context, ss ...string) (string, error) {
+	srv := jrpc2.NewServer(handler.Map{
+		"Test": handler.New(func(ctx context.Context, ss ...string) (string, error) {
 			return strings.Join(ss, " "), nil
 		}),
 	}, nil).Start(cs)

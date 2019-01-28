@@ -1,4 +1,4 @@
-package jrpc2
+package jrpc2_test
 
 import (
 	"context"
@@ -9,27 +9,27 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kylelemons/godebug/pretty"
-
+	"bitbucket.org/creachadair/jrpc2"
 	"bitbucket.org/creachadair/jrpc2/channel"
 	"bitbucket.org/creachadair/jrpc2/code"
+	"bitbucket.org/creachadair/jrpc2/handler"
 	"bitbucket.org/creachadair/jrpc2/jauth"
 	"bitbucket.org/creachadair/jrpc2/jctx"
 )
 
 type testOptions struct {
-	server *ServerOptions
-	client *ClientOptions
+	server *jrpc2.ServerOptions
+	client *jrpc2.ClientOptions
 }
 
-func newServer(t *testing.T, assigner Assigner, opts *testOptions) (*Server, *Client, func()) {
+func newServer(t *testing.T, assigner jrpc2.Assigner, opts *testOptions) (*jrpc2.Server, *jrpc2.Client, func()) {
 	t.Helper()
 	if opts == nil {
 		opts = new(testOptions)
 	}
 	cpipe, spipe := channel.Pipe(channel.RawJSON)
-	srv := NewServer(assigner, opts.server).Start(spipe)
-	cli := NewClient(cpipe, opts.client)
+	srv := jrpc2.NewServer(assigner, opts.server).Start(spipe)
+	cli := jrpc2.NewClient(cpipe, opts.client)
 
 	return srv, cli, func() {
 		if err := cli.Close(); err != nil {
@@ -45,7 +45,7 @@ func newServer(t *testing.T, assigner Assigner, opts *testOptions) (*Server, *Cl
 type dummy struct{}
 
 // Add is a request-based method.
-func (dummy) Add(_ context.Context, req *Request) (interface{}, error) {
+func (dummy) Add(_ context.Context, req *jrpc2.Request) (interface{}, error) {
 	if req.IsNotification() {
 		return nil, errors.New("ignoring notification")
 	}
@@ -68,7 +68,7 @@ func (dummy) Mul(_ context.Context, req struct{ X, Y int }) (int, error) {
 // Max has a variadic signature.
 func (dummy) Max(_ context.Context, vs ...int) (int, error) {
 	if len(vs) == 0 {
-		return 0, Errorf(code.InvalidParams, "cannot compute max of no elements")
+		return 0, jrpc2.Errorf(code.InvalidParams, "cannot compute max of no elements")
 	}
 	max := vs[0]
 	for _, v := range vs[1:] {
@@ -83,8 +83,8 @@ func (dummy) Max(_ context.Context, vs ...int) (int, error) {
 func (dummy) Nil(_ context.Context) (int, error) { return 42, nil }
 
 // Ctx validates that its context includes the request.
-func (dummy) Ctx(ctx context.Context, req *Request) (int, error) {
-	if creq := InboundRequest(ctx); creq != req {
+func (dummy) Ctx(ctx context.Context, req *jrpc2.Request) (int, error) {
+	if creq := jrpc2.InboundRequest(ctx); creq != req {
 		return 0, fmt.Errorf("wrong req in context %p ≠ %p", creq, req)
 	}
 	return 1, nil
@@ -109,22 +109,22 @@ var callTests = []struct {
 }
 
 func TestMethodNames(t *testing.T) {
-	s, _, cleanup := newServer(t, ServiceMapper{
-		"Test": NewService(dummy{}),
+	s, _, cleanup := newServer(t, handler.ServiceMap{
+		"Test": handler.NewService(dummy{}),
 	}, nil)
 	defer cleanup()
 
 	// Verify that the assigner got the names it was supposed to.
-	if got, want := s.mux.Names(), []string{"Test.Add", "Test.Ctx", "Test.Max", "Test.Mul", "Test.Nil"}; !reflect.DeepEqual(got, want) {
+	if got, want := s.ServerInfo().Methods, []string{"Test.Add", "Test.Ctx", "Test.Max", "Test.Mul", "Test.Nil"}; !reflect.DeepEqual(got, want) {
 		t.Errorf("Names:\ngot  %+q\nwant %+q", got, want)
 	}
 }
 
 func TestCall(t *testing.T) {
-	_, c, cleanup := newServer(t, ServiceMapper{
-		"Test": NewService(dummy{}),
+	_, c, cleanup := newServer(t, handler.ServiceMap{
+		"Test": handler.NewService(dummy{}),
 	}, &testOptions{
-		server: &ServerOptions{
+		server: &jrpc2.ServerOptions{
 			AllowV1:     true,
 			Concurrency: 16,
 		},
@@ -154,10 +154,10 @@ func TestCall(t *testing.T) {
 }
 
 func TestCallResult(t *testing.T) {
-	_, c, cleanup := newServer(t, ServiceMapper{
-		"Test": NewService(dummy{}),
+	_, c, cleanup := newServer(t, handler.ServiceMap{
+		"Test": handler.NewService(dummy{}),
 	}, &testOptions{
-		server: &ServerOptions{Concurrency: 16},
+		server: &jrpc2.ServerOptions{Concurrency: 16},
 	})
 	defer cleanup()
 	ctx := context.Background()
@@ -175,59 +175,11 @@ func TestCallResult(t *testing.T) {
 	}
 }
 
-func TestParseRequests(t *testing.T) {
-	tests := []struct {
-		input string
-		want  []*Request
-		err   error
-	}{
-		// An empty batch is valid and produces no results.
-		{`[]`, nil, nil},
-
-		// An empty single request is invalid but returned anyway.
-		{`{}`, []*Request{{}}, ErrInvalidVersion},
-
-		// A valid notification.
-		{`{"jsonrpc":"2.0", "method": "foo", "params":[1, 2, 3]}`, []*Request{{
-			method: "foo",
-			params: json.RawMessage(`[1, 2, 3]`),
-		}}, nil},
-
-		// A valid request, with nil parameters.
-		{`{"jsonrpc":"2.0", "method": "foo", "id":10332, "params":null}`, []*Request{{
-			id: json.RawMessage("10332"), method: "foo",
-		}}, nil},
-
-		// A valid mixed batch.
-		{`[ {"jsonrpc": "2.0", "id": 1, "method": "A", "params": {}},
-          {"jsonrpc": "2.0", "params": [5], "method": "B"} ]`, []*Request{
-			{method: "A", id: json.RawMessage(`1`), params: json.RawMessage(`{}`)},
-			{method: "B", params: json.RawMessage(`[5]`)},
-		}, nil},
-
-		// An invalid batch.
-		{`[{"id": 37, "method": "complain", "params":[]}]`, []*Request{
-			{method: "complain", id: json.RawMessage(`37`), params: json.RawMessage(`[]`)},
-		}, ErrInvalidVersion},
-	}
-	for _, test := range tests {
-		got, err := ParseRequests([]byte(test.input))
-		if err != test.err {
-			t.Errorf("ParseRequests(%#q): got error %v, want%v", test.input, err, test.err)
-			continue
-		}
-
-		if diff := pretty.Compare(got, test.want); diff != "" {
-			t.Errorf("ParseRequests(%#q): wrong result (-got +want):\n%s", test.input, diff)
-		}
-	}
-}
-
 func TestBatch(t *testing.T) {
-	_, c, cleanup := newServer(t, ServiceMapper{
-		"Test": NewService(dummy{}),
+	_, c, cleanup := newServer(t, handler.ServiceMap{
+		"Test": handler.NewService(dummy{}),
 	}, &testOptions{
-		server: &ServerOptions{
+		server: &jrpc2.ServerOptions{
 			AllowV1:     true,
 			Concurrency: 16,
 		},
@@ -236,9 +188,13 @@ func TestBatch(t *testing.T) {
 	ctx := context.Background()
 
 	// Verify that a batch request works.
-	specs := make([]Spec, len(callTests))
+	specs := make([]jrpc2.Spec, len(callTests))
 	for i, test := range callTests {
-		specs[i] = Spec{test.method, test.params, false}
+		specs[i] = jrpc2.Spec{
+			Method: test.method,
+			Params: test.params,
+			Notify: false,
+		}
 	}
 	batch, err := c.Batch(ctx, specs)
 	if err != nil {
@@ -264,10 +220,10 @@ func TestBatch(t *testing.T) {
 // up and handled correctly.
 func TestErrorOnly(t *testing.T) {
 	const errMessage = "not enough strings"
-	_, c, cleanup := newServer(t, MapAssigner{
-		"ErrorOnly": NewHandler(func(_ context.Context, ss []string) error {
+	_, c, cleanup := newServer(t, handler.Map{
+		"ErrorOnly": handler.New(func(_ context.Context, ss []string) error {
 			if len(ss) == 0 {
-				return Errorf(1, errMessage)
+				return jrpc2.Errorf(1, errMessage)
 			}
 			t.Logf("ErrorOnly succeeds on input %q", ss)
 			return nil
@@ -280,10 +236,10 @@ func TestErrorOnly(t *testing.T) {
 		rsp, err := c.Call(ctx, "ErrorOnly", []string{})
 		if err == nil {
 			t.Errorf("ErrorOnly: got %+v, want error", rsp)
-		} else if e, ok := err.(*Error); !ok {
+		} else if e, ok := err.(*jrpc2.Error); !ok {
 			t.Errorf("ErrorOnly: got %v, want *Error", err)
-		} else if e.code != 1 || e.message != errMessage {
-			t.Errorf("ErrorOnly: got (%s, %s), want (1, %s)", e.code, e.message, errMessage)
+		} else if e.Code() != 1 || e.Message() != errMessage {
+			t.Errorf("ErrorOnly: got (%s, %s), want (1, %s)", e.Code(), e.Message(), errMessage)
 		}
 	})
 	t.Run("CallExpectingOK", func(t *testing.T) {
@@ -293,7 +249,10 @@ func TestErrorOnly(t *testing.T) {
 		}
 		// Per https://www.jsonrpc.org/specification#response_object, a "result"
 		// field is required on success, so verify that it is set null.
-		if r := string(rsp.result); r != "null" {
+		var got json.RawMessage
+		if err := rsp.UnmarshalResult(&got); err != nil {
+			t.Fatalf("Failed to unmarshal result data: %v", err)
+		} else if r := string(got); r != "null" {
 			t.Errorf("ErrorOnly response: got %q, want null", r)
 		}
 	})
@@ -302,8 +261,8 @@ func TestErrorOnly(t *testing.T) {
 // Verify that a timeout set on the context is respected by the server and
 // propagates back to the client as an error.
 func TestTimeout(t *testing.T) {
-	_, c, cleanup := newServer(t, MapAssigner{
-		"Stall": NewHandler(func(ctx context.Context) (bool, error) {
+	_, c, cleanup := newServer(t, handler.Map{
+		"Stall": handler.New(func(ctx context.Context) (bool, error) {
 			t.Log("Stalling...")
 			select {
 			case <-ctx.Done():
@@ -334,8 +293,8 @@ func TestTimeout(t *testing.T) {
 func TestServerStopCancellation(t *testing.T) {
 	started := make(chan struct{})
 	stopped := make(chan error, 1)
-	s, c, cleanup := newServer(t, MapAssigner{
-		"Hang": NewHandler(func(ctx context.Context) (bool, error) {
+	s, c, cleanup := newServer(t, handler.Map{
+		"Hang": handler.New(func(ctx context.Context) (bool, error) {
 			close(started) // signal that the method handler is running
 			<-ctx.Done()
 			return true, ctx.Err()
@@ -365,72 +324,15 @@ func TestServerStopCancellation(t *testing.T) {
 	}
 }
 
-// Verify that if the client context terminates during a request, the client
-// will terminate and report failure.
-func TestClientCancellation(t *testing.T) {
-	started := make(chan struct{})
-	stopped := make(chan bool, 1)
-	_, c, cleanup := newServer(t, MapAssigner{
-		"Hang": NewHandler(func(ctx context.Context) (bool, error) {
-			close(started) // signal that the method handler is running
-			defer close(stopped)
-
-			t.Log("Waiting for context completion...")
-			select {
-			case <-ctx.Done():
-				t.Logf("Server context cancelled: err=%v", ctx.Err())
-				stopped <- true
-				return true, ctx.Err()
-			case <-time.After(10 * time.Second):
-				return false, nil
-			}
-		}),
-	}, nil)
-	defer cleanup()
-
-	// Start a call that will hang around until a timer expires or an explicit
-	// cancellation is received.
-	ctx, cancel := context.WithCancel(context.Background())
-	req, err := c.req(ctx, "Hang", nil)
-	if err != nil {
-		t.Fatalf("c.req(Hang) failed: %v", err)
-	}
-	rsps, err := c.send(ctx, jrequests{req})
-	if err != nil {
-		t.Fatalf("c.send(Hang) failed: %v", err)
-	}
-
-	// Wait for the handler to start so that we don't race with calling the
-	// handler on the server side, then cancel the context client-side.
-	<-started
-	cancel()
-
-	// The call should fail client side, in the usual way for a cancellation.
-	rsp := rsps[0]
-	rsp.wait()
-	if err := rsp.Error(); err != nil {
-		if err.code != code.Cancelled {
-			t.Errorf("Response error for %q: got %v, want %v", rsp.ID(), err, code.Cancelled)
-		}
-	} else {
-		t.Errorf("Response for %q: unexpectedly succeeded", rsp.ID())
-	}
-
-	// The server handler should have reported a cancellation.
-	if ok := <-stopped; !ok {
-		t.Error("Server context was not cancelled")
-	}
-}
-
 // Test that an error with data attached to it is correctly propagated back
 // from the server to the client, in a value of concrete type *Error.
 func TestErrors(t *testing.T) {
 	const errCode = -32000
 	const errData = `{"caroline":452}`
 	const errMessage = "error thingy"
-	_, c, cleanup := newServer(t, MapAssigner{
-		"Err": NewHandler(func(_ context.Context) (int, error) {
-			return 17, DataErrorf(errCode, json.RawMessage(errData), errMessage)
+	_, c, cleanup := newServer(t, handler.Map{
+		"Err": handler.New(func(_ context.Context) (int, error) {
+			return 17, jrpc2.DataErrorf(errCode, json.RawMessage(errData), errMessage)
 		}),
 	}, nil)
 	defer cleanup()
@@ -438,14 +340,17 @@ func TestErrors(t *testing.T) {
 	got, err := c.Call(context.Background(), "Err", nil)
 	if err == nil {
 		t.Errorf("Call: got %#v, wanted error", got)
-	} else if e, ok := err.(*Error); ok {
-		if e.code != errCode {
-			t.Errorf("Error code: got %d, want %d", e.code, errCode)
+	} else if e, ok := err.(*jrpc2.Error); ok {
+		if e.Code() != errCode {
+			t.Errorf("Error code: got %d, want %d", e.Code(), errCode)
 		}
-		if e.message != errMessage {
-			t.Errorf("Error message: got %q, want %q", e.message, errMessage)
+		if e.Message() != errMessage {
+			t.Errorf("Error message: got %q, want %q", e.Message(), errMessage)
 		}
-		if s := string(e.data); s != errData {
+		var data json.RawMessage
+		if err := e.UnmarshalData(&data); err != nil {
+			t.Errorf("Unmarshaling error data: %v", err)
+		} else if s := string(data); s != errData {
 			t.Errorf("Error data: got %q, want %q", s, errData)
 		}
 	} else {
@@ -455,9 +360,9 @@ func TestErrors(t *testing.T) {
 
 // Verify that metrics are correctly propagated to server info.
 func TestServerInfo(t *testing.T) {
-	s, c, cleanup := newServer(t, MapAssigner{
-		"Metricize": NewHandler(func(ctx context.Context) (bool, error) {
-			m := ServerMetrics(ctx)
+	s, c, cleanup := newServer(t, handler.Map{
+		"Metricize": handler.New(func(ctx context.Context) (bool, error) {
+			m := jrpc2.ServerMetrics(ctx)
 			if m == nil {
 				t.Error("Request context does not contain a metrics writer")
 				return false, nil
@@ -518,8 +423,8 @@ func TestServerInfo(t *testing.T) {
 // client by writing requests directly into the channel.
 func TestOtherClient(t *testing.T) {
 	srv, cli := channel.Pipe(channel.Line)
-	s := NewServer(MapAssigner{
-		"X": NewHandler(func(ctx context.Context) (string, error) {
+	s := jrpc2.NewServer(handler.Map{
+		"X": handler.New(func(ctx context.Context) (string, error) {
 			return "OK", nil
 		}),
 	}, nil).Start(srv)
@@ -581,24 +486,24 @@ func TestServerNotify(t *testing.T) {
 	// we're just capturing the name of the notification method, as a sign we
 	// got the right thing.
 	var notes []string
-	s, c, cleanup := newServer(t, MapAssigner{
-		"NoteMe": NewHandler(func(ctx context.Context) (bool, error) {
+	s, c, cleanup := newServer(t, handler.Map{
+		"NoteMe": handler.New(func(ctx context.Context) (bool, error) {
 			// When this method is called, it posts a notification back to the
 			// client before returning.
-			if err := ServerPush(ctx, "method", nil); err != nil {
+			if err := jrpc2.ServerPush(ctx, "method", nil); err != nil {
 				t.Errorf("ServerPush unexpectedly failed: %v", err)
 				return false, err
 			}
 			return true, nil
 		}),
 	}, &testOptions{
-		server: &ServerOptions{
+		server: &jrpc2.ServerOptions{
 			AllowPush: true,
 		},
-		client: &ClientOptions{
-			OnNotify: func(req *Request) {
-				notes = append(notes, req.method)
-				t.Logf("OnNotify handler saw method %q", req.method)
+		client: &jrpc2.ClientOptions{
+			OnNotify: func(req *jrpc2.Request) {
+				notes = append(notes, req.Method())
+				t.Logf("OnNotify handler saw method %q", req.Method())
 			},
 		},
 	})
@@ -630,8 +535,8 @@ func TestContextPlumbing(t *testing.T) {
 	ctx, cancel := context.WithDeadline(context.Background(), want)
 	defer cancel()
 
-	_, c, cleanup := newServer(t, MapAssigner{
-		"X": NewHandler(func(ctx context.Context) (bool, error) {
+	_, c, cleanup := newServer(t, handler.Map{
+		"X": handler.New(func(ctx context.Context) (bool, error) {
 			got, ok := ctx.Deadline()
 			if !ok {
 				return false, errors.New("no deadline was set")
@@ -642,89 +547,13 @@ func TestContextPlumbing(t *testing.T) {
 			return true, nil
 		}),
 	}, &testOptions{
-		server: &ServerOptions{DecodeContext: jctx.Decode},
-		client: &ClientOptions{EncodeContext: jctx.Encode},
+		server: &jrpc2.ServerOptions{DecodeContext: jctx.Decode},
+		client: &jrpc2.ClientOptions{EncodeContext: jctx.Encode},
 	})
 	defer cleanup()
 
 	if _, err := c.Call(ctx, "X", nil); err != nil {
 		t.Errorf("Call X failed: %v", err)
-	}
-}
-
-func TestSpecialMethods(t *testing.T) {
-	s := NewServer(MapAssigner{
-		"rpc.nonesuch": NewHandler(func(context.Context) (string, error) { return "OK", nil }),
-		"donkeybait":   NewHandler(func(context.Context) (bool, error) { return true, nil }),
-	}, nil)
-	for _, name := range []string{"rpc.serverInfo", "rpc.cancel", "donkeybait"} {
-		if got := s.assign(name); got == nil {
-			t.Errorf("s.assign(%s): no method assigned", name)
-		}
-	}
-	if got := s.assign("rpc.nonesuch"); got != nil {
-		t.Errorf("s.assign(rpc.nonesuch): got %v, want nil", got)
-	}
-}
-
-// Verify that the option to remove the special behaviour of rpc.* methods can
-// be correctly disabled by the server options.
-func TestDisableBuiltin(t *testing.T) {
-	s := NewServer(MapAssigner{
-		"rpc.nonesuch": NewHandler(func(context.Context) (string, error) { return "OK", nil }),
-	}, &ServerOptions{DisableBuiltin: true})
-
-	// With builtins disabled, the default rpc.* methods should not get assigned.
-	for _, name := range []string{"rpc.serverInfo", "rpc.cancel"} {
-		if got := s.assign(name); got != nil {
-			t.Errorf("s.assign(%s): got %+v, wanted nil", name, got)
-		}
-	}
-
-	// However, user-assigned methods with this prefix should now work.
-	if got := s.assign("rpc.nonesuch"); got == nil {
-		t.Error("s.assign(rpc.nonesuch): missing assignment")
-	}
-}
-
-// Verify that the NewHandler function correctly handles the various type
-// signatures it's advertised to support, and not others.
-func TestNewHandler(t *testing.T) {
-	tests := []struct {
-		v   interface{}
-		bad bool
-	}{
-		{v: nil, bad: true},              // nil value
-		{v: "not a function", bad: true}, // not a function
-
-		// All the legal kinds...
-		{v: func(context.Context, *Request) (interface{}, error) { return nil, nil }},
-		{v: func(context.Context) (int, error) { return 0, nil }},
-		{v: func(context.Context, []int) error { return nil }},
-		{v: func(context.Context, []bool) (float64, error) { return 0, nil }},
-		{v: func(context.Context, ...string) (bool, error) { return false, nil }},
-		{v: func(context.Context, *Request) (byte, error) { return '0', nil }},
-
-		// Things that aren't supposed to work.
-		{v: func() error { return nil }, bad: true},                           // wrong # of params
-		{v: func(a, b, c int) bool { return false }, bad: true},               // ...
-		{v: func(byte) {}, bad: true},                                         // wrong # of results
-		{v: func(byte) (int, bool, error) { return 0, true, nil }, bad: true}, // ...
-		{v: func(string) error { return nil }, bad: true},                     // missing context
-		{v: func(context.Context) error { return nil }, bad: true},            // no params, no result
-		{v: func(a, b string) error { return nil }, bad: true},                // P1 is not context
-		{v: func(context.Context, int) bool { return false }, bad: true},      // R1 is not error
-		{v: func(context.Context) (int, bool) { return 1, true }, bad: true},  // R2 is not error
-	}
-	for _, test := range tests {
-		got, err := newHandler(test.v)
-		if !test.bad && err != nil {
-			t.Errorf("newHandler(%T): unexpected error: %v", test.v, err)
-		} else if test.bad && err == nil {
-			t.Errorf("newHandler(%T): got %+v, want error", test.v, got)
-		} else if _, ok := got.(methodFunc); !ok && got != nil {
-			t.Errorf("newHandler(%T): incorrect return type %T", test.v, got)
-		}
 	}
 }
 
@@ -738,13 +567,13 @@ func TestAuthHooks(t *testing.T) {
 		Key:  []byte("8A27D68F-AD87-4DE0-957B-33E9A0A74222"),
 	}
 
-	_, c, cleanup := newServer(t, MapAssigner{
-		"Test": NewHandler(func(ctx context.Context) (string, error) {
+	_, c, cleanup := newServer(t, handler.Map{
+		"Test": handler.New(func(ctx context.Context) (string, error) {
 			return wantResponse, nil
 		}),
 	}, &testOptions{
 		// Enable auth checking and context decoding for the server.
-		server: &ServerOptions{
+		server: &jrpc2.ServerOptions{
 			DecodeContext: jctx.Decode,
 			CheckAuth: func(ctx context.Context, method string, params []byte) error {
 				token, ok := jctx.AuthToken(ctx)
@@ -754,7 +583,7 @@ func TestAuthHooks(t *testing.T) {
 		},
 
 		// Enable context encoding for the client.
-		client: &ClientOptions{
+		client: &jrpc2.ClientOptions{
 			EncodeContext: jctx.Encode,
 		},
 	})
@@ -799,8 +628,8 @@ func TestAuthHooks(t *testing.T) {
 // Verify that calling a wrapped method which takes no parameters, but in which
 // the caller provided parameters, will correctly report an error.
 func TestNoParams(t *testing.T) {
-	_, c, cleanup := newServer(t, MapAssigner{
-		"Test": NewHandler(func(ctx context.Context) (string, error) {
+	_, c, cleanup := newServer(t, handler.Map{
+		"Test": handler.New(func(ctx context.Context) (string, error) {
 			return "OK", nil // this should not be reached
 		}),
 	}, nil)

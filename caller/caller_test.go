@@ -11,6 +11,7 @@ import (
 
 	"bitbucket.org/creachadair/jrpc2"
 	"bitbucket.org/creachadair/jrpc2/channel"
+	"bitbucket.org/creachadair/jrpc2/handler"
 )
 
 func newServer(t *testing.T, assigner jrpc2.Assigner, opts *jrpc2.ServerOptions) (*jrpc2.Server, *jrpc2.Client, func()) {
@@ -38,9 +39,9 @@ func newServer(t *testing.T, assigner jrpc2.Assigner, opts *jrpc2.ServerOptions)
 }
 
 func newAssigner(t *testing.T) jrpc2.Assigner {
-	return jrpc2.MapAssigner{
+	return handler.Map{
 		// A dummy method that returns the length of its argument slice.
-		"F": jrpc2.NewHandler(func(_ context.Context, req []string) (int, error) {
+		"F": handler.New(func(_ context.Context, req []string) (int, error) {
 			t.Logf("Call to F with arguments %#v", req)
 
 			// Check for this special form, and generate an error if it matches.
@@ -50,12 +51,12 @@ func newAssigner(t *testing.T) jrpc2.Assigner {
 			return len(req), nil
 		}),
 		// A method that returns a fixed string.
-		"OK": jrpc2.NewHandler(func(context.Context) (string, error) {
+		"OK": handler.New(func(context.Context) (string, error) {
 			t.Log("Call to OK")
 			return "OK, hello", nil
 		}),
 		// A method that returns an error only, no data value.
-		"ErrOnly": jrpc2.NewHandler(func(_ context.Context, req []string) error {
+		"ErrOnly": handler.New(func(_ context.Context, req []string) error {
 			if len(req) != 0 {
 				return jrpc2.Errorf(1, req[0])
 			}
@@ -63,7 +64,7 @@ func newAssigner(t *testing.T) jrpc2.Assigner {
 		}),
 		// A method that should only ever be called as a notification.  It
 		// generates a test error if it is sent a call expecting a reply.
-		"Note": jrpc2.NewHandler(func(_ context.Context, req *jrpc2.Request) error {
+		"Note": handler.New(func(_ context.Context, req *jrpc2.Request) error {
 			if !req.IsNotification() {
 				t.Errorf("Note called expecting a reply: %+v", req)
 				return errors.New("bad")

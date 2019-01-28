@@ -10,6 +10,7 @@ import (
 
 	"bitbucket.org/creachadair/jrpc2"
 	"bitbucket.org/creachadair/jrpc2/channel"
+	"bitbucket.org/creachadair/jrpc2/handler"
 )
 
 var newChan = channel.Varint
@@ -42,8 +43,8 @@ func mustServe(t *testing.T, lst net.Listener) <-chan struct{} {
 		defer close(sc)
 		// Start a server loop to accept connections from the clients. This should
 		// exit cleanly once all the clients have finished and the listener closes.
-		service := jrpc2.MapAssigner{
-			"Test": jrpc2.NewHandler(func(context.Context) (string, error) {
+		service := handler.Map{
+			"Test": handler.New(func(context.Context) (string, error) {
 				return "OK", nil
 			}),
 		}

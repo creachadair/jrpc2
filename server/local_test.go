@@ -4,12 +4,12 @@ import (
 	"context"
 	"testing"
 
-	"bitbucket.org/creachadair/jrpc2"
 	"bitbucket.org/creachadair/jrpc2/caller"
+	"bitbucket.org/creachadair/jrpc2/handler"
 )
 
 func TestLocal(t *testing.T) {
-	cli, wait := Local(make(jrpc2.MapAssigner), nil)
+	cli, wait := Local(make(handler.Map), nil)
 
 	ctx := context.Background()
 	si, err := caller.RPCServerInfo(ctx, cli)
