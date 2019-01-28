@@ -141,10 +141,12 @@ func TestMetadata(t *testing.T) {
 func TestAuth(t *testing.T) {
 	const token = "my magic token"
 	const param = "[1,2,3]"
-	ctx := WithAuthorizer(context.Background(), func(method string, params []byte) ([]byte, error) {
-		t.Logf("Authorizer called for method %q with params %q", method, string(params))
-		return []byte(token), nil
-	})
+	ctx := WithAuthorizer(context.Background(),
+		func(ctx context.Context, method string, params []byte) ([]byte, error) {
+			t.Logf("Authorizer called for method %q with params %q", method, string(params))
+			return []byte(token), nil
+		},
+	)
 
 	// Simulate transmission -- encode, then decode.
 	var dec context.Context

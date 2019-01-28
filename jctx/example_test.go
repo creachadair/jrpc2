@@ -45,7 +45,7 @@ func ExampleEncode_deadline() {
 
 func ExampleWithAuthorizer() {
 	// A trivial "authorization" token consisting of username and password.
-	userPass := func(method string, params []byte) ([]byte, error) {
+	userPass := func(ctx context.Context, method string, params []byte) ([]byte, error) {
 		return []byte("jonsnow:myWatchIsD0ne"), nil
 	}
 

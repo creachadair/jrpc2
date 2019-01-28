@@ -19,6 +19,7 @@ package jauth
 
 import (
 	"bytes"
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"crypto/subtle"
@@ -51,7 +52,7 @@ func (u User) Signature(method string, params []byte) []byte {
 }
 
 // Token computes an encoded token for the given method and parameters.
-func (u User) Token(method string, params []byte) ([]byte, error) {
+func (u User) Token(ctx context.Context, method string, params []byte) ([]byte, error) {
 	return json.Marshal(Token{
 		User: u.Name,
 		Sig:  u.Signature(method, params),

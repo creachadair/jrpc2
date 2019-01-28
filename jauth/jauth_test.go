@@ -1,6 +1,7 @@
 package jauth
 
 import (
+	"context"
 	"testing"
 )
 
@@ -15,7 +16,7 @@ func TestRoundTrip(t *testing.T) {
 
 	// Generate a token.
 	user := User{Name: userName, Key: []byte(key)}
-	token, err := user.Token(method, []byte(params))
+	token, err := user.Token(context.Background(), method, []byte(params))
 	if err != nil {
 		t.Fatalf("Token(%q, ...) failed: %v", method, err)
 	}

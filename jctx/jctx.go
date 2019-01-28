@@ -84,7 +84,7 @@ func Encode(ctx context.Context, method string, params json.RawMessage) (json.Ra
 	// If there is an authorizer, use it to generate a token for this request.
 	if v := ctx.Value(authorizerKey{}); v != nil {
 		auth := v.(Authorizer)
-		tok, err := auth(method, []byte(params))
+		tok, err := auth(ctx, method, []byte(params))
 		if err != nil {
 			return nil, err
 		}
@@ -171,7 +171,7 @@ type authorizerKey struct{}
 // method name and request parameters to be authorized. If the authorizer
 // returns an error, context encoding fails. If it returns an empty token
 // without error, no token is attached to the context.
-type Authorizer func(method string, params []byte) ([]byte, error)
+type Authorizer func(ctx context.Context, method string, params []byte) ([]byte, error)
 
 // WithAuthorizer attaches the specified authorizer to the context.
 func WithAuthorizer(ctx context.Context, auth Authorizer) context.Context {
