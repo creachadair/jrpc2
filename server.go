@@ -147,8 +147,8 @@ func (s *Server) serve() {
 }
 
 // nextRequest blocks until a request batch is available and returns a function
-// dispatches it to the appropriate handlers. The result is only an error if
-// the connection failed; errors reported by the handler are reported to the
+// that dispatches it to the appropriate handlers. The result is only an error
+// if the connection failed; errors reported by the handler are reported to the
 // caller and not returned here.
 //
 // The caller must invoke the returned function to complete the request.
