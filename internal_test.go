@@ -169,3 +169,41 @@ func TestDisableBuiltin(t *testing.T) {
 		t.Error("s.assign(rpc.nonesuch): missing assignment")
 	}
 }
+
+// Verify that a batch request gets a batch reply, even if it is only a single
+// request. The Client never sends requests like that, but the server needs to
+// cope with it correctly.
+func TestBatchReply(t *testing.T) {
+	cpipe, spipe := channel.Pipe(channel.RawJSON)
+	srv := NewServer(hmap{
+		"test": methodFunc(func(_ context.Context, req *Request) (interface{}, error) {
+			t.Logf("Called %q", req.Method())
+			return req.Method() + " OK", nil
+		}),
+	}, nil).Start(spipe)
+	defer func() { cpipe.Close(); srv.Wait() }()
+
+	tests := []struct {
+		input, want string
+	}{
+		// A single-element batch gets returned as a batch.
+		{`[{"jsonrpc":"2.0", "id":1, "method":"test"}]`,
+			`[{"jsonrpc":"2.0","id":1,"result":"test OK"}]`},
+
+		// A single-element non-batch gets returned as a single reply.
+		{`{"jsonrpc":"2.0", "id":2, "method":"test"}`,
+			`{"jsonrpc":"2.0","id":2,"result":"test OK"}`},
+	}
+	for _, test := range tests {
+		if err := cpipe.Send([]byte(test.input)); err != nil {
+			t.Errorf("Send failed: %v", err)
+		}
+		rsp, err := cpipe.Recv()
+		if err != nil {
+			t.Errorf("Recv failed: %v", err)
+		}
+		if got := string(rsp); got != test.want {
+			t.Errorf("Batch reply:\n got %#q\nwant %#q", got, test.want)
+		}
+	}
+}
