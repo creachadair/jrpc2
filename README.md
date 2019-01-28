@@ -27,3 +27,36 @@ This repository provides Go package that implements a [JSON-RPC 2.0][spec] clien
 *  Package [server](http://godoc.org/bitbucket.org/creachadair/jrpc2/server) provides support for running a server to handle multiple connections, and an in-memory implementation for testing.
 
 [spec]: http://www.jsonrpc.org/specification
+
+## Implementation Notes
+
+The JSON-RPC 2.0 spec is ambiguous about the semantics of batch requests. Specifically, the definition of notifications says:
+
+> A Notification is a Request object without an "id" member.
+> ...
+> The Server MUST NOT reply to a Notification, including those that are within
+> a batch request.
+>
+> Notifications are not confirmable by definition, since they do not have a
+> Response object to be returned. As such, the Client would not be aware of any
+> errors (like e.g. "Invalid params", "Internal error").
+
+This conflicts with the definition of batch requests, which asserts:
+
+> A Response object SHOULD exist for each Request object, except that there
+> SHOULD NOT be any Response objects for notifications.
+> ...
+> The Response objects being returned from a batch call MAY be returned in any
+> order within the Array.
+> ...
+> If the batch rpc call itself fails to be recognized as an valid JSON or as an
+> Array with at least one value, the response from the Server MUST be a single
+> Response object.
+
+and includes examples that contain request values with no ID (which are, perforce, notifications) and report errors back to the client. Since order may not be relied upon, and there are no IDs, the client cannot correctly match such responses back to their originating requests.
+
+This implementation resolves the conflict in favour of the notification rules. Specifically:
+
+-  If a batch is empty or contains no structurally valid request or notification objects, the server reports error -32700 (Invalid JSON) as a single error Response object.
+
+-  Otherwise, errors resulting from any request object without an ID are logged by the server but not reported to the client.
