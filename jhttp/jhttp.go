@@ -18,7 +18,7 @@ import (
 //
 // The body of the HTTP POST request must contain the complete JSON-RPC request
 // message, encoded with Content-Type: application/json. Either a single
-// request object or a list of request objects are supported.
+// request object or a list of request objects is supported.
 //
 // If the request completes, whether or not there is an error, the HTTP
 // response is 200 (OK) for ordinary requests or 204 (No Response) for
