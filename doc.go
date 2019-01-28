@@ -214,7 +214,9 @@ method sends a notification back to the client, if this feature is enabled:
     // server notifications are not enabled
   }
 
-A method handler may use jrpc2.ServerPush to access this functionality.
+A method handler may use jrpc2.ServerPush to access this functionality.  On the
+client side, the OnNotify option in jrpc2.ClientOptions provides a callback to
+which any server notifications are delivered if it is set.
 */
 package jrpc2
 
