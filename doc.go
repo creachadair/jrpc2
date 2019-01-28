@@ -206,7 +206,7 @@ true when constructing the server.
 Server Notifications
 
 The AllowPush option in jrpc2.ServerOptions enables the server to "push"
-notifications back to the client. This is a non-standard feature of JSON-RPC
+notifications back to the client. This is a non-standard extension of JSON-RPC
 used by some applications such as the Language Server Protocol (LSP). The Push
 method sends a notification back to the client, if this feature is enabled:
 
