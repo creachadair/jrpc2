@@ -26,9 +26,8 @@
 //    ch := channel.LSP(r, wc)
 //
 // creates a channel that reads from r and writes to wc using the Language
-// Server Protocol (LSP) framing defined by [1].
-//
-// [1]: https://microsoft.github.io/language-server-protocol/specification
+// Server Protocol (LSP) framing defined by
+// https://microsoft.github.io/language-server-protocol/specification.
 //
 package channel
 
