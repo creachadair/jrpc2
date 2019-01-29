@@ -28,7 +28,7 @@ var (
 	callTimeout = flag.Duration("timeout", 0, "Timeout on each call (0 for no timeout)")
 	doNotify    = flag.Bool("notify", false, "Send a notification")
 	withContext = flag.Bool("c", false, "Send context with request")
-	chanFraming = flag.String("f", "raw", `Channel framing ("json", "line", "lsp", "raw", "varint")`)
+	chanFraming = flag.String("f", "raw", "Channel framing")
 	doSeq       = flag.Bool("seq", false, "Issue calls sequentially rather than as a batch")
 	doTiming    = flag.Bool("T", false, "Print call timing stats")
 	withLogging = flag.Bool("v", false, "Enable verbose logging")
@@ -43,6 +43,19 @@ func init() {
 Connect to the specified address and transmit the specified JSON-RPC method
 calls (as a batch, if more than one is provided).  The resulting response
 values are printed to stdout.
+
+The -f flag sets the framing discipline to use. The client must agree with the
+server in order for communication to work. The options are:
+
+  decimal    -- length-prefixed, length as a decimal integer
+  header:<t> -- header-framed, content-type <t>
+  json       -- header-framed, content-type application/json
+  line       -- byte-terminated, records end in LF (Unicode 10)
+  lsp        -- header-framed, content-type application/vscode-jsonrpc (like LSP)
+  raw        -- unframed, each message is a complete JSON value
+  varint     -- length-prefixed, length is a binary varint
+
+See also: https://godoc.org/bitbucket.org/creachadair/jrpc2/channel
 
 Options:
 `, filepath.Base(os.Args[0]))
