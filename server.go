@@ -227,7 +227,7 @@ func (s *Server) checkAndAssign(next jrequests) tasks {
 	var ts tasks
 	for _, req := range next {
 		s.log("Checking request for %q: %s", req.M, string(req.P))
-		t := &task{reqID: req.ID, reqM: req.M}
+		t := &task{reqID: req.ID, reqM: req.M, batch: req.batch}
 		req.ID = fixID(req.ID)
 		if id := string(req.ID); id != "" && s.used[id] != nil {
 			t.err = Errorf(code.InvalidRequest, "duplicate request id %q", id)
@@ -547,6 +547,7 @@ type task struct {
 	reqID  json.RawMessage // the original request ID
 	reqM   string          // the original method name
 	params json.RawMessage // the encoded parameters
+	batch  bool            // whether the request was part of a batch
 
 	val json.RawMessage // the result value (when complete)
 	err error           // the error value (when complete)
@@ -565,7 +566,7 @@ func (ts tasks) responses() jresponses {
 			// any errors."
 			continue
 		}
-		rsp := &jresponse{V: Version, ID: task.reqID}
+		rsp := &jresponse{V: Version, ID: task.reqID, batch: task.batch}
 		if task.err == nil {
 			rsp.R = task.val
 		} else if e, ok := task.err.(*Error); ok {

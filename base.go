@@ -181,8 +181,13 @@ func (j *jrequests) UnmarshalJSON(data []byte) error {
 	} else if data[0] != '[' {
 		*j = jrequests{new(jrequest)}
 		return json.Unmarshal(data, (*j)[0])
+	} else if err := json.Unmarshal(data, (*[]*jrequest)(j)); err != nil {
+		return err
 	}
-	return json.Unmarshal(data, (*[]*jrequest)(j))
+	for _, req := range *j {
+		req.batch = true
+	}
+	return nil
 }
 
 // jrequest is the transmission format of a request message.
@@ -191,6 +196,8 @@ type jrequest struct {
 	ID json.RawMessage `json:"id,omitempty"` // rendered by the constructor, may be nil
 	M  string          `json:"method"`
 	P  json.RawMessage `json:"params,omitempty"` // rendered by the constructor
+
+	batch bool // this request was part of a batch
 }
 
 func (j *jrequest) UnmarshalJSON(data []byte) error {
@@ -213,7 +220,7 @@ func (j *jrequest) UnmarshalJSON(data []byte) error {
 type jresponses []*jresponse
 
 func (j jresponses) MarshalJSON() ([]byte, error) {
-	if len(j) == 1 {
+	if len(j) == 1 && !j[0].batch {
 		return json.Marshal(j[0])
 	}
 	return json.Marshal([]*jresponse(j))
@@ -240,6 +247,8 @@ type jresponse struct {
 	// This is an extension of JSON-RPC 2.0.
 	M string          `json:"method,omitempty"`
 	P json.RawMessage `json:"params,omitempty"`
+
+	batch bool // the request was part of a batch
 }
 
 func (j jresponse) isServerRequest() bool { return j.E == nil && j.R == nil && j.M != "" }
