@@ -121,7 +121,13 @@ func newClient(conn net.Conn) *jrpc2.Client {
 	if nc == nil {
 		log.Fatalf("Unknown channel framing %q", *chanFraming)
 	}
-	opts := new(jrpc2.ClientOptions)
+	opts := &jrpc2.ClientOptions{
+		OnNotify: func(req *jrpc2.Request) {
+			var p json.RawMessage
+			req.UnmarshalParams(&p)
+			fmt.Printf(`{"method":%q,"params":%s}`+"\n", req.Method(), string(p))
+		},
+	}
 	if *withContext {
 		opts.EncodeContext = jctx.Encode
 	}
