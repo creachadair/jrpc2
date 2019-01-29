@@ -16,6 +16,7 @@ import (
 //    json     -- corresponds to channel.JSON
 //    line     -- corresponds to channel.Line
 //    lsp      -- corresponds to channel.LSP
+//    nul      -- corresponds to channel.NUL
 //    raw      -- corresponds to channel.RawJSON
 //    varint   -- corresponds to channel.Varint
 //
@@ -31,6 +32,7 @@ var framings = map[string]channel.Framing{
 	"json":    channel.JSON,
 	"line":    channel.Line,
 	"lsp":     channel.LSP,
+	"nul":     channel.NUL,
 	"raw":     channel.RawJSON,
 	"varint":  channel.Varint,
 }

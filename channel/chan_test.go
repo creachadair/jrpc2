@@ -15,7 +15,7 @@ var tests = []struct {
 	{"JSON", JSON},
 	{"LSP", LSP},
 	{"Line", Line},
-	{"NUL", Split('\x00')},
+	{"NUL", NUL},
 	{"NoMIME", Header("")},
 	{"RS", Split('\x1e')},
 	{"RawJSON", RawJSON},
