@@ -119,8 +119,9 @@ sends them to the server, but the server does not reply.
 
 A jrpc2.Client supports sending notifications as follows:
 
-   type alert struct { M string `json:"message"` }
-   err := cli.Notify(ctx, "Alert", alert{M: "a fire is burning!"})
+   err := cli.Notify(ctx, "Alert", struct{ M string }{
+      M: "A fire is burning!",
+   })
 
 Unlike ordinary requests, there are no pending calls for notifications; the
 notification is complete once it has been sent.
