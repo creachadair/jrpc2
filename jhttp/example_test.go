@@ -9,22 +9,20 @@ import (
 	"net/http/httptest"
 	"strings"
 
-	"bitbucket.org/creachadair/jrpc2"
-	"bitbucket.org/creachadair/jrpc2/channel"
 	"bitbucket.org/creachadair/jrpc2/handler"
 	"bitbucket.org/creachadair/jrpc2/jhttp"
+	"bitbucket.org/creachadair/jrpc2/server"
 )
 
 func Example() {
-	cch, sch := channel.Pipe(channel.Varint)
-	srv := jrpc2.NewServer(handler.Map{
+	cli, wait := server.Local(handler.Map{
 		"Test": handler.New(func(ctx context.Context, ss ...string) (string, error) {
 			return strings.Join(ss, " "), nil
 		}),
-	}, nil).Start(sch)
-	defer srv.Stop()
+	}, nil)
+	defer wait()
 
-	b := jhttp.New(cch, nil)
+	b := jhttp.NewClientBridge(cli)
 	defer b.Close()
 
 	hsrv := httptest.NewServer(b)

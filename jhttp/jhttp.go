@@ -122,8 +122,11 @@ func (b *Bridge) serveInternal(w http.ResponseWriter, req *http.Request) error {
 // its Close method.
 func (b *Bridge) Close() error { return b.cli.Close() }
 
-// New constructs a new Bridge that dispatches requests through a client
+// NewBridge constructs a new Bridge that dispatches requests through a client
 // constructed from the specified channel and options.
-func New(ch channel.Channel, opts *jrpc2.ClientOptions) *Bridge {
-	return &Bridge{cli: jrpc2.NewClient(ch, opts)}
+func NewBridge(ch channel.Channel, opts *jrpc2.ClientOptions) *Bridge {
+	return NewClientBridge(jrpc2.NewClient(ch, opts))
 }
+
+// NewClientBridge constructs a new Bridge that dispatches through the given client.
+func NewClientBridge(cli *jrpc2.Client) *Bridge { return &Bridge{cli: cli} }
