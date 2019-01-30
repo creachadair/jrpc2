@@ -26,36 +26,52 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"strconv"
+	"time"
 )
 
 // A User identifies a principal, identified by a name and an encryption key.
 type User struct {
 	Name string
 	Key  []byte
+
+	// If set, this function is used to return the current time for the user.
+	Time func() time.Time
+}
+
+func (u User) counter() int64 {
+	if u.Time != nil {
+		return u.Time().Unix() / 15
+	}
+	return time.Now().Unix() / 15
 }
 
 // Signature computes an HMAC/SHA256 signature of the given method and
 // parameters.  The input to the signature is:
 //
-//     <user> NUL <method> NUL <params>
+//     <user> NUL <method> NUL <params> NUL <nonce>
 //
 // That is the method name concatenated to the parameters, separated by a
 // single NUL (0) byte.
-func (u User) Signature(method string, params []byte) []byte {
+func (u User) Signature(method string, params []byte, nonce string) []byte {
 	h := hmac.New(sha256.New, u.Key)
 	io.WriteString(h, u.Name)
 	h.Write([]byte{0})
 	io.WriteString(h, method)
 	h.Write([]byte{0})
 	h.Write(params)
+	h.Write([]byte{0})
+	io.WriteString(h, nonce)
 	return h.Sum(nil)
 }
 
 // Token computes an encoded token for the given method and parameters.
 func (u User) Token(ctx context.Context, method string, params []byte) ([]byte, error) {
+	nonce := strconv.FormatInt(u.counter(), 10)
 	return json.Marshal(Token{
-		User: u.Name,
-		Sig:  u.Signature(method, params),
+		User:  u.Name,
+		Nonce: nonce,
+		Sig:   u.Signature(method, params, nonce),
 	})
 }
 
@@ -82,8 +98,22 @@ func (u User) Verify(token []byte, method string, params []byte) error {
 
 // VerifyParsed is as verify, but applies to a parsed Token.
 func (u User) VerifyParsed(tok Token, method string, params []byte) error {
-	want := u.Signature(method, params)
-	if subtle.ConstantTimeCompare(tok.Sig, want) != 1 {
+	// Verify that the nonce is within one interval on either side of the
+	// current counter. If not, the token has expired or the clocks of the
+	// client and the server are badly skewed.
+	//
+	// N.B. Do the verification work regardless of whether it succeeds or fails
+	// to minimize timing exposure.
+	ctr := u.counter()
+	nonce, err := strconv.ParseInt(tok.Nonce, 10, 64)
+	want := u.Signature(method, params, tok.Nonce)
+	ok := subtle.ConstantTimeCompare(tok.Sig, want) == 1
+
+	if err != nil && tok.Nonce != "" {
+		return ErrInvalidToken
+	} else if nonce < ctr-1 || nonce > ctr+1 {
+		return ErrInvalidToken
+	} else if !ok {
 		return ErrInvalidSignature
 	}
 	return nil
@@ -92,8 +122,9 @@ func (u User) VerifyParsed(tok Token, method string, params []byte) error {
 // A Token represents the structure of an encoded auth token, including the
 // username and the signature of the request to be authorized.
 type Token struct {
-	User string `json:"user"`
-	Sig  []byte `json:"sig"`
+	User  string `json:"user"`
+	Nonce string `json:"nonce"`
+	Sig   []byte `json:"sig"`
 }
 
 // ParseToken decodes an encoded auth token. It reports an error if raw is not
