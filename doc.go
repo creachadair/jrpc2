@@ -123,7 +123,7 @@ A jrpc2.Client supports sending notifications as follows:
       M: "A fire is burning!",
    })
 
-Unlike ordinary requests, there are no pending calls for notifications; the
+Unlike ordinary requests, there are no responses for notifications; a
 notification is complete once it has been sent.
 
 On the server side, notifications are identical to ordinary requests, save that
