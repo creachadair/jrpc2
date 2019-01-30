@@ -80,11 +80,11 @@ func ExampleDecode() {
 }
 
 func ExampleWithMetadata() {
-	type Auth struct {
+	type Meta struct {
 		User string `json:"user"`
 		UUID string `json:"uuid"`
 	}
-	ctx, err := jctx.WithMetadata(context.Background(), &Auth{
+	ctx, err := jctx.WithMetadata(context.Background(), &Meta{
 		User: "Jon Snow",
 		UUID: "28EF40F5-77C9-4744-B5BD-3ADCD1C15141",
 	})
@@ -127,25 +127,25 @@ func ExampleAuthToken() {
 
 func ExampleUnmarshalMetadata() {
 	// Setup for the example...
-	const meta = `{"user":"Jon Snow","token":"MjhFRjQwRjUtNzdDOS00NzQ0LUI1QkQtM0FEQ0QxQzE1MTQx"}`
-	ctx, err := jctx.WithMetadata(context.Background(), json.RawMessage(meta))
+	const input = `{"user":"Jon Snow","info":"MjhFRjQwRjUtNzdDOS00NzQ0LUI1QkQtM0FEQ0QxQzE1MTQx"}`
+	ctx, err := jctx.WithMetadata(context.Background(), json.RawMessage(input))
 	if err != nil {
 		log.Fatalln("Setup:", err)
 	}
 
 	// Demonstrates how to decode the value back.
-	var auth struct {
-		User  string `json:"user"`
-		Token []byte `json:"token"`
+	var meta struct {
+		User string `json:"user"`
+		Info []byte `json:"info"`
 	}
-	if err := jctx.UnmarshalMetadata(ctx, &auth); err != nil {
+	if err := jctx.UnmarshalMetadata(ctx, &meta); err != nil {
 		log.Fatalln("UnmarshalMetadata:", err)
 	}
-	fmt.Println("user:", auth.User)
-	fmt.Println("token:", string(auth.Token))
+	fmt.Println("user:", meta.User)
+	fmt.Println("info:", string(meta.Info))
 	// Output:
 	// user: Jon Snow
-	// token: 28EF40F5-77C9-4744-B5BD-3ADCD1C15141
+	// info: 28EF40F5-77C9-4744-B5BD-3ADCD1C15141
 }
 
 func pretty(v []byte) string {
