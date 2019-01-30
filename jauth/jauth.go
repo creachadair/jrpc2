@@ -32,18 +32,23 @@ import (
 
 // A User identifies a principal, identified by a name and an encryption key.
 type User struct {
-	Name string
-	Key  []byte
+	Name     string        // user identifier
+	Key      []byte        // secret key
+	Lifetime time.Duration // token lifetime (0 means use a default)
 
 	// If set, this function is used to return the current time for the user.
 	Time func() time.Time
 }
 
 func (u User) counter() int64 {
-	if u.Time != nil {
-		return u.Time().Unix() / 15
+	life := (int64(u.Lifetime/time.Second) + 2) / 3
+	if life == 0 {
+		life = 10 // 30 seconds
 	}
-	return time.Now().Unix() / 15
+	if u.Time != nil {
+		return u.Time().Unix() / life
+	}
+	return time.Now().Unix() / life
 }
 
 // Signature computes an HMAC/SHA256 signature of the given method and
