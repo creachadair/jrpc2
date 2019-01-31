@@ -29,7 +29,7 @@ var (
 	doNotify    = flag.Bool("notify", false, "Send a notification")
 	withContext = flag.Bool("c", false, "Send context with request")
 	chanFraming = flag.String("f", "raw", "Channel framing")
-	doSeq       = flag.Bool("seq", false, "Issue calls sequentially rather than as a batch")
+	doBatch     = flag.Bool("batch", false, "Issue calls as a batch rather than sequentially")
 	doTiming    = flag.Bool("T", false, "Print call timing stats")
 	withLogging = flag.Bool("v", false, "Enable verbose logging")
 	withAuth    = flag.String("auth", "", "Identity for auth token (user:key or key; implies -c)")
@@ -172,10 +172,10 @@ func printResults(rsps []*jrpc2.Response) bool {
 
 func issueCalls(ctx context.Context, cli *jrpc2.Client, args []string) ([]*jrpc2.Response, error) {
 	specs := newSpecs(args)
-	if *doSeq {
-		return issueSequential(ctx, cli, specs)
+	if *doBatch {
+		cli.Batch(ctx, specs)
 	}
-	return cli.Batch(ctx, specs)
+	return issueSequential(ctx, cli, specs)
 }
 
 func issueSequential(ctx context.Context, cli *jrpc2.Client, specs []jrpc2.Spec) ([]*jrpc2.Response, error) {
