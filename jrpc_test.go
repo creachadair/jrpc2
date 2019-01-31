@@ -450,6 +450,23 @@ func TestOtherClient(t *testing.T) {
 		// A correct request.
 		{`{"jsonrpc":"2.0","id": 5, "method": "X"}`,
 			`{"jsonrpc":"2.0","id":5,"result":"OK"}`},
+
+		// An empty batch request should report a single error object.
+		{`[]`, `{"jsonrpc":"2.0","error":{"code":-32600,"message":"empty request batch"}}`},
+
+		// An invalid batch request should report a single error object.
+		{`[1]`, `{"jsonrpc":"2.0","error":{"code":-32700,"message":"invalid JSON request message"}}`},
+
+		// A batch of invalid requests returns a batch of errors.
+		{`[{"jsonrpc": "2.0", "id": 6, "method":"bogus"}]`,
+			`[{"jsonrpc":"2.0","id":6,"error":{"code":-32601,"message":"no such method \"bogus\""}}]`},
+
+		// Batch requests return batch responses, even for a singleton.
+		{`[{"jsonrpc": "2.0", "id": 7, "method": "X"}]`, `[{"jsonrpc":"2.0","id":7,"result":"OK"}]`},
+
+		// Notifications are not reflected in a batch response.
+		{`[{"jsonrpc": "2.0", "method": "note"}, {"jsonrpc": "2.0", "id": 8, "method": "X"}]`,
+			`[{"jsonrpc":"2.0","id":8,"result":"OK"}]`},
 	}
 	for _, test := range tests {
 		if err := cli.Send([]byte(test.input)); err != nil {
