@@ -3,40 +3,14 @@ package caller
 import (
 	"context"
 	"errors"
-	"log"
-	"os"
 	"reflect"
 	"strings"
 	"testing"
 
 	"bitbucket.org/creachadair/jrpc2"
-	"bitbucket.org/creachadair/jrpc2/channel"
 	"bitbucket.org/creachadair/jrpc2/handler"
+	"bitbucket.org/creachadair/jrpc2/server"
 )
-
-func newServer(t *testing.T, assigner jrpc2.Assigner, opts *jrpc2.ServerOptions) (*jrpc2.Server, *jrpc2.Client, func()) {
-	t.Helper()
-	if opts == nil {
-		opts = &jrpc2.ServerOptions{
-			Logger: log.New(os.Stderr, "[test client] ", log.LstdFlags|log.Lshortfile),
-		}
-	}
-
-	cpipe, spipe := channel.Pipe(channel.JSON)
-	srv := jrpc2.NewServer(assigner, opts).Start(spipe)
-	t.Logf("Server running on pipe %+v", spipe)
-
-	cli := jrpc2.NewClient(cpipe, &jrpc2.ClientOptions{
-		Logger: log.New(os.Stderr, "[test server] ", log.LstdFlags|log.Lshortfile),
-	})
-	t.Logf("Client running on pipe %v", cpipe)
-
-	return srv, cli, func() {
-		t.Logf("Client close: err=%v", cli.Close())
-		srv.Stop()
-		t.Logf("Server wait: err=%v", srv.Wait())
-	}
-}
 
 func newAssigner(t *testing.T) jrpc2.Assigner {
 	return handler.Map{
@@ -76,8 +50,9 @@ func newAssigner(t *testing.T) jrpc2.Assigner {
 }
 
 func TestNew(t *testing.T) {
-	_, c, cleanup := newServer(t, newAssigner(t), nil)
+	c, cleanup := server.Local(newAssigner(t), nil)
 	defer cleanup()
+	defer c.Close()
 	ctx := context.Background()
 
 	caller := New("F", Options{Params: []string(nil), Result: int(0)})
