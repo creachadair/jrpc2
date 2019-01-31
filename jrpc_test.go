@@ -15,32 +15,8 @@ import (
 	"bitbucket.org/creachadair/jrpc2/handler"
 	"bitbucket.org/creachadair/jrpc2/jauth"
 	"bitbucket.org/creachadair/jrpc2/jctx"
+	"bitbucket.org/creachadair/jrpc2/server"
 )
-
-type testOptions struct {
-	server *jrpc2.ServerOptions
-	client *jrpc2.ClientOptions
-}
-
-func newServer(t *testing.T, assigner jrpc2.Assigner, opts *testOptions) (*jrpc2.Server, *jrpc2.Client, func()) {
-	t.Helper()
-	if opts == nil {
-		opts = new(testOptions)
-	}
-	cpipe, spipe := channel.Pipe(channel.RawJSON)
-	srv := jrpc2.NewServer(assigner, opts.server).Start(spipe)
-	cli := jrpc2.NewClient(cpipe, opts.client)
-
-	return srv, cli, func() {
-		if err := cli.Close(); err != nil {
-			t.Logf("Warning: client close returned %v", err)
-		}
-		srv.Stop()
-		if err := srv.Wait(); err != nil {
-			t.Logf("Warning: server wait returned %v", err)
-		}
-	}
-}
 
 type dummy struct{}
 
@@ -109,10 +85,11 @@ var callTests = []struct {
 }
 
 func TestMethodNames(t *testing.T) {
-	s, _, cleanup := newServer(t, handler.ServiceMap{
+	loc := server.NewLocal(handler.ServiceMap{
 		"Test": handler.NewService(dummy{}),
 	}, nil)
-	defer cleanup()
+	defer loc.Close()
+	s := loc.Server
 
 	// Verify that the assigner got the names it was supposed to.
 	if got, want := s.ServerInfo().Methods, []string{"Test.Add", "Test.Ctx", "Test.Max", "Test.Mul", "Test.Nil"}; !reflect.DeepEqual(got, want) {
@@ -121,15 +98,16 @@ func TestMethodNames(t *testing.T) {
 }
 
 func TestCall(t *testing.T) {
-	_, c, cleanup := newServer(t, handler.ServiceMap{
+	loc := server.NewLocal(handler.ServiceMap{
 		"Test": handler.NewService(dummy{}),
-	}, &testOptions{
-		server: &jrpc2.ServerOptions{
+	}, &server.LocalOptions{
+		ServerOptions: &jrpc2.ServerOptions{
 			AllowV1:     true,
 			Concurrency: 16,
 		},
 	})
-	defer cleanup()
+	defer loc.Close()
+	c := loc.Client
 	ctx := context.Background()
 
 	// Verify that individual sequential requests work.
@@ -154,12 +132,13 @@ func TestCall(t *testing.T) {
 }
 
 func TestCallResult(t *testing.T) {
-	_, c, cleanup := newServer(t, handler.ServiceMap{
+	loc := server.NewLocal(handler.ServiceMap{
 		"Test": handler.NewService(dummy{}),
-	}, &testOptions{
-		server: &jrpc2.ServerOptions{Concurrency: 16},
+	}, &server.LocalOptions{
+		ServerOptions: &jrpc2.ServerOptions{Concurrency: 16},
 	})
-	defer cleanup()
+	defer loc.Close()
+	c := loc.Client
 	ctx := context.Background()
 
 	// Verify also that the CallResult wrapper works.
@@ -176,15 +155,16 @@ func TestCallResult(t *testing.T) {
 }
 
 func TestBatch(t *testing.T) {
-	_, c, cleanup := newServer(t, handler.ServiceMap{
+	loc := server.NewLocal(handler.ServiceMap{
 		"Test": handler.NewService(dummy{}),
-	}, &testOptions{
-		server: &jrpc2.ServerOptions{
+	}, &server.LocalOptions{
+		ServerOptions: &jrpc2.ServerOptions{
 			AllowV1:     true,
 			Concurrency: 16,
 		},
 	})
-	defer cleanup()
+	defer loc.Close()
+	c := loc.Client
 	ctx := context.Background()
 
 	// Verify that a batch request works.
@@ -220,7 +200,7 @@ func TestBatch(t *testing.T) {
 // up and handled correctly.
 func TestErrorOnly(t *testing.T) {
 	const errMessage = "not enough strings"
-	_, c, cleanup := newServer(t, handler.Map{
+	loc := server.NewLocal(handler.Map{
 		"ErrorOnly": handler.New(func(_ context.Context, ss []string) error {
 			if len(ss) == 0 {
 				return jrpc2.Errorf(1, errMessage)
@@ -229,9 +209,10 @@ func TestErrorOnly(t *testing.T) {
 			return nil
 		}),
 	}, nil)
-	defer cleanup()
-
+	defer loc.Close()
+	c := loc.Client
 	ctx := context.Background()
+
 	t.Run("CallExpectingError", func(t *testing.T) {
 		rsp, err := c.Call(ctx, "ErrorOnly", []string{})
 		if err == nil {
@@ -261,7 +242,7 @@ func TestErrorOnly(t *testing.T) {
 // Verify that a timeout set on the context is respected by the server and
 // propagates back to the client as an error.
 func TestTimeout(t *testing.T) {
-	_, c, cleanup := newServer(t, handler.Map{
+	loc := server.NewLocal(handler.Map{
 		"Stall": handler.New(func(ctx context.Context) (bool, error) {
 			t.Log("Stalling...")
 			select {
@@ -273,7 +254,8 @@ func TestTimeout(t *testing.T) {
 			}
 		}),
 	}, nil)
-	defer cleanup()
+	defer loc.Close()
+	c := loc.Client
 
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
@@ -293,14 +275,15 @@ func TestTimeout(t *testing.T) {
 func TestServerStopCancellation(t *testing.T) {
 	started := make(chan struct{})
 	stopped := make(chan error, 1)
-	s, c, cleanup := newServer(t, handler.Map{
+	loc := server.NewLocal(handler.Map{
 		"Hang": handler.New(func(ctx context.Context) (bool, error) {
 			close(started) // signal that the method handler is running
 			<-ctx.Done()
 			return true, ctx.Err()
 		}),
 	}, nil)
-	defer cleanup()
+	defer loc.Close()
+	s, c := loc.Server, loc.Client
 
 	// Call the server. The method will hang until its context is cancelled,
 	// which should happen when the server stops.
@@ -330,12 +313,13 @@ func TestErrors(t *testing.T) {
 	const errCode = -32000
 	const errData = `{"caroline":452}`
 	const errMessage = "error thingy"
-	_, c, cleanup := newServer(t, handler.Map{
+	loc := server.NewLocal(handler.Map{
 		"Err": handler.New(func(_ context.Context) (int, error) {
 			return 17, jrpc2.DataErrorf(errCode, json.RawMessage(errData), errMessage)
 		}),
 	}, nil)
-	defer cleanup()
+	defer loc.Close()
+	c := loc.Client
 
 	got, err := c.Call(context.Background(), "Err", nil)
 	if err == nil {
@@ -360,7 +344,7 @@ func TestErrors(t *testing.T) {
 
 // Verify that metrics are correctly propagated to server info.
 func TestServerInfo(t *testing.T) {
-	s, c, cleanup := newServer(t, handler.Map{
+	loc := server.NewLocal(handler.Map{
 		"Metricize": handler.New(func(ctx context.Context) (bool, error) {
 			m := jrpc2.ServerMetrics(ctx)
 			if m == nil {
@@ -384,7 +368,8 @@ func TestServerInfo(t *testing.T) {
 			return true, nil
 		}),
 	}, nil)
-	defer cleanup()
+	defer loc.Close()
+	s, c := loc.Server, loc.Client
 
 	ctx := context.Background()
 	if _, err := c.Call(ctx, "Metricize", nil); err != nil {
@@ -486,7 +471,7 @@ func TestServerNotify(t *testing.T) {
 	// we're just capturing the name of the notification method, as a sign we
 	// got the right thing.
 	var notes []string
-	s, c, cleanup := newServer(t, handler.Map{
+	loc := server.NewLocal(handler.Map{
 		"NoteMe": handler.New(func(ctx context.Context) (bool, error) {
 			// When this method is called, it posts a notification back to the
 			// client before returning.
@@ -496,18 +481,18 @@ func TestServerNotify(t *testing.T) {
 			}
 			return true, nil
 		}),
-	}, &testOptions{
-		server: &jrpc2.ServerOptions{
+	}, &server.LocalOptions{
+		ServerOptions: &jrpc2.ServerOptions{
 			AllowPush: true,
 		},
-		client: &jrpc2.ClientOptions{
+		ClientOptions: &jrpc2.ClientOptions{
 			OnNotify: func(req *jrpc2.Request) {
 				notes = append(notes, req.Method())
 				t.Logf("OnNotify handler saw method %q", req.Method())
 			},
 		},
 	})
-
+	s, c := loc.Server, loc.Client
 	ctx := context.Background()
 
 	// Post an explicit notification.
@@ -521,7 +506,7 @@ func TestServerNotify(t *testing.T) {
 	}
 
 	// Shut everything down to be sure the callbacks have settled.
-	cleanup()
+	loc.Close()
 
 	want := []string{"explicit", "method"}
 	if !reflect.DeepEqual(notes, want) {
@@ -535,7 +520,7 @@ func TestContextPlumbing(t *testing.T) {
 	ctx, cancel := context.WithDeadline(context.Background(), want)
 	defer cancel()
 
-	_, c, cleanup := newServer(t, handler.Map{
+	loc := server.NewLocal(handler.Map{
 		"X": handler.New(func(ctx context.Context) (bool, error) {
 			got, ok := ctx.Deadline()
 			if !ok {
@@ -546,13 +531,13 @@ func TestContextPlumbing(t *testing.T) {
 			t.Logf("Got expected deadline: %v", got)
 			return true, nil
 		}),
-	}, &testOptions{
-		server: &jrpc2.ServerOptions{DecodeContext: jctx.Decode},
-		client: &jrpc2.ClientOptions{EncodeContext: jctx.Encode},
+	}, &server.LocalOptions{
+		ServerOptions: &jrpc2.ServerOptions{DecodeContext: jctx.Decode},
+		ClientOptions: &jrpc2.ClientOptions{EncodeContext: jctx.Encode},
 	})
-	defer cleanup()
+	defer loc.Close()
 
-	if _, err := c.Call(ctx, "X", nil); err != nil {
+	if _, err := loc.Client.Call(ctx, "X", nil); err != nil {
 		t.Errorf("Call X failed: %v", err)
 	}
 }
@@ -567,13 +552,13 @@ func TestAuthHooks(t *testing.T) {
 		Key:  []byte("8A27D68F-AD87-4DE0-957B-33E9A0A74222"),
 	}
 
-	_, c, cleanup := newServer(t, handler.Map{
+	loc := server.NewLocal(handler.Map{
 		"Test": handler.New(func(ctx context.Context) (string, error) {
 			return wantResponse, nil
 		}),
-	}, &testOptions{
+	}, &server.LocalOptions{
 		// Enable auth checking and context decoding for the server.
-		server: &jrpc2.ServerOptions{
+		ServerOptions: &jrpc2.ServerOptions{
 			DecodeContext: jctx.Decode,
 			CheckAuth: func(ctx context.Context, method string, params []byte) error {
 				token, ok := jctx.AuthToken(ctx)
@@ -583,11 +568,12 @@ func TestAuthHooks(t *testing.T) {
 		},
 
 		// Enable context encoding for the client.
-		client: &jrpc2.ClientOptions{
+		ClientOptions: &jrpc2.ClientOptions{
 			EncodeContext: jctx.Encode,
 		},
 	})
-	defer cleanup()
+	defer loc.Close()
+	c := loc.Client
 
 	// Call without a token and verify that we get an error.
 	t.Run("NoToken", func(t *testing.T) {
@@ -628,15 +614,15 @@ func TestAuthHooks(t *testing.T) {
 // Verify that calling a wrapped method which takes no parameters, but in which
 // the caller provided parameters, will correctly report an error.
 func TestNoParams(t *testing.T) {
-	_, c, cleanup := newServer(t, handler.Map{
+	loc := server.NewLocal(handler.Map{
 		"Test": handler.New(func(ctx context.Context) (string, error) {
 			return "OK", nil // this should not be reached
 		}),
 	}, nil)
-	defer cleanup()
+	defer loc.Close()
 
 	var rsp string
-	if err := c.CallResult(context.Background(), "Test", []int{1, 2, 3}, &rsp); err == nil {
+	if err := loc.Client.CallResult(context.Background(), "Test", []int{1, 2, 3}, &rsp); err == nil {
 		t.Errorf("Call(Test): got %q, wanted error", rsp)
 	} else if ec := code.FromError(err); ec != code.InvalidParams {
 		t.Errorf("Call(Test): got code %v, wanted %v", ec, code.InvalidParams)
