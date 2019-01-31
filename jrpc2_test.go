@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"reflect"
 	"testing"
 	"time"
+
+	"github.com/kylelemons/godebug/pretty"
 
 	"bitbucket.org/creachadair/jrpc2"
 	"bitbucket.org/creachadair/jrpc2/channel"
@@ -92,8 +93,9 @@ func TestMethodNames(t *testing.T) {
 	s := loc.Server
 
 	// Verify that the assigner got the names it was supposed to.
-	if got, want := s.ServerInfo().Methods, []string{"Test.Add", "Test.Ctx", "Test.Max", "Test.Mul", "Test.Nil"}; !reflect.DeepEqual(got, want) {
-		t.Errorf("Names:\ngot  %+q\nwant %+q", got, want)
+	got, want := s.ServerInfo().Methods, []string{"Test.Add", "Test.Ctx", "Test.Max", "Test.Mul", "Test.Nil"}
+	if diff := pretty.Compare(got, want); diff != "" {
+		t.Errorf("Wrong method names: (-got, +want)\n%s", diff)
 	}
 }
 
@@ -526,8 +528,8 @@ func TestServerNotify(t *testing.T) {
 	loc.Close()
 
 	want := []string{"explicit", "method"}
-	if !reflect.DeepEqual(notes, want) {
-		t.Errorf("Server notifications: got %+q, want %+q", notes, want)
+	if diff := pretty.Compare(notes, want); diff != "" {
+		t.Errorf("Server notifications: (-got, +want)\n%s", diff)
 	}
 }
 
