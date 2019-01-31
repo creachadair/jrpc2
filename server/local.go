@@ -33,7 +33,7 @@ func NewLocal(assigner jrpc2.Assigner, opts *LocalOptions) Local {
 }
 
 // LocalOptions control the behaviour of the server and client constructed by
-// the Local function.
+// the NewLocal function.
 type LocalOptions struct {
 	ClientOptions *jrpc2.ClientOptions
 	ServerOptions *jrpc2.ServerOptions
