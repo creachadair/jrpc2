@@ -9,10 +9,10 @@ import (
 )
 
 func TestLocal(t *testing.T) {
-	cli, wait := Local(make(handler.Map), nil)
+	loc := NewLocal(make(handler.Map), nil)
 
 	ctx := context.Background()
-	si, err := caller.RPCServerInfo(ctx, cli)
+	si, err := caller.RPCServerInfo(ctx, loc.Client)
 	if err != nil {
 		t.Fatalf("rpc.serverInfo failed: %v", err)
 	}
@@ -26,8 +26,7 @@ func TestLocal(t *testing.T) {
 	}
 
 	// Close the client and wait for the server to stop.
-	cli.Close()
-	if err := wait(); err != nil {
+	if err := loc.Close(); err != nil {
 		t.Errorf("Server wait: got %v, want nil", err)
 	}
 }

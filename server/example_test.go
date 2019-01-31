@@ -9,19 +9,18 @@ import (
 	"bitbucket.org/creachadair/jrpc2/server"
 )
 
-func ExampleLocal() {
-	cli, wait := server.Local(handler.Map{
+func ExampleNewLocal() {
+	loc := server.NewLocal(handler.Map{
 		"Hello": handler.New(func(context.Context) (string, error) {
 			return "Hello, world!", nil
 		}),
 	}, nil)
-	defer wait()
+	defer loc.Close()
 
 	var result string
-	if err := cli.CallResult(context.Background(), "Hello", nil, &result); err != nil {
+	if err := loc.Client.CallResult(context.Background(), "Hello", nil, &result); err != nil {
 		log.Fatalf("Call failed: %v", err)
 	}
-	cli.Close()
 	fmt.Println(result)
 	// Output:
 	// Hello, world!

@@ -5,19 +5,31 @@ import (
 	"bitbucket.org/creachadair/jrpc2/channel"
 )
 
-// Local constructs a *jrpc2.Server and a *jrpc2.Client connected to it via an
-// in-memory pipe, using the specified assigner and options.  If opts == nil,
-// it behaves as if the client and server options are also nil.
-//
-// When the client is closed, the server is also stopped; the caller may invoke
-// wait to wait for the server to complete.
-func Local(assigner jrpc2.Assigner, opts *LocalOptions) (client *jrpc2.Client, wait func() error) {
+// Local represents a client and server connected by an in-memory pipe.
+type Local struct {
+	Server *jrpc2.Server
+	Client *jrpc2.Client
+}
+
+// Close shuts down the client and waits for the server to exit, returning the
+// result from the server's Wait method.
+func (l Local) Close() error {
+	l.Client.Close()
+	return l.Server.Wait()
+}
+
+// NewLocal constructs a *jrpc2.Server and a *jrpc2.Client connected to it via
+// an in-memory pipe, using the specified assigner and options.
+// If opts == nil, it behaves as if the client and server options are also nil.
+func NewLocal(assigner jrpc2.Assigner, opts *LocalOptions) Local {
 	if opts == nil {
 		opts = new(LocalOptions)
 	}
 	cpipe, spipe := channel.Pipe(channel.Varint)
-	srv := jrpc2.NewServer(assigner, opts.ServerOptions).Start(spipe)
-	return jrpc2.NewClient(cpipe, opts.ClientOptions), srv.Wait
+	return Local{
+		Server: jrpc2.NewServer(assigner, opts.ServerOptions).Start(spipe),
+		Client: jrpc2.NewClient(cpipe, opts.ClientOptions),
+	}
 }
 
 // LocalOptions control the behaviour of the server and client constructed by
