@@ -15,14 +15,15 @@ import (
 )
 
 func Example() {
-	cli, wait := server.Local(handler.Map{
+	// Set up a local server to demonstrate the API.
+	loc := server.NewLocal(handler.Map{
 		"Test": handler.New(func(ctx context.Context, ss ...string) (string, error) {
 			return strings.Join(ss, " "), nil
 		}),
 	}, nil)
-	defer wait()
+	defer loc.Close()
 
-	b := jhttp.NewClientBridge(cli)
+	b := jhttp.NewClientBridge(loc.Client)
 	defer b.Close()
 
 	hsrv := httptest.NewServer(b)

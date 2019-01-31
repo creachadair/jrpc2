@@ -50,9 +50,8 @@ func newAssigner(t *testing.T) jrpc2.Assigner {
 }
 
 func TestNew(t *testing.T) {
-	c, cleanup := server.Local(newAssigner(t), nil)
-	defer cleanup()
-	defer c.Close()
+	loc := server.NewLocal(newAssigner(t), nil)
+	defer loc.Close()
 	ctx := context.Background()
 
 	caller := New("F", Options{Params: []string(nil), Result: int(0)})
@@ -82,12 +81,12 @@ func TestNew(t *testing.T) {
 		{[]string{"", "", "q"}, 3},
 	}
 	for _, test := range tests {
-		if got, err := F(ctx, c, test.in); err != nil {
+		if got, err := F(ctx, loc.Client, test.in); err != nil {
 			t.Errorf("F(_, c, %q): unexpected error: %v", test.in, err)
 		} else if got != test.want {
 			t.Errorf("F(_, c, %q): got %d, want %d", test.in, got, test.want)
 		}
-		if got, err := V(ctx, c, test.in...); err != nil {
+		if got, err := V(ctx, loc.Client, test.in...); err != nil {
 			t.Errorf("V(_, c, %q): unexpected error: %v", test.in, err)
 		} else if got != test.want {
 			t.Errorf("V(_, c, %q): got %d, want %d", test.in, got, test.want)
@@ -96,12 +95,12 @@ func TestNew(t *testing.T) {
 
 	// Verify that errors get propagated sensibly.
 	t.Run("PropagateErrors", func(t *testing.T) {
-		if got, err := F(ctx, c, []string{"fail", "propagate error"}); err == nil {
+		if got, err := F(ctx, loc.Client, []string{"fail", "propagate error"}); err == nil {
 			t.Errorf("F(_, c, _): should have failed, returned %d", got)
 		} else {
 			t.Logf("F(_, c, _): correctly failed: %v", err)
 		}
-		if got, err := V(ctx, c, "fail", "propagate error"); err == nil {
+		if got, err := V(ctx, loc.Client, "fail", "propagate error"); err == nil {
 			t.Errorf("V(_, c, _): should have failed, returned %d", got)
 		} else {
 			t.Logf("V(_, c, _): correctly failed: %v", err)
@@ -113,7 +112,7 @@ func TestNew(t *testing.T) {
 	for _, fn := range []tester{
 		testOmitParams, testOmitResult, testNotification, testRPCServerInfo,
 	} {
-		fn(ctx, c, t)
+		fn(ctx, loc.Client, t)
 	}
 }
 

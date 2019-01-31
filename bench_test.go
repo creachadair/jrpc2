@@ -12,7 +12,7 @@ import (
 func BenchmarkRoundTrip(b *testing.B) {
 	// Benchmark the round-trip call cycle for a method that does no useful
 	// work, as a proxy for overhead for client and server maintenance.
-	cli, wait := server.Local(handler.Map{
+	loc := server.NewLocal(handler.Map{
 		"void": handler.New(func(context.Context, *jrpc2.Request) (interface{}, error) {
 			return nil, nil
 		}),
@@ -22,13 +22,12 @@ func BenchmarkRoundTrip(b *testing.B) {
 			Concurrency:    1,
 		},
 	})
-	defer wait()
-	defer cli.Close()
+	defer loc.Close()
 	ctx := context.Background()
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if _, err := cli.Call(ctx, "void", nil); err != nil {
+		if _, err := loc.Client.Call(ctx, "void", nil); err != nil {
 			b.Fatalf("Call void failed: %v", err)
 		}
 	}
