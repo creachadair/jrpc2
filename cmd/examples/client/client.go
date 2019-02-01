@@ -3,9 +3,10 @@
 //
 // Usage (communicates with the server example):
 //
-//   go build bitbucket.org/creachadair/jrpc2/examples/client
+//   go build bitbucket.org/creachadair/jrpc2/cmd/examples/client
 //   ./client -server :8080
 //
+// See also cmd/examples/server/server.go.
 package main
 
 import (

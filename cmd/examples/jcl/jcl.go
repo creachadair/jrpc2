@@ -16,9 +16,10 @@
 // Use the command ":stderr" to toggle reporting of stderr from commands.
 //
 // Usage:
-//    go build bitbucket.org/creachadair/jrpc2/examples/jcl
+//    go build bitbucket.org/creachadair/jrpc2/cmd/examples/jcl
 //    ./jcl -server :8080
 //
+// See also cmd/examples/jsh/jsh.go.
 package main
 
 import (

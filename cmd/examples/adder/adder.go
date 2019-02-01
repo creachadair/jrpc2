@@ -2,7 +2,7 @@
 // the process's stdin and stdout.
 //
 // Usage:
-//    $ go build bitbucket.org/creachadair/jrpc2/examples/adder
+//    $ go build bitbucket.org/creachadair/jrpc2/cmd/examples/adder
 //    $ ./adder
 //
 // Queries to try (copy and paste):

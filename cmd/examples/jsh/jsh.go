@@ -2,10 +2,10 @@
 // demonstration purposes.
 //
 // Usage:
-//    go build bitbucket.org/creachadair/jrpc2/examples/jsh
+//    go build bitbucket.org/creachadair/jrpc2/cmd/examples/jsh
 //    ./jsh -port 8080
 //
-// See also examples/jcl/jcl.go.
+// See also cmd/examples/jcl/jcl.go.
 package main
 
 import (
