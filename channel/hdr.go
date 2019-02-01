@@ -10,8 +10,7 @@ import (
 )
 
 // Header defines a framing that transmits and receives messages using a header
-// prefix similar to HTTP, in which the value of the string is used to describe
-// the content encoding.
+// prefix similar to HTTP, in which mimeType describes the content type.
 //
 // Specifically, each message is sent in the format:
 //
@@ -28,7 +27,9 @@ import (
 //    \r\n
 //    123\n
 //
-// If mimeType == "", the Content-Type header is omitted.
+// If mimeType == "", the Content-Type header is omitted. Note, however, that
+// the framing function returned by Header does not verify that the encoding of
+// messages matches the declared mimeType.
 func Header(mimeType string) Framing {
 	return func(r io.Reader, wc io.WriteCloser) Channel {
 		var ctype string
