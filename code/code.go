@@ -40,8 +40,7 @@ func (c Code) Err() error {
 	return errors.New(c.String())
 }
 
-// Pre-defined error codes, including the standard ones from the JSON-RPC
-// specification and some specific to this implementation.
+// Pre-defined standard error codes defined by the JSON-RPC specification.
 const (
 	ParseError     Code = -32700 // Invalid JSON received by the server
 	InvalidRequest Code = -32600 // The JSON sent is not a valid request object
