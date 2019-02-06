@@ -3,8 +3,61 @@ package channel
 import (
 	"io"
 	"strconv"
+	"sync"
 	"testing"
 )
+
+// newPipe creates a pair of connected in-memory channels using the specified
+// framing discipline. Sends to client will be received by server, and vice
+// versa. newPipe will panic if framing == nil.
+func newPipe(framing Framing) (client, server Channel) {
+	cr, sw := io.Pipe()
+	sr, cw := io.Pipe()
+	client = framing(cr, cw)
+	server = framing(sr, sw)
+	return
+}
+
+func testSendRecv(t *testing.T, s Sender, r Receiver, msg string) {
+	var wg sync.WaitGroup
+	var sendErr, recvErr error
+	var data []byte
+
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		data, recvErr = r.Recv()
+	}()
+	go func() {
+		defer wg.Done()
+		sendErr = s.Send([]byte(msg))
+	}()
+	wg.Wait()
+
+	if sendErr != nil {
+		t.Errorf("Send(%q): unexpected error: %v", msg, sendErr)
+	}
+	if recvErr != nil {
+		t.Errorf("Recv(): unexpected error: %v", recvErr)
+	}
+	if got := string(data); got != msg {
+		t.Errorf("Recv():\ngot  %#q\nwant %#q", got, msg)
+	}
+}
+
+const message1 = `["Full plate and packing steel"]`
+const message2 = `{"slogan":"Jump on your sword, evil!"}`
+
+func TestDirect(t *testing.T) {
+	lhs, rhs := Direct()
+	defer lhs.Close()
+	defer rhs.Close()
+
+	t.Logf("Testing lhs ⇒ rhs :: %s", message1)
+	testSendRecv(t, lhs, rhs, message1)
+	t.Logf("Testing rhs ⇒ lhs :: %s", message2)
+	testSendRecv(t, rhs, lhs, message2)
+}
 
 var tests = []struct {
 	name    string
@@ -36,7 +89,7 @@ var messages = []string{
 func TestChannelTypes(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			lhs, rhs := Pipe(test.framing)
+			lhs, rhs := newPipe(test.framing)
 			defer lhs.Close()
 			defer rhs.Close()
 
@@ -58,7 +111,7 @@ func TestChannelTypes(t *testing.T) {
 func TestEmptyMessage(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			lhs, rhs := Pipe(test.framing)
+			lhs, rhs := newPipe(test.framing)
 			defer lhs.Close()
 			defer rhs.Close()
 
