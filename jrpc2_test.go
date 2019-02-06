@@ -409,7 +409,7 @@ func TestServerInfo(t *testing.T) {
 // elicit a correct response from the server. Here we simulate a "different"
 // client by writing requests directly into the channel.
 func TestOtherClient(t *testing.T) {
-	srv, cli := channel.Pipe(channel.Line)
+	srv, cli := channel.Direct()
 	s := jrpc2.NewServer(handler.Map{
 		"X": handler.New(func(ctx context.Context) (string, error) {
 			return "OK", nil

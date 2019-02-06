@@ -15,7 +15,7 @@ var (
 	s *jrpc2.Server
 
 	ctx      = context.Background()
-	srv, cli = channel.Pipe(channel.Line)
+	srv, cli = channel.Direct()
 	c        = jrpc2.NewClient(cli, nil)
 )
 

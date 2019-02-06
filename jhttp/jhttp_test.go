@@ -15,7 +15,7 @@ import (
 
 func TestBridge(t *testing.T) {
 	// Set up a JSON-RPC server to answer requests bridged from HTTP.
-	cc, cs := channel.Pipe(channel.Varint)
+	cc, cs := channel.Direct()
 	srv := jrpc2.NewServer(handler.Map{
 		"Test": handler.New(func(ctx context.Context, ss ...string) (string, error) {
 			return strings.Join(ss, " "), nil

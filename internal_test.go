@@ -72,7 +72,7 @@ func (h hmap) Names() []string              { return nil }
 func TestClientCancellation(t *testing.T) {
 	started := make(chan struct{})
 	stopped := make(chan bool, 1)
-	cpipe, spipe := channel.Pipe(channel.RawJSON)
+	cpipe, spipe := channel.Direct()
 	srv := NewServer(hmap{
 		"Hang": methodFunc(func(ctx context.Context, _ *Request) (interface{}, error) {
 			close(started) // signal that the method handler is running
@@ -174,7 +174,7 @@ func TestDisableBuiltin(t *testing.T) {
 // request. The Client never sends requests like that, but the server needs to
 // cope with it correctly.
 func TestBatchReply(t *testing.T) {
-	cpipe, spipe := channel.Pipe(channel.RawJSON)
+	cpipe, spipe := channel.Direct()
 	srv := NewServer(hmap{
 		"test": methodFunc(func(_ context.Context, req *Request) (interface{}, error) {
 			t.Logf("Called %q", req.Method())
