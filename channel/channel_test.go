@@ -59,6 +59,18 @@ func TestDirect(t *testing.T) {
 	testSendRecv(t, rhs, lhs, message2)
 }
 
+func TestDirectClosed(t *testing.T) {
+	lhs, rhs := Direct()
+	defer rhs.Close()
+	lhs.Close() // immediately
+
+	if err := lhs.Send([]byte("nonsense")); err == nil {
+		t.Error("Send on closed channel did not fail")
+	} else {
+		t.Logf("Send correctly failed: %v", err)
+	}
+}
+
 var tests = []struct {
 	name    string
 	framing Framing

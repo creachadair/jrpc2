@@ -39,13 +39,13 @@ type direct struct {
 }
 
 func (d direct) Send(msg []byte) (err error) {
+	cp := make([]byte, len(msg))
+	copy(cp, msg)
 	defer func() {
 		if p := recover(); p != nil {
 			err = errors.New("send on closed channel")
 		}
 	}()
-	cp := make([]byte, len(msg))
-	copy(cp, msg)
 	d.send <- cp
 	return nil
 }
