@@ -60,9 +60,9 @@ func (d direct) Recv() ([]byte, error) {
 
 func (d direct) Close() error { close(d.send); return nil }
 
-// Direct returns a pair of connected channels that pass message buffers
-// directly without encoding. Sends to client will be received by server, and
-// vice versa.
+// Direct returns a pair of synchronous connected channels that pass message
+// buffers directly in memory without framing or encoding. Sends to client will
+// be received by server, and vice versa.
 func Direct() (client, server Channel) {
 	c2s := make(chan []byte)
 	s2c := make(chan []byte)
