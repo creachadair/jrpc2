@@ -5,14 +5,7 @@ import (
 	"testing"
 )
 
-type sender interface {
-	Send([]byte) error
-}
-type receiver interface {
-	Recv() ([]byte, error)
-}
-
-func testSendRecv(t *testing.T, s sender, r receiver, msg string) {
+func testSendRecv(t *testing.T, s Sender, r Receiver, msg string) {
 	var wg sync.WaitGroup
 	var sendErr, recvErr error
 	var data []byte
