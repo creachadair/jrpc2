@@ -65,6 +65,14 @@ func TestEmptyMessage(t *testing.T) {
 			t.Log(`Testing lhs → rhs :: "" (empty line)`)
 			testSendRecv(t, lhs, rhs, "")
 		})
+		t.Run(test.name, func(t *testing.T) {
+			lhs, rhs := Direct()
+			defer lhs.Close()
+			defer rhs.Close()
+
+			t.Log(`Testing lhs → rhs :: "" (empty line)`)
+			testSendRecv(t, lhs, rhs, "")
+		})
 	}
 }
 

@@ -45,3 +45,14 @@ func TestPipe(t *testing.T) {
 	t.Logf("Testing rhs ⇒ lhs :: %s", message2)
 	testSendRecv(t, rhs, lhs, message2)
 }
+
+func TestDirect(t *testing.T) {
+	lhs, rhs := Direct()
+	defer lhs.Close()
+	defer rhs.Close()
+
+	t.Logf("Testing lhs ⇒ rhs :: %s", message1)
+	testSendRecv(t, lhs, rhs, message1)
+	t.Logf("Testing rhs ⇒ lhs :: %s", message2)
+	testSendRecv(t, rhs, lhs, message2)
+}
