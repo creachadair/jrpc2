@@ -235,12 +235,10 @@ func (c *Client) waitComplete(pctx context.Context, id string, p *Response) {
 // *jrpc2.Error.
 //
 //    rsp, err := c.Call(ctx, method, params)
-//    if err != nil {
-//       if e, ok := err.(*jrpc2.Error); ok {
-//          log.Fatalf("Error from server: %v", err)
-//       } else {
-//          log.Fatalf("Call failed: %v", err)
-//       }
+//    if e, ok := err.(*jrpc2.Error); ok {
+//       log.Fatalf("Error from server: %v", err)
+//    } else if err != nil {
+//       log.Fatalf("Call failed: %v", err)
 //    }
 //    handleValidResponse(rsp)
 //
