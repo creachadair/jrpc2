@@ -28,6 +28,7 @@ func (s *Server) handleRPCCancel(ctx context.Context, req *Request) (interface{}
 	return nil, nil
 }
 
+// methodFunc is a replication of handler.Func redeclared to avert a cycle.
 type methodFunc func(context.Context, *Request) (interface{}, error)
 
 func (m methodFunc) Handle(ctx context.Context, req *Request) (interface{}, error) {
