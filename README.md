@@ -10,8 +10,6 @@ This repository provides Go package that implements a [JSON-RPC 2.0][spec] clien
 
 *  Package [jrpc2](http://godoc.org/bitbucket.org/creachadair/jrpc2) implements the base client and server.
 
-*  Package [caller](http://godoc.org/bitbucket.org/creachadair/jrpc2/caller) provides a function to construct client call wrappers.
-
 *  Package [channel](http://godoc.org/bitbucket.org/creachadair/jrpc2/channel) defines the communication channel abstractioon used by the server & client.
 
 *  Package [code](http://godoc.org/bitbucket.org/creachadair/jrpc2/code) defines standard error codes as defined by the JSON-RPC 2.0 protocol.
