@@ -28,6 +28,10 @@ This repository provides Go package that implements a [JSON-RPC 2.0][spec] clien
 
 ## Implementation Notes
 
+The following describes some of the implementation choices made by this module.
+
+### Batch requests and error reporting
+
 The JSON-RPC 2.0 spec is ambiguous about the semantics of batch requests. Specifically, the definition of notifications says:
 
 > A Notification is a Request object without an "id" member.
@@ -52,7 +56,7 @@ This implementation resolves the conflict in favour of the notification rules. S
 
 -  Otherwise, errors resulting from any request object without an ID are logged by the server but not reported to the client.
 
-### Server Notifications
+### Non-standard server notifications
 
 The specification defines client and server as follows:
 
