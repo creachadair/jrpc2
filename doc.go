@@ -184,8 +184,6 @@ and "Status.Get" to the status value's method. A ServiceMap splits the method
 name on the first period ("."), and you may nest ServiceMaps more deeply if you
 require a more complex hierarchy.
 
-See the "caller" package for a convenient way to generate client call wrappers.
-
 
 Non-Standard Custom Methods
 

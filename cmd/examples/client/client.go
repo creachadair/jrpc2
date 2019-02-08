@@ -19,35 +19,29 @@ import (
 	"sync"
 
 	"bitbucket.org/creachadair/jrpc2"
-	"bitbucket.org/creachadair/jrpc2/caller"
 	"bitbucket.org/creachadair/jrpc2/channel"
 )
 
 var serverAddr = flag.String("server", "", "Server address")
 
-var (
-	// Reflective call wrappers for the remote methods.
+func add(ctx context.Context, cli *jrpc2.Client, vs ...int) (result int, err error) {
+	err = cli.CallResult(ctx, "Math.Add", vs, &result)
+	return
+}
 
-	add = caller.New("Math.Add", caller.Options{
-		Params:   int(0),
-		Result:   int(0),
-		Variadic: true,
-	}).(func(context.Context, *jrpc2.Client, ...int) (int, error))
+func div(ctx context.Context, cli *jrpc2.Client, args binarg) (result float64, err error) {
+	err = cli.CallResult(ctx, "Math.Div", args, &result)
+	return
+}
 
-	div = caller.New("Math.Div", caller.Options{
-		Params: binarg{},
-		Result: float64(0),
-	}).(func(context.Context, *jrpc2.Client, binarg) (float64, error))
+func stat(ctx context.Context, cli *jrpc2.Client) (result string, err error) {
+	err = cli.CallResult(ctx, "Math.Status", nil, &result)
+	return
+}
 
-	stat = caller.New("Math.Status", caller.Options{
-		Result: "",
-	}).(func(context.Context, *jrpc2.Client) (string, error))
-
-	alert = caller.New("Post.Alert", caller.Options{
-		Params: msg{},
-		Notify: true,
-	}).(func(context.Context, *jrpc2.Client, msg) error)
-)
+func alert(ctx context.Context, cli *jrpc2.Client, msg msg) error {
+	return cli.Notify(ctx, "Post.Alert", msg)
+}
 
 type binarg struct{ X, Y int }
 

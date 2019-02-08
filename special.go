@@ -45,3 +45,10 @@ func (s *Server) installBuiltins() {
 		"rpc.serverInfo": methodFunc(s.handleRPCServerInfo),
 	}
 }
+
+// RPCServerInfo calls the built-in rpc.serverInfo method exported by servers.
+// It is a convenience wrapper for an invocation of cli.CallResult.
+func RPCServerInfo(ctx context.Context, cli *Client) (result *ServerInfo, err error) {
+	err = cli.CallResult(ctx, "rpc.serverInfo", nil, &result)
+	return
+}
