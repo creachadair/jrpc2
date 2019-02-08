@@ -51,3 +51,12 @@ This implementation resolves the conflict in favour of the notification rules. S
 -  If a batch is empty or contains structurally invalid request or notification objects, the server reports error -32700 (Invalid JSON) as a single error Response object.
 
 -  Otherwise, errors resulting from any request object without an ID are logged by the server but not reported to the client.
+
+### Server Notifications
+
+The specification defines client and server as follows:
+
+> The Client is defined as the origin of `Request` objects and the handler of `Response` objects.
+> The Server is defined as the origin of `Response` objects and the handler of `Request` objects.
+
+Although a client may also be a server, and vice versa, the specification does not require them to do so. The server notification support defined in the `jrpc2` package is thus "non-standard" in that it allows the server to act as a client, and the client as a server, in the narrow context of "push" notifications. Otherwise the feature is not special: Notifications sent by `*jrpc2.Server.Push` are standard `Request` objects.
