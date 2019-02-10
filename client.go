@@ -361,9 +361,8 @@ func (c *Client) versionOK(v string) bool {
 	return v == Version
 }
 
-// marshalParams validates and marshals params to JSON for a request.  It's
-// okay for the parameters to be empty, but if they are not they must be valid
-// JSON. We check for the required structural properties also.
+// marshalParams validates and marshals params to JSON for a request.  The
+// value of params must be either nil or encodable as a JSON object or array.
 func (c *Client) marshalParams(ctx context.Context, method string, params interface{}) (json.RawMessage, error) {
 	if params == nil {
 		return c.enctx(ctx, method, nil) // no parameters, that is OK
