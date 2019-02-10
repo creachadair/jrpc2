@@ -579,10 +579,12 @@ func TestAuthHooks(t *testing.T) {
 		// Enable auth checking and context decoding for the server.
 		ServerOptions: &jrpc2.ServerOptions{
 			DecodeContext: jctx.Decode,
-			CheckAuth: func(ctx context.Context, method string, params []byte) error {
+			CheckAuth: func(ctx context.Context, req *jrpc2.Request) error {
 				token, ok := jctx.AuthToken(ctx)
 				t.Logf("Auth token present=%v, value=%#q", ok, string(token))
-				return user.Verify(token, method, params)
+				var params json.RawMessage
+				req.UnmarshalParams(&params)
+				return user.Verify(token, req.Method(), params)
 			},
 		},
 
