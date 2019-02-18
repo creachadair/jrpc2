@@ -14,6 +14,10 @@ import (
 // given assigner and options, running in a new goroutine. If accept reports an
 // error, the loop will terminate and the error will be reported once all the
 // servers currently active have returned.
+//
+// While running, Loop maintains a pool of *jrpc2.Server values to reduce setup
+// and memory overhead. However, it does not rate-limit connections. Instead,
+// the listener is responsible for deciding how and whether to shed load.
 func Loop(lst net.Listener, assigner jrpc2.Assigner, opts *LoopOptions) error {
 	newChannel := opts.framing()
 	serverOpts := opts.serverOpts()
