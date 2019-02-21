@@ -42,8 +42,6 @@ func TestNew(t *testing.T) {
 			t.Errorf("newHandler(%T): unexpected error: %v", test.v, err)
 		} else if test.bad && err == nil {
 			t.Errorf("newHandler(%T): got %+v, want error", test.v, got)
-		} else if _, ok := got.(Func); !ok && got != nil {
-			t.Errorf("newHandler(%T): incorrect return type %T", test.v, got)
 		}
 	}
 }

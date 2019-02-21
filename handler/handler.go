@@ -84,7 +84,7 @@ func (m ServiceMap) Names() []string {
 //
 // Functions adapted by in this way can obtain the *jrpc2.Request value using
 // the jrpc2.InboundRequest helper on the context value supplied by the server.
-func New(fn interface{}) jrpc2.Handler {
+func New(fn interface{}) Func {
 	m, err := newHandler(fn)
 	if err != nil {
 		panic(err)
@@ -119,7 +119,7 @@ var (
 	reqType = reflect.TypeOf((*jrpc2.Request)(nil))          // type *jrpc2.Request
 )
 
-func newHandler(fn interface{}) (jrpc2.Handler, error) {
+func newHandler(fn interface{}) (Func, error) {
 	if fn == nil {
 		return nil, errors.New("nil method")
 	}
