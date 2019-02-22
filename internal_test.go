@@ -6,6 +6,7 @@ package jrpc2
 import (
 	"context"
 	"encoding/json"
+	"reflect"
 	"testing"
 	"time"
 
@@ -58,6 +59,43 @@ func TestParseRequests(t *testing.T) {
 
 		if diff := pretty.Compare(got, test.want); diff != "" {
 			t.Errorf("ParseRequests(%#q): wrong result (-got +want):\n%s", test.input, diff)
+		}
+	}
+}
+
+func TestUnmarshalParams(t *testing.T) {
+	tests := []struct {
+		input string
+		want  interface{}
+	}{
+		// If parameters are set, the target should be updated.
+		{`{"jsonrpc":"2.0", "id":1, "method":"X", "params":[1,2]}`, []int{1, 2}},
+
+		// If parameters are null, the target should not be modified.
+		{`{"jsonrpc":"2.0", "id":2, "method":"Y", "params":null}`, ""},
+
+		// If parameters are not set, the target should not be modified.
+		{`{"jsonrpc":"2.0", "id":2, "method":"Y"}`, 0},
+	}
+	for _, test := range tests {
+		req, err := ParseRequests([]byte(test.input))
+		if err != nil {
+			t.Errorf("Parsing request %#q failed: %v", test.input, err)
+		} else if len(req) != 1 {
+			t.Fatalf("Wrong number of requests: got %d, want 1", len(req))
+		}
+
+		// Allocate a zero of the expected type to unmarshal into.
+		target := reflect.New(reflect.TypeOf(test.want)).Interface()
+		if err := req[0].UnmarshalParams(target); err != nil {
+			t.Errorf("Unmarshaling parameters failed: %v", err)
+			continue
+		}
+
+		// Dereference the target to get the value to compare.
+		got := reflect.ValueOf(target).Elem().Interface()
+		if diff := pretty.Compare(got, test.want); diff != "" {
+			t.Errorf("Parameters(%#q): wrong result (-got +want):\n%s", test.input, diff)
 		}
 	}
 }

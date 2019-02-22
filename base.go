@@ -65,8 +65,14 @@ func (r *Request) Method() string { return r.method }
 // HasParams reports whether the request has non-empty parameters.
 func (r *Request) HasParams() bool { return len(r.params) != 0 }
 
-// UnmarshalParams decodes the parameters into v.
-func (r *Request) UnmarshalParams(v interface{}) error { return json.Unmarshal(r.params, v) }
+// UnmarshalParams decodes the parameters into v. If r has empty parameters, it
+// returns nil without modifying v.
+func (r *Request) UnmarshalParams(v interface{}) error {
+	if len(r.params) == 0 {
+		return nil
+	}
+	return json.Unmarshal(r.params, v)
+}
 
 // ErrInvalidVersion is returned by ParseRequests if one or more of the
 // requests in the input has a missing or invalid version marker.
