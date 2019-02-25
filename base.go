@@ -303,12 +303,3 @@ func encode(ch channel.Sender, v interface{}) (int, error) {
 	}
 	return len(bits), ch.Send(bits)
 }
-
-// decode receives a message from the channel and unmarshals it as JSON to v.
-func decode(ch channel.Receiver, v interface{}) error {
-	bits, err := ch.Recv()
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(bits, v)
-}

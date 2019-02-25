@@ -67,7 +67,10 @@ func NewClient(ch channel.Channel, opts *ClientOptions) *Client {
 // handle both. The caller must not hold c.mu.
 func (c *Client) accept(ch channel.Receiver) error {
 	var in jresponses
-	err := decode(ch, &in)
+	bits, err := ch.Recv()
+	if err == nil {
+		err = json.Unmarshal(bits, &in)
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
