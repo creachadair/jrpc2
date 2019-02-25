@@ -199,20 +199,60 @@ func (j *jrequests) UnmarshalJSON(data []byte) error {
 // jrequest is the transmission format of a request message.
 type jrequest struct {
 	V  string          `json:"jsonrpc"`      // must be Version
-	ID json.RawMessage `json:"id,omitempty"` // rendered by the constructor, may be nil
+	ID json.RawMessage `json:"id,omitempty"` // may be nil
 	M  string          `json:"method"`
-	P  json.RawMessage `json:"params,omitempty"` // rendered by the constructor
+	P  json.RawMessage `json:"params,omitempty"` // may be nil
 
 	batch bool // this request was part of a batch
 }
 
 func (j *jrequest) UnmarshalJSON(data []byte) error {
-	type stub jrequest
-	if err := json.Unmarshal(data, (*stub)(j)); err != nil {
-		return err
+	// Unmarshal into a map so we can check for extra keys.  The json.Decoder
+	// has DisallowUnknownFields, but fails decoding eagerly for fields that do
+	// not map to known tags. We want to fully parse the object so we can
+	// propagate the "id" in error responses, if it is set. So we have to decode
+	// and check the fields ourselves.
+
+	var obj map[string]json.RawMessage
+	if err := json.Unmarshal(data, &obj); err != nil {
+		return Errorf(code.ParseError, "request is not a JSON object")
 	}
 
-	// As a special case, reduce "null" to nil.
+	*j = jrequest{}    // reset
+	var err error      // deferred error from parsing fields
+	var extra []string // extra field names
+	var id interface{} // if "id" is set, its value
+	for key, val := range obj {
+		switch key {
+		case "jsonrpc":
+			if e := json.Unmarshal(val, &j.V); e != nil && err == nil {
+				err = errors.New("invalid version key")
+			}
+		case "id":
+			id = val
+			j.ID = val
+		case "method":
+			if e := json.Unmarshal(val, &j.M); e != nil && err == nil {
+				err = errors.New("invalid method name")
+			}
+		case "params":
+			j.P = val
+		default:
+			extra = append(extra, key)
+		}
+	}
+
+	// Report a parse error, if we had one.
+	if err != nil {
+		return DataErrorf(code.ParseError, id, err.Error())
+	}
+
+	// Report an error for extraneous fields.
+	if len(extra) != 0 {
+		return DataErrorf(code.InvalidRequest, j.ID, "extra fields in request")
+	}
+
+	// As a special case, reduce "null" to nil in the parameters.
 	if string(j.P) == "null" {
 		j.P = nil
 	} else if len(j.P) != 0 && j.P[0] != '[' && j.P[0] != '{' {
