@@ -428,17 +428,6 @@ func (s *Server) stop(err error) {
 	s.ch = nil
 }
 
-func isRecoverableJSONError(err error) bool {
-	switch err.(type) {
-	case *json.UnmarshalTypeError, *json.UnsupportedTypeError:
-		// Do not include syntax errors, as the decoder will not generally
-		// recover from these without more serious help.
-		return true
-	default:
-		return false
-	}
-}
-
 // read is the main receiver loop, decoding requests from the client and adding
 // them to the queue. Decoding errors and message-format problems are handled
 // and reported back to the client directly, so that any message that survives
@@ -461,8 +450,6 @@ func (s *Server) read(ch channel.Receiver) {
 		if err != nil {
 			if e, ok := err.(*Error); ok {
 				s.pushError(e.data, jerrorf(e.code, e.message))
-			} else if isRecoverableJSONError(err) {
-				s.pushError(nil, jerrorf(code.ParseError, "invalid JSON request message"))
 			} else {
 				s.stop(err)
 				s.mu.Unlock()

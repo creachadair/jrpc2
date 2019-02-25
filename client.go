@@ -71,11 +71,8 @@ func (c *Client) accept(ch channel.Receiver) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	if isRecoverableJSONError(err) {
-		c.log("Recoverable decoding error: %v", err)
-		return nil
-	} else if err != nil {
-		c.log("Unrecoverable decoding error: %v", err)
+	if err != nil {
+		c.log("Decoding error: %v", err)
 		c.stop(err)
 		return err
 	}
