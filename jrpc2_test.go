@@ -493,6 +493,10 @@ func TestOtherClient(t *testing.T) {
 		// A broken batch request should report a single top-level error.
 		{`[{"jsonrpc":"2.0", "method":"A", "id": 1}, {"jsonrpc":"2.0"]`, // N.B. syntax error
 			`{"jsonrpc":"2.0","id":null,"error":{"code":-32700,"message":"invalid request batch"}}`},
+
+		// A broken single request should report a top-level error.
+		{`{"bogus"][++`,
+			`{"jsonrpc":"2.0","id":null,"error":{"code":-32700,"message":"invalid request message"}}`},
 	}
 	for _, test := range tests {
 		if err := cli.Send([]byte(test.input)); err != nil {
