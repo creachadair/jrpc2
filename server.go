@@ -180,7 +180,7 @@ func (s *Server) dispatch(next jrequests, ch channel.Sender) func() error {
 	var wg sync.WaitGroup
 	for _, t := range tasks {
 		if t.err != nil {
-			continue // nothing to do here; this was a bogus one
+			continue // nothing to do here; this task has already failed
 		}
 		t := t
 		wg.Add(1)
@@ -228,8 +228,9 @@ func (s *Server) checkAndAssign(next jrequests) tasks {
 	for _, req := range next {
 		s.log("Checking request for %q: %s", req.M, string(req.P))
 		t := &task{reqID: req.ID, reqM: req.M, batch: req.batch}
-		req.ID = fixID(req.ID)
-		if id := string(req.ID); id != "" && s.used[id] != nil {
+		if req.err != nil {
+			t.err = req.err // deferred validation error
+		} else if id := string(fixID(req.ID)); id != "" && s.used[id] != nil {
 			t.err = Errorf(code.InvalidRequest, "duplicate request id %q", id)
 		} else if !s.versionOK(req.V) {
 			t.err = ErrInvalidVersion
@@ -434,27 +435,26 @@ func (s *Server) stop(err error) {
 // into the request queue is structurally valid.
 func (s *Server) read(ch channel.Receiver) {
 	for {
-		// If the message is not sensible, report an error; otherwise enqueue
-		// it for processing.
+		// If the message is not sensible, report an error; otherwise enqueue it
+		// for processing. Errors in individual requests are handled later.
 		var in jrequests
+		var derr error
 		bits, err := ch.Recv()
-		if err == nil || (err == io.EOF && len(bits) != 0) {
-			err = json.Unmarshal(bits, &in)
-		}
-
-		s.metrics.Count("rpc.requests", int64(len(in)))
 		s.metrics.CountAndSetMax("rpc.bytesRead", int64(len(bits)))
+		if err == nil || (err == io.EOF && len(bits) != 0) {
+			err = nil
+			derr = in.UnmarshalJSON(bits)
+			s.metrics.Count("rpc.requests", int64(len(in)))
+		}
 		s.mu.Lock()
-		if err != nil {
-			if e, ok := err.(*Error); ok {
-				s.pushError(e.data, jerrorf(e.code, e.message))
-			} else {
-				s.stop(err)
-				s.mu.Unlock()
-				return
-			}
+		if err != nil { // receive failure; shut down
+			s.stop(err)
+			s.mu.Unlock()
+			return
+		} else if derr != nil { // parse failure; report and continue
+			s.pushError(derr)
 		} else if len(in) == 0 {
-			s.pushError(nil, jerrorf(code.InvalidRequest, "empty request batch"))
+			s.pushError(Errorf(code.InvalidRequest, "empty request batch"))
 		} else {
 			s.log("Received %d new requests", len(in))
 			s.inq.PushBack(in)
@@ -495,11 +495,18 @@ func (s *Server) assign(name string) Handler {
 // pushError reports an error for the given request ID directly back to the
 // client, bypassing the normal request handling mechanism.  The caller must
 // hold s.mu when calling this method.
-func (s *Server) pushError(id json.RawMessage, jerr *jerror) {
-	s.log("Error for request %q: %v", string(id), jerr)
+func (s *Server) pushError(err error) {
+	s.log("Invalid request: %v", err)
+	var jerr *jerror
+	if e, ok := err.(*Error); ok {
+		jerr = e.tojerror()
+	} else {
+		jerr = jerrorf(code.FromError(err), err.Error())
+	}
+
 	nw, err := encode(s.ch, jresponses{{
 		V:  Version,
-		ID: id,
+		ID: json.RawMessage("null"),
 		E:  jerr,
 	}})
 	s.metrics.Count("rpc.errors", 1)
@@ -553,9 +560,17 @@ func (ts tasks) responses() jresponses {
 			// confirmable by definition, since they do not have a Response
 			// object to be returned. As such, the Client would not be aware of
 			// any errors."
-			continue
+			//
+			// However, parse and validation errors must still be reported, with
+			// an ID of null if the request ID was not resolvable.
+			if c := code.FromError(task.err); c != code.ParseError && c != code.InvalidRequest {
+				continue
+			}
 		}
 		rsp := &jresponse{V: Version, ID: task.reqID, batch: task.batch}
+		if rsp.ID == nil {
+			rsp.ID = json.RawMessage("null")
+		}
 		if task.err == nil {
 			rsp.R = task.val
 		} else if e, ok := task.err.(*Error); ok {

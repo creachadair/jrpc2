@@ -182,16 +182,31 @@ func (j jrequests) MarshalJSON() ([]byte, error) {
 }
 
 func (j *jrequests) UnmarshalJSON(data []byte) error {
-	if len(data) == 0 {
-		return errors.New("empty request message")
-	} else if data[0] != '[' {
-		*j = jrequests{new(jrequest)}
-		return json.Unmarshal(data, (*j)[0])
-	} else if err := json.Unmarshal(data, (*[]*jrequest)(j)); err != nil {
-		return err
+	*j = (*j)[:0] // reset state
+
+	// When parsing requests, validation checks are deferred: The only immediate
+	// mode of failure for unmarshaling is if the request is not a valid object
+	// or array.
+	var msgs []json.RawMessage
+	var batch bool
+	if len(data) == 0 || data[0] != '[' {
+		msgs = append(msgs, nil)
+		if err := json.Unmarshal(data, &msgs[0]); err != nil {
+			return Errorf(code.ParseError, "invalid request message")
+		}
+	} else if err := json.Unmarshal(data, &msgs); err != nil {
+		return Errorf(code.ParseError, "invalid request batch")
+	} else {
+		batch = true
 	}
-	for _, req := range *j {
-		req.batch = true
+
+	// Now parse the individual request messages, but do not fail on errors.  We
+	// know that the messages are intact, but validity is checked at usage.
+	for _, raw := range msgs {
+		req := new(jrequest)
+		json.Unmarshal(raw, req)
+		req.batch = batch
+		*j = append(*j, req)
 	}
 	return nil
 }
@@ -203,7 +218,13 @@ type jrequest struct {
 	M  string          `json:"method"`
 	P  json.RawMessage `json:"params,omitempty"` // may be nil
 
-	batch bool // this request was part of a batch
+	batch bool  // this request was part of a batch
+	err   error // if not nil, this request is invalid and err is why
+}
+
+func (j *jrequest) fail(code code.Code, msg string) error {
+	j.err = Errorf(code, msg)
+	return j.err
 }
 
 func (j *jrequest) UnmarshalJSON(data []byte) error {
@@ -215,48 +236,40 @@ func (j *jrequest) UnmarshalJSON(data []byte) error {
 
 	var obj map[string]json.RawMessage
 	if err := json.Unmarshal(data, &obj); err != nil {
-		return Errorf(code.ParseError, "request is not a JSON object")
+		return j.fail(code.ParseError, "request is not a JSON object")
 	}
 
-	*j = jrequest{}    // reset
-	var err error      // deferred error from parsing fields
+	*j = jrequest{}    // reset content
 	var extra []string // extra field names
-	var id interface{} // if "id" is set, its value
 	for key, val := range obj {
 		switch key {
 		case "jsonrpc":
-			if e := json.Unmarshal(val, &j.V); e != nil && err == nil {
-				err = errors.New("invalid version key")
+			if json.Unmarshal(val, &j.V) != nil {
+				j.fail(code.ParseError, "invalid version key")
 			}
 		case "id":
-			id = val
 			j.ID = val
 		case "method":
-			if e := json.Unmarshal(val, &j.M); e != nil && err == nil {
-				err = errors.New("invalid method name")
+			if json.Unmarshal(val, &j.M) != nil {
+				j.fail(code.ParseError, "invalid method name")
 			}
 		case "params":
-			j.P = val
+			// As a special case, reduce "null" to nil in the parameters.
+			// Otherwise, require per spec that val is an array or object.
+			if string(val) != "null" {
+				j.P = val
+			}
+			if len(j.P) != 0 && j.P[0] != '[' && j.P[0] != '{' {
+				j.fail(code.InvalidRequest, "parameters must be array or object")
+			}
 		default:
 			extra = append(extra, key)
 		}
 	}
 
-	// Report a parse error, if we had one.
-	if err != nil {
-		return DataErrorf(code.ParseError, id, err.Error())
-	}
-
 	// Report an error for extraneous fields.
 	if len(extra) != 0 {
-		return DataErrorf(code.InvalidRequest, j.ID, "extra fields in request")
-	}
-
-	// As a special case, reduce "null" to nil in the parameters.
-	if string(j.P) == "null" {
-		j.P = nil
-	} else if len(j.P) != 0 && j.P[0] != '[' && j.P[0] != '{' {
-		return DataErrorf(code.InvalidRequest, j.ID, "parameters must be list or object")
+		j.fail(code.InvalidRequest, "extra fields in request")
 	}
 	return nil
 }

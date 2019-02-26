@@ -443,7 +443,7 @@ func TestOtherClient(t *testing.T) {
 
 		// The parameters are of the wrong form.
 		{`{"jsonrpc":"2.0", "id": 4, "method": "X", "params": "bogus"}`,
-			`{"jsonrpc":"2.0","id":4,"error":{"code":-32600,"message":"parameters must be list or object"}}`},
+			`{"jsonrpc":"2.0","id":4,"error":{"code":-32600,"message":"parameters must be array or object"}}`},
 
 		// The parameters are absent, but as null.
 		{`{"jsonrpc": "2.0", "id": 6, "method": "X", "params": null}`,
@@ -453,15 +453,19 @@ func TestOtherClient(t *testing.T) {
 		{`{"jsonrpc":"2.0","id": 5, "method": "X"}`,
 			`{"jsonrpc":"2.0","id":5,"result":"OK"}`},
 
+		// A batch of correct requests.
+		{`[{"jsonrpc":"2.0", "id":"a1", "method":"X"}, {"jsonrpc":"2.0", "id":"a2", "method": "X"}]`,
+			`[{"jsonrpc":"2.0","id":"a1","result":"OK"},{"jsonrpc":"2.0","id":"a2","result":"OK"}]`},
+
 		// Extra fields on an otherwise-correct request.
 		{`{"jsonrpc":"2.0","id": 7, "method": "Z", "params":[], "bogus":true}`,
 			`{"jsonrpc":"2.0","id":7,"error":{"code":-32600,"message":"extra fields in request"}}`},
 
 		// An empty batch request should report a single error object.
-		{`[]`, `{"jsonrpc":"2.0","error":{"code":-32600,"message":"empty request batch"}}`},
+		{`[]`, `{"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"empty request batch"}}`},
 
 		// An invalid batch request should report a single error object.
-		{`[1]`, `{"jsonrpc":"2.0","error":{"code":-32700,"message":"request is not a JSON object"}}`},
+		{`[1]`, `[{"jsonrpc":"2.0","id":null,"error":{"code":-32700,"message":"request is not a JSON object"}}]`},
 
 		// A batch of invalid requests returns a batch of errors.
 		{`[{"jsonrpc": "2.0", "id": 6, "method":"bogus"}]`,
@@ -476,15 +480,19 @@ func TestOtherClient(t *testing.T) {
 
 		// Invalid structure for a version is reported, with and without ID.
 		{`{"jsonrpc": false}`,
-			`{"jsonrpc":"2.0","error":{"code":-32700,"message":"invalid version key"}}`},
+			`{"jsonrpc":"2.0","id":null,"error":{"code":-32700,"message":"invalid version key"}}`},
 		{`{"jsonrpc": false, "id": 747}`,
 			`{"jsonrpc":"2.0","id":747,"error":{"code":-32700,"message":"invalid version key"}}`},
 
 		// Invalid structure for a method name is reported, with and without ID.
 		{`{"jsonrpc":"2.0", "method": [false]}`,
-			`{"jsonrpc":"2.0","error":{"code":-32700,"message":"invalid method name"}}`},
+			`{"jsonrpc":"2.0","id":null,"error":{"code":-32700,"message":"invalid method name"}}`},
 		{`{"jsonrpc":"2.0", "method": [false], "id": 252}`,
 			`{"jsonrpc":"2.0","id":252,"error":{"code":-32700,"message":"invalid method name"}}`},
+
+		// A broken batch request should report a single top-level error.
+		{`[{"jsonrpc":"2.0", "method":"A", "id": 1}, {"jsonrpc":"2.0"]`, // N.B. syntax error
+			`{"jsonrpc":"2.0","id":null,"error":{"code":-32700,"message":"invalid request batch"}}`},
 	}
 	for _, test := range tests {
 		if err := cli.Send([]byte(test.input)); err != nil {
