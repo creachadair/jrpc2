@@ -52,9 +52,11 @@ and includes examples that contain request values with no ID (which are, perforc
 
 This implementation resolves the conflict in favour of the notification rules. Specifically:
 
--  If a batch is empty or contains structurally invalid request or notification objects, the server reports error -32700 (Invalid JSON) as a single error Response object.
+-  If a batch is empty or not valid JSON, the server reports error -32700 (Invalid JSON) as a single error Response object.
 
--  Otherwise, errors resulting from any request object without an ID are logged by the server but not reported to the client.
+-  Otherwise, parse or validation errors resulting from any batch member without an ID are mapped to error objects with a `null` ID, in the same position in the reply as the corresponding request. This behaviour is not required by the specification, but it ensures the server has stable behaviour.
+
+Because a server is allowed to reorder the results, a client should not depend on this implementation detail.
 
 ### Non-standard server notifications
 
