@@ -54,7 +54,7 @@ This implementation resolves the conflict in favour of the notification rules. S
 
 -  If a batch is empty or not valid JSON, the server reports error -32700 (Invalid JSON) as a single error Response object.
 
--  Otherwise, parse or validation errors resulting from any batch member without an ID are mapped to error objects with a `null` ID, in the same position in the reply as the corresponding request. This behaviour is not required by the specification, but it ensures the server has stable behaviour.
+-  Otherwise, parse or validation errors resulting from any batch member without an ID are mapped to error objects with a `null` ID, in the same position in the reply as the corresponding request. Preservation of order is not required by the specification, but it ensures the server has stable behaviour.
 
 Because a server is allowed to reorder the results, a client should not depend on this implementation detail.
 
