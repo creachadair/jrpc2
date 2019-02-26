@@ -185,21 +185,22 @@ name on the first period ("."), and you may nest ServiceMaps more deeply if you
 require a more complex hierarchy.
 
 
-Non-Standard Custom Methods
+Non-Standard Extension Methods
 
-By default a jrpc2.Server exports the following built-in non-standard custom
+By default a jrpc2.Server exports the following built-in non-standard extension
 methods:
 
-  rpc.serverInfo (null)
+  rpc.serverInfo(null) ⇒ jrpc2.ServerInfo
   Returns a jrpc2.ServerInfo value giving server metrics.
 
-  rpc.cancel ([]int)  [notification only]
+  rpc.cancel([]int)  [notification]
   Request cancellation of the specified in-flight request IDs.
 
-The methods marked "notification only" work only as notifications, and will
-report an error if called as ordinary methods.  These methods are enabled by
-default, but may be disabled by setting the DisableBuiltin server option to
-true when constructing the server.
+The rpc.cancel method works only as a notification, and will report an error if
+called as an ordinary method.
+
+These extension methods are enabled by default, but may be disabled by setting
+the DisableBuiltin server option to true when constructing the server.
 
 
 Server Notifications
