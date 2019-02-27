@@ -49,11 +49,17 @@ func TestParseRequests(t *testing.T) {
 		{`[{"id": 37, "method": "complain", "params":[]}]`, []*Request{
 			{method: "complain", id: json.RawMessage(`37`), params: json.RawMessage(`[]`)},
 		}, ErrInvalidVersion},
+
+		// A broken request.
+		{`{`, nil, Errorf(code.ParseError, "invalid request message")},
+
+		// A broken batch.
+		{`["bad"{]`, nil, Errorf(code.ParseError, "invalid request batch")},
 	}
 	for _, test := range tests {
 		got, err := ParseRequests([]byte(test.input))
-		if err != test.err {
-			t.Errorf("ParseRequests(%#q): got error %v, want%v", test.input, err, test.err)
+		if !errEQ(err, test.err) {
+			t.Errorf("ParseRequests(%#q): got error %v, want %v", test.input, err, test.err)
 			continue
 		}
 
@@ -61,6 +67,15 @@ func TestParseRequests(t *testing.T) {
 			t.Errorf("ParseRequests(%#q): wrong result (-got +want):\n%s", test.input, diff)
 		}
 	}
+}
+
+func errEQ(x, y error) bool {
+	if x == nil {
+		return y == nil
+	} else if y == nil {
+		return false
+	}
+	return code.FromError(x) == code.FromError(y) && x.Error() == y.Error()
 }
 
 func TestUnmarshalParams(t *testing.T) {

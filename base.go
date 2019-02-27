@@ -86,7 +86,7 @@ var ErrInvalidVersion = Errorf(code.InvalidRequest, "incorrect version marker")
 // validation apart from basic structure is performed on the results.
 func ParseRequests(msg []byte) ([]*Request, error) {
 	var req jrequests
-	if err := json.Unmarshal(msg, &req); err != nil {
+	if err := req.UnmarshalJSON(msg); err != nil {
 		return nil, err
 	}
 	var err error
