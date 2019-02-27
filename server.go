@@ -501,7 +501,7 @@ func (s *Server) pushError(err error) {
 	if e, ok := err.(*Error); ok {
 		jerr = e.tojerror()
 	} else {
-		jerr = jerrorf(code.FromError(err), err.Error())
+		jerr = jerrorf(code.FromError(err), "%v", err)
 	}
 
 	nw, err := encode(s.ch, jresponses{{
@@ -576,9 +576,9 @@ func (ts tasks) responses() jresponses {
 		} else if e, ok := task.err.(*Error); ok {
 			rsp.E = e.tojerror()
 		} else if c := code.FromError(task.err); c != code.NoError {
-			rsp.E = jerrorf(c, "%v: %v", c.String(), task.err)
+			rsp.E = jerrorf(c, "%v", task.err)
 		} else {
-			rsp.E = jerrorf(code.InternalError, "internal error: %v", task.err)
+			rsp.E = jerrorf(code.InternalError, "%v", task.err)
 		}
 		rsps = append(rsps, rsp)
 	}

@@ -217,7 +217,7 @@ func (c *Client) waitComplete(pctx context.Context, id string, p *Response) {
 	code := code.FromError(pctx.Err())
 	p.ch <- &jresponse{
 		ID: json.RawMessage(id),
-		E:  jerrorf(code, pctx.Err().Error()),
+		E:  jerrorf(code, "%v", pctx.Err()),
 	}
 
 	// Inform the server, best effort only. N.B. Use a background context here,
