@@ -163,7 +163,13 @@ func (r *Response) wait() {
 		// channel and cancel the context. This order ensures that subsequent
 		// waiters all get the same response, and do not race on accessing it.
 		r.id = string(fixID(raw.ID))
-		r.err = raw.E.toError()
+		if e := raw.E; e != nil {
+			r.err = &Error{
+				message: e.Msg,
+				code:    code.Code(e.Code),
+				data:    e.Data,
+			}
+		}
 		r.result = raw.R
 		close(r.ch)
 		r.cancel() // release the context observer
@@ -317,18 +323,6 @@ type jerror struct {
 	Code int32           `json:"code"`
 	Msg  string          `json:"message,omitempty"` // optional
 	Data json.RawMessage `json:"data,omitempty"`    // optional
-}
-
-// toError converts a wire-format error object into an *Error.
-func (e *jerror) toError() *Error {
-	if e == nil {
-		return nil
-	}
-	return &Error{
-		message: e.Msg,
-		code:    code.Code(e.Code),
-		data:    e.Data,
-	}
 }
 
 func jerrorf(code code.Code, msg string, args ...interface{}) *jerror {
