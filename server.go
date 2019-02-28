@@ -28,7 +28,7 @@ type Server struct {
 	allowP  bool                // allow server notifications to the client
 	log     logger              // write debug logs here
 	dectx   decoder             // decode context from request
-	ckauth  verifier            // check request authorization
+	ckreq   verifier            // check request authorization
 	expctx  bool                // whether to expect request context
 	metrics *metrics.M          // metrics collected during execution
 	start   time.Time           // when Start was called
@@ -67,7 +67,7 @@ func NewServer(mux Assigner, opts *ServerOptions) *Server {
 		allowP:  opts.allowPush(),
 		log:     opts.logger(),
 		dectx:   dc,
-		ckauth:  opts.checkAuth(),
+		ckreq:   opts.checkRequest(),
 		expctx:  exp,
 		mu:      new(sync.Mutex),
 		metrics: opts.metrics(),
@@ -260,13 +260,13 @@ func (s *Server) setContext(t *task, id, method string, rawParams json.RawMessag
 		return false
 	}
 
-	// Check authorization.
-	if err := s.ckauth(base, &Request{
+	// Check request.
+	if err := s.ckreq(base, &Request{
 		id:     json.RawMessage(id),
 		method: method,
 		params: params,
 	}); err != nil {
-		t.err = Errorf(code.NotAuthorized, "%v: %v", code.NotAuthorized.String(), err)
+		t.err = err
 		return false
 	}
 

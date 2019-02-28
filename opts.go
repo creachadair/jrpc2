@@ -45,9 +45,9 @@ type ServerOptions struct {
 	DecodeContext func(context.Context, string, json.RawMessage) (context.Context, json.RawMessage, error)
 
 	// If set, this function is called with the context and the client request
-	// to be delivered to the handler. If CheckAuth reports a non-nil error, the
-	// request fails reporting code.NotAuthorized.
-	CheckAuth func(ctx context.Context, req *Request) error
+	// to be delivered to the handler. If CheckRequest reports a non-nil error,
+	// the request fails reporting code.NotAuthorized.
+	CheckRequest func(ctx context.Context, req *Request) error
 
 	// If set, use this value to record server metrics. All servers created
 	// from the same options will share the same metrics collector.  If none is
@@ -98,11 +98,11 @@ func (s *ServerOptions) decodeContext() (decoder, bool) {
 
 type verifier = func(context.Context, *Request) error
 
-func (s *ServerOptions) checkAuth() verifier {
-	if s == nil || s.CheckAuth == nil {
+func (s *ServerOptions) checkRequest() verifier {
+	if s == nil || s.CheckRequest == nil {
 		return func(context.Context, *Request) error { return nil }
 	}
-	return s.CheckAuth
+	return s.CheckRequest
 }
 
 func (s *ServerOptions) metrics() *metrics.M {

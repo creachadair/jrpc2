@@ -19,6 +19,8 @@ import (
 	"bitbucket.org/creachadair/jrpc2/server"
 )
 
+var notAuthorized = code.Register(-32095, "request not authorized")
+
 type dummy struct{}
 
 // Add is a request-based method.
@@ -607,12 +609,15 @@ func TestAuthHooks(t *testing.T) {
 		// Enable auth checking and context decoding for the server.
 		ServerOptions: &jrpc2.ServerOptions{
 			DecodeContext: jctx.Decode,
-			CheckAuth: func(ctx context.Context, req *jrpc2.Request) error {
+			CheckRequest: func(ctx context.Context, req *jrpc2.Request) error {
 				token, ok := jctx.AuthToken(ctx)
 				t.Logf("Auth token present=%v, value=%#q", ok, string(token))
 				var params json.RawMessage
 				req.UnmarshalParams(&params)
-				return user.Verify(token, req.Method(), params)
+				if err := user.Verify(token, req.Method(), params); err != nil {
+					return jrpc2.Errorf(notAuthorized, "not authorized: %v", err)
+				}
+				return nil
 			},
 		},
 
@@ -630,8 +635,8 @@ func TestAuthHooks(t *testing.T) {
 		err := c.CallResult(context.Background(), "Test", nil, &rsp)
 		if err == nil {
 			t.Errorf("Call(Test): got %q, wanted error", rsp)
-		} else if ec := code.FromError(err); ec != code.NotAuthorized {
-			t.Errorf("Call(Test): got code %v, want %v", ec, code.NotAuthorized)
+		} else if ec := code.FromError(err); ec != notAuthorized {
+			t.Errorf("Call(Test): got code %v, want %v", ec, notAuthorized)
 		}
 	})
 
@@ -654,8 +659,8 @@ func TestAuthHooks(t *testing.T) {
 		var rsp string
 		if err := c.CallResult(ctx, "Test", nil, &rsp); err == nil {
 			t.Errorf("Call(Test): got %q, wanted error", rsp)
-		} else if ec := code.FromError(err); ec != code.NotAuthorized {
-			t.Errorf("Call(Test): got code %v, want %v", ec, code.NotAuthorized)
+		} else if ec := code.FromError(err); ec != notAuthorized {
+			t.Errorf("Call(Test): got code %v, want %v", ec, notAuthorized)
 		}
 	})
 }
