@@ -443,7 +443,7 @@ func (s *Server) read(ch channel.Receiver) {
 		s.metrics.CountAndSetMax("rpc.bytesRead", int64(len(bits)))
 		if err == nil || (err == io.EOF && len(bits) != 0) {
 			err = nil
-			derr = in.UnmarshalJSON(bits)
+			derr = in.parseJSON(bits)
 			s.metrics.Count("rpc.requests", int64(len(in)))
 		}
 		s.mu.Lock()

@@ -86,7 +86,7 @@ var ErrInvalidVersion = Errorf(code.InvalidRequest, "incorrect version marker")
 // validation apart from basic structure is performed on the results.
 func ParseRequests(msg []byte) ([]*Request, error) {
 	var req jrequests
-	if err := req.UnmarshalJSON(msg); err != nil {
+	if err := req.parseJSON(msg); err != nil {
 		return nil, err
 	}
 	var err error
@@ -187,7 +187,9 @@ func (j jrequests) MarshalJSON() ([]byte, error) {
 	return json.Marshal([]*jrequest(j))
 }
 
-func (j *jrequests) UnmarshalJSON(data []byte) error {
+// N.B. Not UnmarshalJSON, because json.Unmarshal checks for validity early and
+// hwere we want to control the error that is returned.
+func (j *jrequests) parseJSON(data []byte) error {
 	*j = (*j)[:0] // reset state
 
 	// When parsing requests, validation checks are deferred: The only immediate
