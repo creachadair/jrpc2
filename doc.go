@@ -60,9 +60,9 @@ wait for the server to finish, call:
 This will report the error that led to the server exiting. A working
 implementation of this example can found in cmd/examples/adder/adder.go:
 
-    $ go run examples/adder/adder.go
+    $ go run cmd/examples/adder/adder.go
 
-You can interact with this server on the command line.
+You can interact with this server by typing JSON-RPC requests on stdin.
 
 
 Clients
