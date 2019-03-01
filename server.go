@@ -480,16 +480,14 @@ type ServerInfo struct {
 // assign returns a Handler to handle the specified name, or nil.
 // The caller must hold s.mu.
 func (s *Server) assign(name string) Handler {
-	if s.builtin {
+	if s.builtin && strings.HasPrefix(name, "rpc.") {
 		switch name {
 		case rpcServerInfo:
 			return methodFunc(s.handleRPCServerInfo)
 		case rpcCancel:
 			return methodFunc(s.handleRPCCancel)
 		default:
-			if strings.HasPrefix(name, "rpc.") {
-				return nil
-			}
+			return nil // reserved
 		}
 	}
 	return s.mux.Assign(name)
