@@ -81,21 +81,16 @@ func ExampleClient_Batch() {
 		log.Fatalf("Batch: %v", err)
 	}
 
-	// There should be only one reply in this case, since we sent 1
-	// notification and 1 request.
-	if len(rsps) != 1 {
-		log.Fatalf("Wait: got %d responses, wanted 1", len(rsps))
+	fmt.Printf("len(rsps) = %d\n", len(rsps))
+	for i, rsp := range rsps {
+		var msg string
+		if err := rsp.UnmarshalResult(&msg); err != nil {
+			log.Fatalf("Invalid result: %v", err)
+		}
+		fmt.Printf("Response #%d: %s\n", i+1, msg)
 	}
-	fmt.Printf("len(rsps)=%d\n", len(rsps))
-
-	// Decode the result from the request.
-	var msg string
-	if err := rsps[0].UnmarshalResult(&msg); err != nil {
-		log.Fatalf("Invalid result: %v", err)
-	}
-	fmt.Printf("rsps[0]=%s\n", msg)
 	// Output:
 	// Log: Sing it!
-	// len(rsps)=1
-	// rsps[0]=Hello, world!
+	// len(rsps) = 1
+	// Response #1: Hello, world!
 }
