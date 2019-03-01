@@ -14,7 +14,6 @@ import (
 	"bitbucket.org/creachadair/jrpc2/channel"
 	"bitbucket.org/creachadair/jrpc2/code"
 	"bitbucket.org/creachadair/jrpc2/handler"
-	"bitbucket.org/creachadair/jrpc2/jauth"
 	"bitbucket.org/creachadair/jrpc2/jctx"
 	"bitbucket.org/creachadair/jrpc2/server"
 )
@@ -591,14 +590,15 @@ func TestContextPlumbing(t *testing.T) {
 	}
 }
 
-// Verify that the authorization hooks work, generating tokens on the client
-// side and verifying them on the server side.
-func TestAuthHooks(t *testing.T) {
+// Verify that the request-checking hook works.
+func TestRequestHook(t *testing.T) {
 	const wantResponse = "Hey girl"
+	const wantToken = "OK"
 
-	user := jauth.User{
-		Name: "Bartolomé",
-		Key:  []byte("8A27D68F-AD87-4DE0-957B-33E9A0A74222"),
+	auth := func(tok string) jctx.Authorizer {
+		return func(ctx context.Context, method string, params []byte) ([]byte, error) {
+			return []byte(tok), nil
+		}
 	}
 
 	loc := server.NewLocal(handler.Map{
@@ -610,12 +610,10 @@ func TestAuthHooks(t *testing.T) {
 		ServerOptions: &jrpc2.ServerOptions{
 			DecodeContext: jctx.Decode,
 			CheckRequest: func(ctx context.Context, req *jrpc2.Request) error {
-				token, ok := jctx.AuthToken(ctx)
-				t.Logf("Auth token present=%v, value=%#q", ok, string(token))
-				var params json.RawMessage
-				req.UnmarshalParams(&params)
-				if err := user.Verify(token, req.Method(), params); err != nil {
-					return jrpc2.Errorf(notAuthorized, "not authorized: %v", err)
+				v, ok := jctx.AuthToken(ctx)
+				t.Logf("Auth token present=%v, value=%#q", ok, v)
+				if !ok || string(v) != wantToken {
+					return jrpc2.Errorf(notAuthorized, "not authorized")
 				}
 				return nil
 			},
@@ -642,7 +640,7 @@ func TestAuthHooks(t *testing.T) {
 
 	// Call with a valid token and verify that we get a response.
 	t.Run("GoodToken", func(t *testing.T) {
-		ctx := jctx.WithAuthorizer(context.Background(), user.Token)
+		ctx := jctx.WithAuthorizer(context.Background(), auth(wantToken))
 		var rsp string
 		if err := c.CallResult(ctx, "Test", nil, &rsp); err != nil {
 			t.Errorf("Call(Test): unexpected error: %v", err)
@@ -654,8 +652,7 @@ func TestAuthHooks(t *testing.T) {
 
 	// Call with an invalid token and verify that we get an error.
 	t.Run("BadToken", func(t *testing.T) {
-		bad := jauth.User{Name: "Cristòffa", Key: []byte("DD5E95D8-7C7A-4F0B-A06C-8672611C74AE")}
-		ctx := jctx.WithAuthorizer(context.Background(), bad.Token)
+		ctx := jctx.WithAuthorizer(context.Background(), auth("BAD"))
 		var rsp string
 		if err := c.CallResult(ctx, "Test", nil, &rsp); err == nil {
 			t.Errorf("Call(Test): got %q, wanted error", rsp)
