@@ -7,6 +7,7 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -19,7 +20,6 @@ import (
 
 	"bitbucket.org/creachadair/jrpc2"
 	"bitbucket.org/creachadair/jrpc2/channel/chanutil"
-	"bitbucket.org/creachadair/jrpc2/jauth"
 	"bitbucket.org/creachadair/jrpc2/jctx"
 )
 
@@ -32,7 +32,7 @@ var (
 	doBatch     = flag.Bool("batch", false, "Issue calls as a batch rather than sequentially")
 	doTiming    = flag.Bool("T", false, "Print call timing stats")
 	withLogging = flag.Bool("v", false, "Enable verbose logging")
-	withAuth    = flag.String("auth", "", "Identity for auth token (user:key or key; implies -c)")
+	withAuth    = flag.String("auth", "", "Auth token (string or @<base64>; implies -c)")
 	withMeta    = flag.String("meta", "", "Attach this JSON value as request metadata (implies -c)")
 )
 
@@ -83,15 +83,19 @@ func main() {
 		*withContext = true
 	}
 	if *withAuth != "" {
-		ukey := strings.SplitN(*withAuth, ":", 2)
-		user, key := os.Getenv("USER"), ukey[0]
-		if len(ukey) == 2 {
-			user, key = ukey[0], ukey[1]
+		var token []byte
+		if t := strings.TrimPrefix(*withAuth, "@"); t != *withAuth {
+			dec, err := base64.RawStdEncoding.DecodeString(t)
+			if err != nil {
+				log.Fatalf("Invalid base64: %v", err)
+			}
+			token = dec
+		} else {
+			token = []byte(*withAuth)
 		}
-		ctx = jctx.WithAuthorizer(ctx, jauth.User{
-			Name: user,
-			Key:  []byte(key),
-		}.Token)
+		ctx = jctx.WithAuthorizer(ctx, func(context.Context, string, []byte) ([]byte, error) {
+			return token, nil
+		})
 		*withContext = true
 	}
 
