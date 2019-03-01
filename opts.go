@@ -46,7 +46,7 @@ type ServerOptions struct {
 
 	// If set, this function is called with the context and the client request
 	// to be delivered to the handler. If CheckRequest reports a non-nil error,
-	// the request fails reporting code.NotAuthorized.
+	// the request fails with that error before calling a handler.
 	CheckRequest func(ctx context.Context, req *Request) error
 
 	// If set, use this value to record server metrics. All servers created
