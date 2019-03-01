@@ -15,8 +15,8 @@ var (
 	s *jrpc2.Server
 
 	ctx      = context.Background()
-	srv, cli = channel.Direct()
-	c        = jrpc2.NewClient(cli, nil)
+	sch, cch = channel.Direct()
+	cli      = jrpc2.NewClient(cch, nil)
 )
 
 type Msg struct {
@@ -33,7 +33,7 @@ func ExampleNewServer() {
 			fmt.Println("Log:", msg.Text)
 			return true, nil
 		}),
-	}, nil).Start(srv)
+	}, nil).Start(sch)
 
 	// We can query the server for its current status information, including a
 	// list of its methods.
@@ -46,8 +46,8 @@ func ExampleNewServer() {
 }
 
 func ExampleClient_Call() {
-	// var c = jrpc2.NewClient(cli, nil)
-	rsp, err := c.Call(ctx, "Hello", nil)
+	// var cli = jrpc2.NewClient(cch, nil)
+	rsp, err := cli.Call(ctx, "Hello", nil)
 	if err != nil {
 		log.Fatalf("Call: %v", err)
 	}
@@ -61,9 +61,9 @@ func ExampleClient_Call() {
 }
 
 func ExampleClient_CallResult() {
-	// var c = jrpc2.NewClient(cli, nil)
+	// var cli = jrpc2.NewClient(cch, nil)
 	var msg string
-	if err := c.CallResult(ctx, "Hello", nil, &msg); err != nil {
+	if err := cli.CallResult(ctx, "Hello", nil, &msg); err != nil {
 		log.Fatalf("CallResult: %v", err)
 	}
 	fmt.Println(msg)
@@ -72,8 +72,8 @@ func ExampleClient_CallResult() {
 }
 
 func ExampleClient_Batch() {
-	// var c = jrpc2.NewClient(cli, nil)
-	rsps, err := c.Batch(ctx, []jrpc2.Spec{
+	// var cli = jrpc2.NewClient(cch, nil)
+	rsps, err := cli.Batch(ctx, []jrpc2.Spec{
 		{Method: "Hello"},
 		{Method: "Log", Params: Msg{"Sing it!"}, Notify: true},
 	})
