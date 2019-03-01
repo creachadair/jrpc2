@@ -32,9 +32,7 @@ type Server struct {
 	expctx  bool                // whether to expect request context
 	metrics *metrics.M          // metrics collected during execution
 	start   time.Time           // when Start was called
-
-	// If rpc.* method handlers are enabled, these are their handlers.
-	rpcHandlers map[string]Handler
+	builtin bool                // whether built-in rpc.* methods are enabled
 
 	mu *sync.Mutex // protects the fields below
 
@@ -72,13 +70,11 @@ func NewServer(mux Assigner, opts *ServerOptions) *Server {
 		mu:      new(sync.Mutex),
 		metrics: opts.metrics(),
 		start:   opts.startTime(),
+		builtin: opts.allowBuiltin(),
 		inq:     list.New(),
 		used:    make(map[string]context.CancelFunc),
 	}
 	s.work = sync.NewCond(s.mu)
-	if opts.allowBuiltin() {
-		s.installBuiltins()
-	}
 	return s
 }
 
@@ -484,10 +480,17 @@ type ServerInfo struct {
 // assign returns a Handler to handle the specified name, or nil.
 // The caller must hold s.mu.
 func (s *Server) assign(name string) Handler {
-	if h, ok := s.rpcHandlers[name]; ok {
-		return h
-	} else if strings.HasPrefix(name, "rpc.") && s.rpcHandlers != nil {
-		return nil
+	if s.builtin {
+		switch name {
+		case rpcServerInfo:
+			return methodFunc(s.handleRPCServerInfo)
+		case rpcCancel:
+			return methodFunc(s.handleRPCCancel)
+		default:
+			if strings.HasPrefix(name, "rpc.") {
+				return nil
+			}
+		}
 	}
 	return s.mux.Assign(name)
 }

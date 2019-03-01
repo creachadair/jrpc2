@@ -225,7 +225,7 @@ func (c *Client) waitComplete(pctx context.Context, id string, p *Response) {
 	if c.allowC {
 		cleanup = func() {
 			c.log("Sending rpc.cancel for id %q to the server", id)
-			c.Notify(context.Background(), "rpc.cancel", []json.RawMessage{json.RawMessage(id)})
+			c.Notify(context.Background(), rpcCancel, []json.RawMessage{json.RawMessage(id)})
 		}
 	}
 }
