@@ -43,8 +43,8 @@ type Sender interface {
 // A Receiver represents the ability to receive a message from a channel.
 type Receiver interface {
 	// Recv returns the next available record from the channel.  If no further
-	// messages are available, it returns io.EOF.  Each call to Recv fetches a
-	// single complete record.
+	// messages are available, it returns nil, io.EOF.  Each call to Recv
+	// fetches a single complete record.
 	Recv() ([]byte, error)
 }
 
