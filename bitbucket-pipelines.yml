@@ -20,3 +20,6 @@ pipelines:
     - step:
         image: golang:1.11.5
         <<: *Verify
+    - step:
+        image: golang:1.12.1
+        <<: *Verify
