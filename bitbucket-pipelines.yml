@@ -1,8 +1,8 @@
 image: golang:1.12
 
-pipelines:
-  default:  # run on each push
-    - step:
+definitions:
+  steps:
+    - step: &Verify
         script:
           - PACKAGE_PATH="${GOPATH}/src/bitbucket.org/${BITBUCKET_REPO_OWNER}/${BITBUCKET_REPO_SLUG}"
           - mkdir -pv "${PACKAGE_PATH}"
@@ -13,3 +13,7 @@ pipelines:
           - go build -v ./...
           - go test -v -race -cpu=1,4 ./...
           - go vet -v ./...
+
+pipelines:
+  default:  # run on each push
+    - step: *Verify
