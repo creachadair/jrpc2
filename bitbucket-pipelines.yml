@@ -16,4 +16,6 @@ definitions:
 
 pipelines:
   default:  # run on each push
-    - step: *Verify
+    - step:
+        image: golang:1.11.5
+        <<: *Verify
