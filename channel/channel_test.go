@@ -152,7 +152,9 @@ func TestWithTrigger(t *testing.T) {
 
 			// Send a message to the channel, then close it.
 			const message = `["fools", "rush", "in"]`
+			done := make(chan struct{})
 			go func() {
+				defer close(done)
 				t.Log("Sending...")
 				if err := ch.Send([]byte(message)); err != nil {
 					t.Errorf("Send failed: %v", err)
@@ -174,6 +176,7 @@ func TestWithTrigger(t *testing.T) {
 				t.Logf("Recv: msg=%q", string(msg))
 			}
 
+			<-done
 			if !triggered {
 				t.Error("After channel close: trigger not called")
 			}
