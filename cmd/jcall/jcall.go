@@ -7,7 +7,6 @@ package main
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -32,7 +31,6 @@ var (
 	doBatch     = flag.Bool("batch", false, "Issue calls as a batch rather than sequentially")
 	doTiming    = flag.Bool("T", false, "Print call timing stats")
 	withLogging = flag.Bool("v", false, "Enable verbose logging")
-	withAuth    = flag.String("auth", "", "Auth token (string or @<base64>; implies -c)")
 	withMeta    = flag.String("meta", "", "Attach this JSON value as request metadata (implies -c)")
 )
 
@@ -80,22 +78,6 @@ func main() {
 			log.Fatalf("Invalid request metadata: %v", err)
 		}
 		ctx = mc
-		*withContext = true
-	}
-	if *withAuth != "" {
-		var token []byte
-		if t := strings.TrimPrefix(*withAuth, "@"); t != *withAuth {
-			dec, err := base64.RawStdEncoding.DecodeString(t)
-			if err != nil {
-				log.Fatalf("Invalid base64: %v", err)
-			}
-			token = dec
-		} else {
-			token = []byte(*withAuth)
-		}
-		ctx = jctx.WithAuthorizer(ctx, func(context.Context, string, []byte) ([]byte, error) {
-			return token, nil
-		})
 		*withContext = true
 	}
 
