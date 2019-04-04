@@ -595,12 +595,6 @@ func TestRequestHook(t *testing.T) {
 	const wantResponse = "Hey girl"
 	const wantToken = "OK"
 
-	auth := func(tok string) jctx.Authorizer {
-		return func(ctx context.Context, method string, params []byte) ([]byte, error) {
-			return []byte(tok), nil
-		}
-	}
-
 	loc := server.NewLocal(handler.Map{
 		"Test": handler.New(func(ctx context.Context) (string, error) {
 			return wantResponse, nil
@@ -610,9 +604,16 @@ func TestRequestHook(t *testing.T) {
 		ServerOptions: &jrpc2.ServerOptions{
 			DecodeContext: jctx.Decode,
 			CheckRequest: func(ctx context.Context, req *jrpc2.Request) error {
-				v, ok := jctx.AuthToken(ctx)
-				t.Logf("Auth token present=%v, value=%#q", ok, v)
-				if !ok || string(v) != wantToken {
+				var token []byte
+				switch err := jctx.UnmarshalMetadata(ctx, &token); err {
+				case nil:
+					t.Logf("Metadata present: value=%q", string(token))
+				case jctx.ErrNoMetadata:
+					t.Log("Metadata not set")
+				default:
+					return err
+				}
+				if s := string(token); s != wantToken {
 					return jrpc2.Errorf(notAuthorized, "not authorized")
 				}
 				return nil
@@ -640,7 +641,10 @@ func TestRequestHook(t *testing.T) {
 
 	// Call with a valid token and verify that we get a response.
 	t.Run("GoodToken", func(t *testing.T) {
-		ctx := jctx.WithAuthorizer(context.Background(), auth(wantToken))
+		ctx, err := jctx.WithMetadata(context.Background(), []byte(wantToken))
+		if err != nil {
+			t.Fatalf("Call(Test): attaching metadata: %v", err)
+		}
 		var rsp string
 		if err := c.CallResult(ctx, "Test", nil, &rsp); err != nil {
 			t.Errorf("Call(Test): unexpected error: %v", err)
@@ -652,7 +656,10 @@ func TestRequestHook(t *testing.T) {
 
 	// Call with an invalid token and verify that we get an error.
 	t.Run("BadToken", func(t *testing.T) {
-		ctx := jctx.WithAuthorizer(context.Background(), auth("BAD"))
+		ctx, err := jctx.WithMetadata(context.Background(), []byte("BAD"))
+		if err != nil {
+			t.Fatalf("Call(Test): attaching metadata: %v", err)
+		}
 		var rsp string
 		if err := c.CallResult(ctx, "Test", nil, &rsp); err == nil {
 			t.Errorf("Call(Test): got %q, wanted error", rsp)
