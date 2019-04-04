@@ -43,26 +43,6 @@ func ExampleEncode_deadline() {
 	// }
 }
 
-func ExampleWithAuthorizer() {
-	// A trivial "authorization" token consisting of username and password.
-	userPass := func(ctx context.Context, method string, params []byte) ([]byte, error) {
-		return []byte("jonsnow:myWatchIsD0ne"), nil
-	}
-
-	ctx := jctx.WithAuthorizer(context.Background(), userPass)
-	enc, err := jctx.Encode(ctx, "methodName", json.RawMessage(`{}`))
-	if err != nil {
-		log.Fatalln("Encode:", err)
-	}
-	fmt.Println(pretty(enc))
-	// Output:
-	// {
-	//   "jctx": "1",
-	//   "payload": {},
-	//   "auth": "am9uc25vdzpteVdhdGNoSXNEMG5l"
-	// }
-}
-
 func ExampleDecode() {
 	const input = `{"jctx":"1","deadline":"2018-06-09T20:45:33.000000001Z","payload":["a", "b", "c"]}`
 
@@ -105,24 +85,6 @@ func ExampleWithMetadata() {
 	//     "uuid": "28EF40F5-77C9-4744-B5BD-3ADCD1C15141"
 	//   }
 	// }
-}
-
-func ExampleAuthToken() {
-	// Setup for the example...
-	const input = `{"jctx":"1","payload":{},"auth":"am9uc25vdzpteVdhdGNoSXNEMG5l"}`
-
-	ctx, param, err := jctx.Decode(context.Background(), "methodName", json.RawMessage(input))
-	if err != nil {
-		log.Fatalln("Decode:", err)
-	}
-	auth, ok := jctx.AuthToken(ctx)
-	fmt.Printf("Parameters:  %v\n", string(param))
-	fmt.Printf("Has token:   %v\n", ok)
-	fmt.Printf("Token value: %q\n", string(auth))
-	// Output:
-	// Parameters:  {}
-	// Has token:   true
-	// Token value: "jonsnow:myWatchIsD0ne"
 }
 
 func ExampleUnmarshalMetadata() {

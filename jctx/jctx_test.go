@@ -137,37 +137,3 @@ func TestMetadata(t *testing.T) {
 		t.Errorf("Metadata(dec): got %+v, want %+v", output, input)
 	}
 }
-
-func TestAuth(t *testing.T) {
-	const token = "my magic token"
-	const param = "[1,2,3]"
-	ctx := WithAuthorizer(context.Background(),
-		func(ctx context.Context, method string, params []byte) ([]byte, error) {
-			t.Logf("Authorizer called for method %q with params %q", method, string(params))
-			return []byte(token), nil
-		},
-	)
-
-	// Simulate transmission -- encode, then decode.
-	var dec context.Context
-	var arg json.RawMessage
-	if enc, err := Encode(ctx, "dummy", json.RawMessage(param)); err != nil {
-		t.Errorf("Encoding context failed: %v", err)
-	} else {
-		t.Logf("Encoded context is: %#q", string(enc))
-		if dec, arg, err = Decode(ctx, "dummy", enc); err != nil {
-			t.Fatalf("Decoding context failed: %v", err)
-		}
-	}
-
-	// The decoded context does contain the token (after receipt).
-	got, ok := AuthToken(dec)
-	if !ok {
-		t.Errorf("AuthToken not found after decoding %+v", dec)
-	} else if s := string(got); s != token {
-		t.Errorf("AuthToken: got %q, want %q", s, token)
-	}
-	if s := string(arg); s != param {
-		t.Errorf("Decoded parameters: got %q, want %q", s, param)
-	}
-}

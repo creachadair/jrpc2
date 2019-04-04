@@ -17,7 +17,6 @@
 //      "jctx": "1",
 //      "payload":  <original-params>,
 //      "deadline": <rfc-3339-timestamp>,
-//      "auth":     <opaque-bytes>,
 //      "meta":     <json-value>
 //    }
 //
@@ -36,14 +35,6 @@
 // wire during a JSON-RPC call. The recipient can decode this value from the
 // context using the jctx.UnmarshalMetadata function.
 //
-// Authorization
-//
-// The jctx.WithAuthorizer function attaches an Authorizer to a context.  This
-// is a function that, when present, is used to generate an authorization token
-// for a method and attach that token to the outbound context. After decoding,
-// the auth token is available via the jctx.AuthToken helper. The structure of
-// an auth token is implementation-defined; it may be JSON or not, but this
-// package handles the value as an opaque byte string.
 package jctx
 
 import (
@@ -65,30 +56,17 @@ type wireContext struct {
 
 	Deadline *time.Time      `json:"deadline,omitempty"` // encoded in UTC
 	Payload  json.RawMessage `json:"payload,omitempty"`
-	Token    []byte          `json:"auth,omitempty"`
 	Metadata json.RawMessage `json:"meta,omitempty"`
 }
 
 // Encode encodes the specified context and request parameters for transmission.
 // If a deadline is set on ctx, it is converted to UTC before encoding.
 // If metadata are set on ctx (see jctx.WithMetadata), they are included.
-// If an authorizer is set on ctx (see jctx.WithAuthorizer), it is invoked and
-// the token it returns (if any) is attached.
 func Encode(ctx context.Context, method string, params json.RawMessage) (json.RawMessage, error) {
 	c := wireContext{V: wireVersion, Payload: params}
 	if dl, ok := ctx.Deadline(); ok {
 		utcdl := dl.In(time.UTC)
 		c.Deadline = &utcdl
-	}
-
-	// If there is an authorizer, use it to generate a token for this request.
-	if v := ctx.Value(authorizerKey{}); v != nil {
-		auth := v.(Authorizer)
-		tok, err := auth(ctx, method, []byte(params))
-		if err != nil {
-			return nil, err
-		}
-		c.Token = tok
 	}
 
 	// If there are metadata in the context, attach them.
@@ -108,9 +86,6 @@ func Encode(ctx context.Context, method string, params json.RawMessage) (json.Ra
 //
 // If the request includes context metadata, they are attached and can be
 // recovered using jctx.UnmarshalMetadata.
-//
-// If the request includes an authorization token, it is attached and can be
-// recovered using jctx.AuthToken.
 func Decode(ctx context.Context, method string, req json.RawMessage) (context.Context, json.RawMessage, error) {
 	if len(req) == 0 {
 		return ctx, req, nil // an empty message has no wrapper
@@ -126,9 +101,6 @@ func Decode(ctx context.Context, method string, req json.RawMessage) (context.Co
 	}
 	if c.Metadata != nil {
 		ctx = context.WithValue(ctx, metadataKey{}, c.Metadata)
-	}
-	if len(c.Token) != 0 {
-		ctx = context.WithValue(ctx, authTokenKey{}, c.Token)
 	}
 	if c.Deadline != nil && !c.Deadline.IsZero() {
 		var ignored context.CancelFunc
@@ -164,27 +136,3 @@ func UnmarshalMetadata(ctx context.Context, meta interface{}) error {
 // ErrNoMetadata is returned by the Metadata function if the context does not
 // contain a metadata value.
 var ErrNoMetadata = errors.New("context metadata not present")
-
-type authorizerKey struct{}
-
-// An Authorizer generates an authorization token for a request, given the
-// method name and request parameters to be authorized. If the authorizer
-// returns an error, context encoding fails. If it returns an empty token
-// without error, no token is attached to the context.
-type Authorizer func(ctx context.Context, method string, params []byte) ([]byte, error)
-
-// WithAuthorizer attaches the specified authorizer to the context.
-func WithAuthorizer(ctx context.Context, auth Authorizer) context.Context {
-	return context.WithValue(ctx, authorizerKey{}, auth)
-}
-
-type authTokenKey struct{}
-
-// AuthToken reports whether there is an authorization token attached to ctx,
-// and if so returns its contents.
-func AuthToken(ctx context.Context) ([]byte, bool) {
-	if v := ctx.Value(authTokenKey{}); v != nil {
-		return v.([]byte), true
-	}
-	return nil, false
-}
