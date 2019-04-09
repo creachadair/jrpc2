@@ -1,5 +1,3 @@
-image: golang:1.12
-
 definitions:
   steps:
     - step: &Verify
@@ -21,5 +19,5 @@ pipelines:
         image: golang:1.11.5
         <<: *Verify
     - step:
-        image: golang:1.12.1
+        image: golang:1.12.3
         <<: *Verify
