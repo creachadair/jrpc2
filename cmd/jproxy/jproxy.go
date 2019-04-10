@@ -98,7 +98,7 @@ func run(ctx context.Context, cframe, sframe channel.Framing) error {
 	}
 	lst, err := net.Listen(kind, addr)
 	if err != nil {
-		return fmt.Errorf("Listen %s %q: %v", kind, addr, err)
+		return fmt.Errorf("listen %s %q: %v", kind, addr, err)
 	}
 	go func() {
 		<-ctx.Done()
