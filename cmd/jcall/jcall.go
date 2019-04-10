@@ -159,7 +159,7 @@ func printResults(rsps []*jrpc2.Response) bool {
 func issueCalls(ctx context.Context, cli *jrpc2.Client, args []string) ([]*jrpc2.Response, error) {
 	specs := newSpecs(args)
 	if *doBatch {
-		cli.Batch(ctx, specs)
+		return cli.Batch(ctx, specs)
 	}
 	return issueSequential(ctx, cli, specs)
 }
