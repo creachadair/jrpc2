@@ -36,12 +36,13 @@ func init() {
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, `Usage: %s [options] <cmd> <args>...
 
-Start the specified command in a subprocess and connect a JSON-RPC client to
-its stdin and stdout. Listen at the given address, and reverse proxy clients
-that connect to it via the client to the subprocess.
+Run a reverse proxy to a command that implements a JSON-RPC service by running
+the command in a subprocess and connecting a JSON-RPC client to its stdin and
+stdout. The proxy listens on the specified address and forwards requests to the
+subprocess.
 
-If the subprocess exits or the proxy receives an interrupt (SIGINT), the
-process cleans up any remaining clients and exits.
+If the subprocess exits or the proxy receives an interrupt (SIGINT), the proxy
+cleans up any remaining clients and exits.
 
 Options:
 `, filepath.Base(os.Args[0]))
