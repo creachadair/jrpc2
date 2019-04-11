@@ -6,18 +6,23 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"log"
 	"net"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"bitbucket.org/creachadair/jrpc2"
+	"bitbucket.org/creachadair/jrpc2/channel"
 	"bitbucket.org/creachadair/jrpc2/channel/chanutil"
 	"bitbucket.org/creachadair/jrpc2/jctx"
 )
@@ -25,6 +30,7 @@ import (
 var (
 	dialTimeout = flag.Duration("dial", 5*time.Second, "Timeout on dialing the server (0 for no timeout)")
 	callTimeout = flag.Duration("timeout", 0, "Timeout on each call (0 for no timeout)")
+	doHTTP      = flag.Bool("http", false, "Connect via HTTP (address is the endpoint URL)")
 	doNotify    = flag.Bool("notify", false, "Send a notification")
 	withContext = flag.Bool("c", false, "Send context with request")
 	chanFraming = flag.String("f", "raw", "Channel framing")
@@ -81,26 +87,35 @@ func main() {
 		*withContext = true
 	}
 
-	// Connect to the server and establish a client.
-	start := time.Now()
-	ntype, addr := "tcp", flag.Arg(0)
-	if !strings.Contains(addr, ":") {
-		ntype = "unix"
-	}
-	conn, err := net.DialTimeout(ntype, addr, *dialTimeout)
-	if err != nil {
-		log.Fatalf("Dial %q: %v", addr, err)
-	}
-	tdial := time.Now()
-	defer conn.Close()
-
 	if *callTimeout > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, *callTimeout)
 		defer cancel()
 	}
 
-	cli := newClient(conn)
+	// Establish a client channel. If we are using HTTP we do not need to dial a
+	// connection; the HTTP client will handle that.
+	start := time.Now()
+	var cc channel.Channel
+	if *doHTTP {
+		cc = newHTTP(ctx, flag.Arg(0))
+	} else if nc := chanutil.Framing(*chanFraming); nc == nil {
+		log.Fatalf("Unknown channel framing %q", *chanFraming)
+	} else {
+		ntype, addr := "tcp", flag.Arg(0)
+		if !strings.Contains(addr, ":") {
+			ntype = "unix"
+		}
+		conn, err := net.DialTimeout(ntype, addr, *dialTimeout)
+		if err != nil {
+			log.Fatalf("Dial %q: %v", addr, err)
+		}
+		defer conn.Close()
+		cc = nc(conn, conn)
+	}
+	tdial := time.Now()
+
+	cli := newClient(cc)
 	rsps, err := issueCalls(ctx, cli, flag.Args()[1:])
 	if err != nil {
 		log.Fatalf("Call failed: %v", err)
@@ -116,11 +131,7 @@ func main() {
 	}
 }
 
-func newClient(conn net.Conn) *jrpc2.Client {
-	nc := chanutil.Framing(*chanFraming)
-	if nc == nil {
-		log.Fatalf("Unknown channel framing %q", *chanFraming)
-	}
+func newClient(conn channel.Channel) *jrpc2.Client {
 	opts := &jrpc2.ClientOptions{
 		OnNotify: func(req *jrpc2.Request) {
 			var p json.RawMessage
@@ -134,7 +145,7 @@ func newClient(conn net.Conn) *jrpc2.Client {
 	if *withLogging {
 		opts.Logger = log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile)
 	}
-	return jrpc2.NewClient(nc(conn, conn), opts)
+	return jrpc2.NewClient(conn, opts)
 }
 
 func printResults(rsps []*jrpc2.Response) bool {
@@ -197,4 +208,67 @@ func param(s string) interface{} {
 		return nil
 	}
 	return json.RawMessage(s)
+}
+
+// roundTripper implements the channel.Channel interface by sending messages to
+// an HTTP server as POST requests with content type "application/json".
+type roundTripper struct {
+	ctx    context.Context
+	cancel context.CancelFunc
+	url    string
+	rsp    chan []byte // requires at least 1 buffer slot
+}
+
+func newHTTP(ctx context.Context, addr string) roundTripper {
+	ctx, cancel := context.WithCancel(ctx)
+	return roundTripper{
+		ctx:    ctx,
+		cancel: cancel,
+		url:    addr,
+		rsp:    make(chan []byte, 1),
+	}
+}
+
+// Send implements channel.Sender. Each request is sent synchronously to the
+// HTTP server at the recorded URL, and the response is either empty or is
+// enqueued immediately for the receiver. This implies that there may be at
+// most cap(r.rsp) concurrent requests in flight simultaneously with this
+// channel.
+func (r roundTripper) Send(data []byte) error {
+	rsp, err := http.Post(r.url, "application/json", bytes.NewReader(data))
+	if err != nil {
+		return err
+	} else if rsp.StatusCode == http.StatusNoContent {
+		return nil
+	} else if rsp.StatusCode != http.StatusOK {
+		return fmt.Errorf("http: %s", rsp.Status)
+	}
+	defer rsp.Body.Close()
+	bits, err := ioutil.ReadAll(rsp.Body)
+	if err != nil {
+		return err
+	}
+	r.rsp <- bits
+	return err
+}
+
+// Recv implements channel.Receiver. It blocks until the stored request context
+// ends or a message becomes available.
+func (r roundTripper) Recv() ([]byte, error) {
+	select {
+	case <-r.ctx.Done():
+		return nil, r.ctx.Err()
+	case rsp, ok := <-r.rsp:
+		if ok {
+			return rsp, nil
+		}
+		return nil, io.EOF
+	}
+}
+
+// Close implements part of channel.Channel.
+func (r roundTripper) Close() error {
+	r.cancel()
+	close(r.rsp)
+	return nil
 }
