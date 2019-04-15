@@ -88,5 +88,8 @@ func TestErr(t *testing.T) {
 		} else {
 			t.Logf("Code(%d).Err() ok: %v", test.code, got)
 		}
+		if c := FromError(got); c != test.code {
+			t.Errorf("Code(%d).Err(): got code %v, want %v", test.code, c, test.code)
+		}
 	}
 }

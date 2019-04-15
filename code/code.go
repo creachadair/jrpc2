@@ -3,7 +3,6 @@ package code
 
 import (
 	"context"
-	"errors"
 	"fmt"
 )
 
@@ -29,15 +28,31 @@ type Coder interface {
 	Code() Code
 }
 
+// A codeError wraps a Code to satisfy the standard error interface.  This
+// indirection prevents a Code from accidentally being used as an error value.
+// It also satisfies the Coder interface, allowing the code to be recovered.
+type codeError Code
+
+// Error satisfies the error interface using the registered string for the
+// code, if one is defined, or else a placeholder that describes the value.
+func (c codeError) Error() string {
+	if s, ok := stdError[Code(c)]; ok {
+		return fmt.Sprintf("[%d] %s", c, s)
+	}
+	return Code(c).String()
+}
+
+// Code trivially satisfies the Coder interface.
+func (c codeError) Code() Code { return Code(c) }
+
 // Err converts c to an error value, which is nil for code.NoError and
-// otherwise an error value constructed by fmt.Errorf.
+// otherwise an error value whose code is c and whose text is based on the
+// registered string for c if one exists.
 func (c Code) Err() error {
 	if c == NoError {
 		return nil
-	} else if s, ok := stdError[c]; ok {
-		return fmt.Errorf("[%d] %s", c, s)
 	}
-	return errors.New(c.String())
+	return codeError(c)
 }
 
 // Pre-defined standard error codes defined by the JSON-RPC specification.
