@@ -137,7 +137,7 @@ func (r *Response) UnmarshalResult(v interface{}) error {
 	return json.Unmarshal(r.result, v)
 }
 
-// MarshalJSON converts the request to equivalent JSON.
+// MarshalJSON converts the response to equivalent JSON.
 func (r *Response) MarshalJSON() ([]byte, error) {
 	jr := &jresponse{
 		V:  Version,

@@ -260,3 +260,32 @@ func TestBatchReply(t *testing.T) {
 		}
 	}
 }
+
+func TestMarshalResponse(t *testing.T) {
+	tests := []struct {
+		id     string
+		err    *Error
+		result string
+		want   string
+	}{
+		{"", nil, "", `{"jsonrpc":"2.0"}`},
+		{"null", nil, "", `{"jsonrpc":"2.0","id":null}`},
+		{"123", Errorf(code.ParseError, "failed").(*Error), "",
+			`{"jsonrpc":"2.0","id":123,"error":{"code":-32700,"message":"failed"}}`},
+		{"456", nil, `{"ok":true,"values":[4,5,6]}`,
+			`{"jsonrpc":"2.0","id":456,"result":{"ok":true,"values":[4,5,6]}}`},
+	}
+	for _, test := range tests {
+		rsp := &Response{id: test.id, err: test.err}
+		if test.err == nil {
+			rsp.result = json.RawMessage(test.result)
+		}
+
+		got, err := json.Marshal(rsp)
+		if err != nil {
+			t.Errorf("Marshaling %+v: unexpected error: %v", rsp, err)
+		} else if s := string(got); s != test.want {
+			t.Errorf("Marshaling %+v: got %#q, want %#q", rsp, s, test.want)
+		}
+	}
+}
