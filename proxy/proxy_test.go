@@ -14,7 +14,7 @@ func TestProxy(t *testing.T) {
 
 	// Set up a "remote" server that exports a method we can dispatch to.
 	remote := server.NewLocal(handler.Map{
-		"Test": handler.New(func(_ context.Context) (string, error) {
+		"Test": handler.New(func(_ context.Context, vs []int) (string, error) {
 			return remoteAnswer, nil
 		}),
 	}, nil)
@@ -32,7 +32,7 @@ func TestProxy(t *testing.T) {
 	// "remote" service.
 	ctx := context.Background()
 	var got string
-	if rsp, err := local.Client.Call(ctx, "Test", nil); err != nil {
+	if rsp, err := local.Client.Call(ctx, "Test", []int{1, 2, 3}); err != nil {
 		t.Errorf("Call(Test): unexpected error: %v", err)
 	} else if err := rsp.UnmarshalResult(&got); err != nil {
 		t.Errorf("Call(Test) result: unexpected error: %v", err)
