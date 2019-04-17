@@ -162,14 +162,6 @@ func (c *Client) send(ctx context.Context, reqs jrequests) ([]*Response, error) 
 		return nil, c.err
 	}
 
-	// Verify that there are no duplicate request IDs in this batch.  If there
-	// are, flag it now before we waste time encoding.
-	for _, req := range reqs {
-		if id := string(req.ID); id != "" && c.pending[id] != nil {
-			return nil, Errorf(code.InvalidRequest, "duplicate request ID %q", id)
-		}
-	}
-
 	b, err := json.Marshal(reqs)
 	if err != nil {
 		return nil, Errorf(code.InternalError, "marshaling request failed: %v", err)
