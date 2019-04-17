@@ -224,6 +224,11 @@ func TestErrorOnly(t *testing.T) {
 			t.Errorf("ErrorOnly: got %v, want *Error", err)
 		} else if e.Code() != 1 || e.Message() != errMessage {
 			t.Errorf("ErrorOnly: got (%s, %s), want (1, %s)", e.Code(), e.Message(), errMessage)
+		} else {
+			var data json.RawMessage
+			if err, want := e.UnmarshalData(&data), jrpc2.ErrNoData; err != want {
+				t.Errorf("UnmarshalData: got %#q, %v, want %v", string(data), err, want)
+			}
 		}
 	})
 	t.Run("CallExpectingOK", func(t *testing.T) {
