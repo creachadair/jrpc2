@@ -140,7 +140,6 @@ type ClientOptions struct {
 	OnNotify func(*Request)
 }
 
-// ClientLog enables debug logging to the specified writer.
 func (c *ClientOptions) logger() logger {
 	if c == nil || c.Logger == nil {
 		return func(string, ...interface{}) {}
