@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"bitbucket.org/creachadair/jrpc2"
@@ -44,4 +45,42 @@ func TestNew(t *testing.T) {
 			t.Errorf("newHandler(%T): got %+v, want error", test.v, got)
 		}
 	}
+}
+
+type dummy struct{}
+
+func (dummy) Y1(context.Context) (int, error) { return 0, nil }
+
+func (dummy) N1(string) {}
+
+func (dummy) Y2(_ context.Context, vs ...int) (int, error) { return len(vs), nil }
+
+func (dummy) N2() bool { return false }
+
+func (dummy) n3(context.Context, []string) error { return nil }
+
+// Verify that the NewService function obtains the correct functions.
+func TestNewService(t *testing.T) {
+	var stub dummy
+	m := NewService(stub)
+	for _, test := range []string{"Y1", "Y2", "N1", "N2", "n3", "foo"} {
+		got := m.Assign(test) != nil
+		want := strings.HasPrefix(test, "Y")
+		if got != want {
+			t.Errorf("Assign %q: got %v, want %v", test, got, want)
+		}
+	}
+}
+
+// Verify that a stub with no usable methods panics.
+func TestEmptyService(t *testing.T) {
+	type empty struct{}
+
+	defer func() {
+		if x := recover(); x != nil {
+			t.Logf("Received expected panic: %v", x)
+		}
+	}()
+	m := NewService(empty{})
+	t.Fatalf("NewService(empty): got %v, want panic", m)
 }
