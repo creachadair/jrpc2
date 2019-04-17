@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"bitbucket.org/creachadair/jrpc2"
+	"github.com/kylelemons/godebug/pretty"
 )
 
 // Verify that the New function correctly handles the various type signatures
@@ -83,4 +84,32 @@ func TestEmptyService(t *testing.T) {
 	}()
 	m := NewService(empty{})
 	t.Fatalf("NewService(empty): got %v, want panic", m)
+}
+
+// Verify that a ServiceMap assigns names correctly.
+func TestServiceMap(t *testing.T) {
+	tests := []struct {
+		name string
+		want bool
+	}{
+		{"nothing", false}, // not a known service
+		{"Test", false},    // no method in the service
+		{"Test.", false},   // empty method name in service
+		{"Test.Y1", true},  // OK
+		{"Test.Y2", true},
+		{"Test.Y3", false},
+		{"Test.N1", false},
+	}
+	m := ServiceMap{"Test": NewService(dummy{})}
+	for _, test := range tests {
+		got := m.Assign(test.name) != nil
+		if got != test.want {
+			t.Errorf("Assign(%q): got %v, want %v", test.name, got, test.want)
+		}
+	}
+
+	got, want := m.Names(), []string{"Test.Y1", "Test.Y2"} // sorted
+	if diff := pretty.Compare(got, want); diff != "" {
+		t.Errorf("Wrong method names: (-got, +want)\n%s", diff)
+	}
 }
