@@ -345,6 +345,25 @@ func TestErrors(t *testing.T) {
 	}
 }
 
+// Test that a client correctly reports bad parameters.
+func TestBadCallParams(t *testing.T) {
+	loc := server.NewLocal(handler.Map{
+		"Test": handler.New(func(_ context.Context, v interface{}) error {
+			return jrpc2.Errorf(129, "this should not be reached")
+		}),
+	}, nil)
+	defer loc.Close()
+
+	rsp, err := loc.Client.Call(context.Background(), "Test", "bogus")
+	if err == nil {
+		t.Errorf("Call(Test): got %+v, wanted error", rsp)
+	} else if got, want := code.FromError(err), code.InvalidRequest; got != want {
+		t.Errorf("Call(Test): got code %v, want %v", got, want)
+	} else {
+		t.Logf("Call(Test): got expected error: %v", err)
+	}
+}
+
 // Verify that metrics are correctly propagated to server info.
 func TestServerInfo(t *testing.T) {
 	loc := server.NewLocal(handler.Map{
