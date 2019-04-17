@@ -686,3 +686,24 @@ func TestNoParams(t *testing.T) {
 		t.Errorf("Call(Test): got code %v, wanted %v", ec, code.InvalidParams)
 	}
 }
+
+// Verify that the rpc.serverInfo handler and client wrapper work together.
+func TestRPCServerInfo(t *testing.T) {
+	loc := server.NewLocal(handler.Map{
+		"Test": handler.New(func(ctx context.Context) (string, error) {
+			return "OK", nil // this should not be reached
+		}),
+	}, nil)
+	defer loc.Close()
+
+	si, err := jrpc2.RPCServerInfo(context.Background(), loc.Client)
+	if err != nil {
+		t.Errorf("RPCServerInfo failed: %v", err)
+	}
+	{
+		got, want := si.Methods, []string{"Test"}
+		if diff := pretty.Compare(got, want); diff != "" {
+			t.Errorf("Wrong method names: (-got, +want)\n%s", diff)
+		}
+	}
+}
