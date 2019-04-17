@@ -325,13 +325,21 @@ func TestErrors(t *testing.T) {
 		"Err": handler.New(func(_ context.Context) (int, error) {
 			return 17, jrpc2.DataErrorf(errCode, json.RawMessage(errData), errMessage)
 		}),
-	}, nil)
+		"Push": handler.New(func(ctx context.Context) (bool, error) {
+			return false, jrpc2.ServerPush(ctx, "PushBack", nil)
+		}),
+	}, &server.LocalOptions{
+		ClientOptions: &jrpc2.ClientOptions{
+			OnNotify: func(req *jrpc2.Request) {
+				t.Errorf("Client received unexpected push: %#v", req)
+			},
+		},
+	})
 	defer loc.Close()
 	c := loc.Client
 
-	got, err := c.Call(context.Background(), "Err", nil)
-	if err == nil {
-		t.Errorf("Call: got %#v, wanted error", got)
+	if got, err := c.Call(context.Background(), "Err", nil); err == nil {
+		t.Errorf("Call(Push): got %#v, wanted error", got)
 	} else if e, ok := err.(*jrpc2.Error); ok {
 		if e.Code() != errCode {
 			t.Errorf("Error code: got %d, want %d", e.Code(), errCode)
@@ -347,6 +355,12 @@ func TestErrors(t *testing.T) {
 		}
 	} else {
 		t.Fatalf("Call(Err): unexpected error: %v", err)
+	}
+
+	if got, err := c.Call(context.Background(), "Push", nil); err == nil {
+		t.Errorf("Call(Push): got %#v, wanted error", got)
+	} else {
+		t.Logf("Call(Push): got expected error: %v", err)
 	}
 }
 
