@@ -327,6 +327,9 @@ func (s *Server) Push(ctx context.Context, method string, params interface{}) er
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if s.ch == nil {
+		return ErrConnClosed
+	}
 	s.log("Posting server notification %q %s", method, string(bits))
 	nw, err := encode(s.ch, jresponses{{
 		V: Version,

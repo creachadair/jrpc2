@@ -51,6 +51,10 @@ var errServerStopped = errors.New("the server has been stopped")
 // explicit call to its Close method.
 var errClientStopped = errors.New("the client has been stopped")
 
+// ErrConnClosed is the error reported when channel is closed
+// expicit send push to its client
+var ErrConnClosed = errors.New("the connection is closed")
+
 // Errorf returns an error value of concrete type *Error having the specified
 // code and formatted message string.
 // It is shorthand for DataErrorf(code, nil, msg, args...)
