@@ -23,8 +23,8 @@ import (
 
 var (
 	address       = flag.String("address", "", "Proxy listener address")
-	clientFraming = flag.String("cf", "raw", "Client channel framing")
-	serverFraming = flag.String("sf", "raw", "Server channel framing")
+	clientFraming = flag.String("cf", "raw", "Client channel framing (for proxy clients)")
+	serverFraming = flag.String("sf", "raw", "Server channel framing (between proxy and server)")
 	doPipe        = flag.Bool("pipe", false, "Communicate with stdin/stdout")
 	doStderr      = flag.Bool("stderr", false, "Send subprocess stderr to proxy stderr")
 	doVerbose     = flag.Bool("v", false, "Enable verbose logging")
