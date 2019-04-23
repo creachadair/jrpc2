@@ -600,6 +600,17 @@ func TestServerNotify(t *testing.T) {
 	}
 }
 
+// Verify that a server push after the client closes does not trigger a panic.
+func TestDeadServerPush(t *testing.T) {
+	loc := server.NewLocal(make(handler.Map), &server.LocalOptions{
+		ServerOptions: &jrpc2.ServerOptions{AllowPush: true},
+	})
+	loc.Client.Close()
+	if err := loc.Server.Push(context.Background(), "whatever", nil); err != jrpc2.ErrConnClosed {
+		t.Errorf("Push(whatever): got %v, want %v", err, jrpc2.ErrConnClosed)
+	}
+}
+
 // Verify that the context encoding/decoding hooks work.
 func TestContextPlumbing(t *testing.T) {
 	want := time.Now().Add(10 * time.Second)
