@@ -104,6 +104,9 @@ var messages = []string{
 
 	// Include a very long message to ensure the chunked channel gets exercised.
 	`[` + strings.Repeat(`"ABCDefghIJKLmnopQRSTuvwxYZ!",`, 8000) + `"END"]`,
+
+	// Include an exactly chunk-sized message to exercise the chunked channel.
+	`"` + strings.Repeat("p", chunkMaxBytes-2) + `"`, // -2 for the quotes
 }
 
 func clip(msg string) string {
