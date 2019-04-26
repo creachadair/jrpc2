@@ -58,6 +58,7 @@ func (dummy) Y2(_ context.Context, vs ...int) (int, error) { return len(vs), nil
 
 func (dummy) N2() bool { return false }
 
+//lint:ignore U1000 verify unexported methods are not assigned
 func (dummy) n3(context.Context, []string) error { return nil }
 
 // Verify that the NewService function obtains the correct functions.
