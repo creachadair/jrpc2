@@ -1,8 +1,10 @@
 package channel
 
 import (
+	"fmt"
 	"io"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 )
@@ -75,6 +77,7 @@ var tests = []struct {
 	name    string
 	framing Framing
 }{
+	{"Chunked", Chunked},
 	{"Decimal", Decimal},
 	{"Header", Header("binary/octet-stream")},
 	{"JSON", JSON},
@@ -87,6 +90,8 @@ var tests = []struct {
 	{"Varint", Varint},
 }
 
+// N.B. the messages in this list must be valid JSON, since the RawJSON framing
+// requires that structure. A Channel is not required to check this generally.
 var messages = []string{
 	message1,
 	message2,
@@ -96,6 +101,16 @@ var messages = []string{
 	"[]",
 	"{}",
 	"[null]",
+
+	// Include a very long message to ensure the chunked channel gets exercised.
+	`[` + strings.Repeat(`"ABCDefghIJKLmnopQRSTuvwxYZ!",`, 8000) + `"END"]`,
+}
+
+func clip(msg string) string {
+	if len(msg) > 80 {
+		return msg[:80] + fmt.Sprintf(" ...[%d bytes]", len(msg))
+	}
+	return msg
 }
 
 func TestChannelTypes(t *testing.T) {
@@ -108,11 +123,11 @@ func TestChannelTypes(t *testing.T) {
 			for i, msg := range messages {
 				n := strconv.Itoa(i + 1)
 				t.Run("LR-"+n, func(t *testing.T) {
-					t.Logf("Testing lhs → rhs :: %s", msg)
+					t.Logf("Testing lhs → rhs :: %s", clip(msg))
 					testSendRecv(t, lhs, rhs, message1)
 				})
 				t.Run("RL-"+n, func(t *testing.T) {
-					t.Logf("Testing rhs → lhs :: %s", msg)
+					t.Logf("Testing rhs → lhs :: %s", clip(msg))
 					testSendRecv(t, rhs, lhs, message2)
 				})
 			}

@@ -39,6 +39,7 @@ func BenchmarkFramingCost(b *testing.B) {
 		name    string
 		framing channel.Framing
 	}{
+		{"Chunked", channel.Chunked},
 		{"Decimal", channel.Decimal},
 		{"JSON", channel.JSON},
 		{"Line", channel.Line},
