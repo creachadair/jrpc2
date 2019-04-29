@@ -22,7 +22,10 @@ func Decimal(r io.Reader, wc io.WriteCloser) Channel {
 }
 
 func encodeLenDecimal(n int, w io.Writer) error {
-	_, err := io.WriteString(w, strconv.Itoa(n)+"\n")
+	var tmp [32]byte
+	buf := strconv.AppendInt(tmp[:0], int64(n), 10)
+	buf = append(buf, '\n')
+	_, err := w.Write(buf)
 	return err
 }
 
