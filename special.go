@@ -42,7 +42,7 @@ func (m methodFunc) Handle(ctx context.Context, req *Request) (interface{}, erro
 
 // Handle the special rpc.serverInfo method, that requests server vitals.
 func (s *Server) handleRPCServerInfo(context.Context, *Request) (interface{}, error) {
-	return s.serverInfo(), nil
+	return s.ServerInfo(), nil
 }
 
 // RPCServerInfo calls the built-in rpc.serverInfo method exported by servers.

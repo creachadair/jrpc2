@@ -304,9 +304,20 @@ func (s *Server) invoke(base context.Context, h Handler, req *Request) (json.Raw
 
 // ServerInfo returns an atomic snapshot of the current server info for s.
 func (s *Server) ServerInfo() *ServerInfo {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.serverInfo()
+	info := &ServerInfo{
+		Methods:     s.mux.Names(),
+		UsesContext: s.expctx,
+		StartTime:   s.start,
+		Counter:     make(map[string]int64),
+		MaxValue:    make(map[string]int64),
+		Label:       make(map[string]string),
+	}
+	s.metrics.Snapshot(metrics.Snapshot{
+		Counter:  info.Counter,
+		MaxValue: info.MaxValue,
+		Label:    info.Label,
+	})
+	return info
 }
 
 // Push posts a server-side notification to the client.  This is a non-standard
@@ -340,25 +351,6 @@ func (s *Server) Push(ctx context.Context, method string, params interface{}) er
 	s.metrics.CountAndSetMax("rpc.bytesWritten", int64(nw))
 	s.metrics.Count("rpc.notifications", 1)
 	return err
-}
-
-// serverInfo returns a snapshot of the current server info for s. It requires
-// the caller hold s.mu.
-func (s *Server) serverInfo() *ServerInfo {
-	info := &ServerInfo{
-		Methods:     s.mux.Names(),
-		UsesContext: s.expctx,
-		StartTime:   s.start,
-		Counter:     make(map[string]int64),
-		MaxValue:    make(map[string]int64),
-		Label:       make(map[string]string),
-	}
-	s.metrics.Snapshot(metrics.Snapshot{
-		Counter:  info.Counter,
-		MaxValue: info.MaxValue,
-		Label:    info.Label,
-	})
-	return info
 }
 
 // Stop shuts down the server. It is safe to call this method multiple times or
