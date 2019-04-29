@@ -2,7 +2,8 @@ package jrpc2
 
 import (
 	"context"
-	"errors"
+
+	"golang.org/x/xerrors"
 
 	"bitbucket.org/creachadair/jrpc2/metrics"
 )
@@ -53,4 +54,4 @@ type serverPushKey struct{}
 
 // ErrNotifyUnsupported is returned by ServerPush if server notifications are
 // not enabled in the specified context.
-var ErrNotifyUnsupported = errors.New("server notifications are not enabled")
+var ErrNotifyUnsupported = xerrors.New("server notifications are not enabled")

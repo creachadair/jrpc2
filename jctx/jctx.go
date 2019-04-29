@@ -40,9 +40,10 @@ package jctx
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
+
+	"golang.org/x/xerrors"
 )
 
 const wireVersion = "1"
@@ -135,4 +136,4 @@ func UnmarshalMetadata(ctx context.Context, meta interface{}) error {
 
 // ErrNoMetadata is returned by the Metadata function if the context does not
 // contain a metadata value.
-var ErrNoMetadata = errors.New("context metadata not present")
+var ErrNoMetadata = xerrors.New("context metadata not present")

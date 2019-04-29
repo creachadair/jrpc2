@@ -4,9 +4,10 @@ package handler
 
 import (
 	"context"
-	"errors"
 	"reflect"
 	"strings"
+
+	"golang.org/x/xerrors"
 
 	"bitbucket.org/creachadair/jrpc2"
 	"bitbucket.org/creachadair/jrpc2/code"
@@ -121,7 +122,7 @@ var (
 
 func newHandler(fn interface{}) (Func, error) {
 	if fn == nil {
-		return nil, errors.New("nil method")
+		return nil, xerrors.New("nil method")
 	}
 
 	// Special case: If fn has the exact signature of the Handle method, don't do
@@ -223,21 +224,21 @@ func newHandler(fn interface{}) (Func, error) {
 func checkFunctionType(fn interface{}) (reflect.Type, error) {
 	typ := reflect.TypeOf(fn)
 	if typ.Kind() != reflect.Func {
-		return nil, errors.New("not a function")
+		return nil, xerrors.New("not a function")
 	} else if np := typ.NumIn(); np == 0 || np > 2 {
-		return nil, errors.New("wrong number of parameters")
+		return nil, xerrors.New("wrong number of parameters")
 	} else if no := typ.NumOut(); no < 1 || no > 2 {
-		return nil, errors.New("wrong number of results")
+		return nil, xerrors.New("wrong number of results")
 	} else if typ.In(0) != ctxType {
-		return nil, errors.New("first parameter is not context.Context")
+		return nil, xerrors.New("first parameter is not context.Context")
 	} else if no == 2 {
 		if typ.Out(1) != errType {
-			return nil, errors.New("second result is not of type error")
+			return nil, xerrors.New("second result is not of type error")
 		}
 	} else if np == 1 {
-		return nil, errors.New("no parameters and no result")
+		return nil, xerrors.New("no parameters and no result")
 	} else if typ.Out(0) != errType {
-		return nil, errors.New("result is not of type error")
+		return nil, xerrors.New("result is not of type error")
 	}
 	return typ, nil
 }
