@@ -55,6 +55,7 @@ type hdr struct {
 	wc    io.WriteCloser
 	rd    *bufio.Reader
 	buf   *bytes.Buffer
+	rbuf  []byte
 }
 
 // Send implements part of the Channel interface.
@@ -63,7 +64,9 @@ func (h *hdr) Send(msg []byte) error {
 	if h.ctype != "" {
 		h.buf.WriteString(h.ctype)
 	}
-	h.buf.WriteString("Content-Length: " + strconv.Itoa(len(msg)) + "\r\n\r\n")
+	h.buf.WriteString("Content-Length: ")
+	h.buf.WriteString(strconv.Itoa(len(msg)))
+	h.buf.WriteString("\r\n\r\n")
 	h.buf.Write(msg)
 	_, err := h.wc.Write(h.buf.Next(h.buf.Len()))
 	return err
@@ -71,7 +74,7 @@ func (h *hdr) Send(msg []byte) error {
 
 // Recv implements part of the Channel interface.
 func (h *hdr) Recv() ([]byte, error) {
-	p := make(map[string]string)
+	var contentType, contentLength string
 	for {
 		raw, err := h.rd.ReadString('\n')
 		if err == io.EOF && raw != "" {
@@ -82,24 +85,29 @@ func (h *hdr) Recv() ([]byte, error) {
 		if line := strings.TrimRight(raw, "\r\n"); line == "" {
 			break
 		} else if parts := strings.SplitN(line, ":", 2); len(parts) == 2 {
-			p[strings.ToLower(parts[0])] = strings.TrimSpace(parts[1])
+			// This implementation ignores unknown header fields.
+			clean := strings.TrimSpace(parts[1])
+			switch strings.ToLower(parts[0]) {
+			case "content-type":
+				contentType = clean
+			case "content-length":
+				contentLength = clean
+			}
 		} else {
 			return nil, xerrors.New("invalid header line")
 		}
 	}
 
-	// Verify that the content-type, if it is set, matches what we expect.
-	if ctype, ok := p["content-type"]; ok && ctype != h.mtype {
+	// Verify that the content-type matches what we expect.
+	if contentType != h.mtype {
 		return nil, xerrors.New("invalid content-type")
 	}
 
-	// Parse out the required content-length field.  This implementation
-	// ignores unknown header fields.
-	clen, ok := p["content-length"]
-	if !ok {
+	// Parse out the required content-length field.
+	if contentLength == "" {
 		return nil, xerrors.New("missing required content-length")
 	}
-	size, err := strconv.Atoi(clen)
+	size, err := strconv.Atoi(contentLength)
 	if err != nil || size < 0 {
 		return nil, xerrors.New("invalid content-length")
 	}
@@ -107,11 +115,15 @@ func (h *hdr) Recv() ([]byte, error) {
 	// We need to use ReadFull here because the buffered reader may not have a
 	// big enough buffer to deliver the whole message, and will only issue a
 	// single read to the underlying source.
-	data := make([]byte, size)
-	if _, err := io.ReadFull(h.rd, data); err != nil {
+	data := h.rbuf
+	if len(data) < size || len(data) > (1<<20) && size < len(data)/4 {
+		data = make([]byte, size*2)
+		h.rbuf = data
+	}
+	if _, err := io.ReadFull(h.rd, data[:size]); err != nil {
 		return nil, err
 	}
-	return data, nil
+	return data[:size], nil
 }
 
 // Close implements part of the Channel interface.
