@@ -11,6 +11,7 @@ import (
 // Framing returns a channel.Framing described by the specified name, or nil if
 // the name is unknown. The framing types currently understood are:
 //
+//    chunked  -- corresponds to channel.Chunked
 //    decimal  -- corresponds to channel.Decimal
 //    header:t -- corresponds to channel.Header(t)
 //    json     -- corresponds to channel.JSON
@@ -28,6 +29,7 @@ func Framing(name string) channel.Framing {
 }
 
 var framings = map[string]channel.Framing{
+	"chunked": channel.Chunked,
 	"decimal": channel.Decimal,
 	"json":    channel.JSON,
 	"line":    channel.Line,
