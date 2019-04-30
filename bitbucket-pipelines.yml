@@ -1,14 +1,17 @@
 definitions:
+  caches:
+    gopath: /go
   steps:
     - step: &Verify
+        caches:
+          - gopath
         script:
-          - PACKAGE_PATH="${GOPATH}/src/bitbucket.org/${BITBUCKET_REPO_OWNER}/${BITBUCKET_REPO_SLUG}"
+          - go version # log the version of Go we are using to test
+          - (cd /tmp ; go get honnef.co/go/tools/cmd/staticcheck)
+          - PACKAGE_PATH=~/"${BITBUCKET_REPO_OWNER}"/"${BITBUCKET_REPO_SLUG}"
           - mkdir -pv "${PACKAGE_PATH}"
           - tar -cO --exclude-vcs --exclude=bitbucket-pipelines.yml . | tar -xv -C "${PACKAGE_PATH}"
-          - go get honnef.co/go/tools/cmd/staticcheck
           - cd "${PACKAGE_PATH}"
-          - go version # log the version of Go we are using in this step
-          - export GO111MODULE=on # enable modules inside $GOPATH
           - go mod download -json
           - go build -v ./...
           - go test -v -race -cpu=1,4 ./...
