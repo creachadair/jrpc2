@@ -6,6 +6,8 @@ definitions:
         caches:
           - gopath
         script:
+          - export GO111MODULE=on
+          - export GOPROXY=https://proxy.golang.org
           - go version # log the version of Go we are using to test
           - (cd /tmp ; go get honnef.co/go/tools/cmd/staticcheck)
           - PACKAGE_PATH=~/"${BITBUCKET_REPO_OWNER}"/"${BITBUCKET_REPO_SLUG}"
