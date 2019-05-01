@@ -12,7 +12,8 @@ import (
 
 	"bitbucket.org/creachadair/jrpc2/channel"
 	"bitbucket.org/creachadair/jrpc2/code"
-	"github.com/kylelemons/godebug/pretty"
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
 func TestParseRequests(t *testing.T) {
@@ -63,8 +64,9 @@ func TestParseRequests(t *testing.T) {
 			continue
 		}
 
-		if diff := pretty.Compare(got, test.want); diff != "" {
-			t.Errorf("ParseRequests(%#q): wrong result (-got +want):\n%s", test.input, diff)
+		diff := cmp.Diff(test.want, got, cmp.AllowUnexported(Request{}), cmpopts.EquateEmpty())
+		if diff != "" {
+			t.Errorf("ParseRequests(%#q): wrong result (-want, +got):\n%s", test.input, diff)
 		}
 	}
 }
@@ -109,8 +111,8 @@ func TestUnmarshalParams(t *testing.T) {
 
 		// Dereference the target to get the value to compare.
 		got := reflect.ValueOf(target).Elem().Interface()
-		if diff := pretty.Compare(got, test.want); diff != "" {
-			t.Errorf("Parameters(%#q): wrong result (-got +want):\n%s", test.input, diff)
+		if diff := cmp.Diff(test.want, got); diff != "" {
+			t.Errorf("Parameters(%#q): wrong result (-want, +got):\n%s", test.input, diff)
 		}
 	}
 }

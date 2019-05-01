@@ -8,14 +8,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kylelemons/godebug/pretty"
-
 	"bitbucket.org/creachadair/jrpc2"
 	"bitbucket.org/creachadair/jrpc2/channel"
 	"bitbucket.org/creachadair/jrpc2/code"
 	"bitbucket.org/creachadair/jrpc2/handler"
 	"bitbucket.org/creachadair/jrpc2/jctx"
 	"bitbucket.org/creachadair/jrpc2/server"
+	"github.com/google/go-cmp/cmp"
 )
 
 var notAuthorized = code.Register(-32095, "request not authorized")
@@ -95,8 +94,8 @@ func TestMethodNames(t *testing.T) {
 
 	// Verify that the assigner got the names it was supposed to.
 	got, want := s.ServerInfo().Methods, []string{"Test.Add", "Test.Ctx", "Test.Max", "Test.Mul", "Test.Nil"}
-	if diff := pretty.Compare(got, want); diff != "" {
-		t.Errorf("Wrong method names: (-got, +want)\n%s", diff)
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("Wrong method names: (-want, +got)\n%s", diff)
 	}
 }
 
@@ -595,8 +594,8 @@ func TestServerNotify(t *testing.T) {
 	loc.Close()
 
 	want := []string{"explicit", "method"}
-	if diff := pretty.Compare(notes, want); diff != "" {
-		t.Errorf("Server notifications: (-got, +want)\n%s", diff)
+	if diff := cmp.Diff(want, notes); diff != "" {
+		t.Errorf("Server notifications: (-want, +got)\n%s", diff)
 	}
 }
 
@@ -751,8 +750,8 @@ func TestRPCServerInfo(t *testing.T) {
 	}
 	{
 		got, want := si.Methods, []string{"Test"}
-		if diff := pretty.Compare(got, want); diff != "" {
-			t.Errorf("Wrong method names: (-got, +want)\n%s", diff)
+		if diff := cmp.Diff(want, got); diff != "" {
+			t.Errorf("Wrong method names: (-want, +got)\n%s", diff)
 		}
 	}
 }

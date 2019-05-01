@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"bitbucket.org/creachadair/jrpc2"
-	"github.com/kylelemons/godebug/pretty"
+	"github.com/google/go-cmp/cmp"
 )
 
 // Verify that the New function correctly handles the various type signatures
@@ -110,7 +110,7 @@ func TestServiceMap(t *testing.T) {
 	}
 
 	got, want := m.Names(), []string{"Test.Y1", "Test.Y2"} // sorted
-	if diff := pretty.Compare(got, want); diff != "" {
-		t.Errorf("Wrong method names: (-got, +want)\n%s", diff)
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("Wrong method names: (-want, +got)\n%s", diff)
 	}
 }

@@ -2,8 +2,8 @@ bitbucket.org/creachadair/shell v0.0.4 h1:pQaJRbIWVEQKoNI7rGMRlLk1vu6RaPR6I5huNB
 bitbucket.org/creachadair/shell v0.0.4/go.mod h1:ysdp8K5OqvK7lJI3ZNP0I7prXD4kWyDWxozmc04IFpE=
 bitbucket.org/creachadair/stringset v0.0.5 h1:30tjoubbPMW4WDfObeby7U00dLvKBRVRyoz4kPEEICI=
 bitbucket.org/creachadair/stringset v0.0.5/go.mod h1:Sh09n+mAanyIbrkX0MICAEZcqXVbuFi8L0P/dbrhH2A=
-github.com/kylelemons/godebug v1.0.0 h1:CzXccTNDr74vi1ciak1YZkJ36Uk8LBAuYAJRcq10SNk=
-github.com/kylelemons/godebug v1.0.0/go.mod h1:9/0rRGxNHcop5bhtWyNeEfOS8JIWk580+fNqagV/RAw=
+github.com/google/go-cmp v0.3.0 h1:crn/baboCvb5fXaQ0IJ1SGTsTVrWpDsCWC8EGETZijY=
+github.com/google/go-cmp v0.3.0/go.mod h1:8QqcDgzrUqlUb/G2PQTWiueGozuR1884gddMywk6iLU=
 golang.org/x/sync v0.0.0-20190423024810-112230192c58 h1:8gQV6CLnAEikrhgkHFbMAEhagSSnXWGV915qUMm9mrU=
 golang.org/x/sync v0.0.0-20190423024810-112230192c58/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 golang.org/x/xerrors v0.0.0-20190410155217-1f06c39b4373 h1:PPwnA7z1Pjf7XYaBP9GL1VAMZmcIWyFz7QCMSIIa3Bg=
