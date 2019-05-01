@@ -1,10 +1,10 @@
 definitions:
   caches:
-    gopath: /go
+    gobin: /go/bin
   steps:
     - step: &Verify
         caches:
-          - gopath
+          - gobin
         script:
           - if [[ ! -f "${GOPATH}/bin/staticcheck" ]] ; then (cd /tmp; go get honnef.co/go/tools/cmd/staticcheck); fi
           - export GO111MODULE=on
