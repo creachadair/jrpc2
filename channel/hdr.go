@@ -134,6 +134,3 @@ func (h *hdr) Close() error { return h.wc.Close() }
 // preferred by the Language Server Protocol (LSP), defined by
 // https://microsoft.github.io/language-server-protocol
 var LSP = Header("application/vscode-jsonrpc; charset=utf-8")
-
-// JSON is a header framing (see Header) with MIME type application/json.
-var JSON = Header("application/json")

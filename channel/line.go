@@ -11,10 +11,6 @@ import (
 // (10). This framing has the constraint that records may not contain LF.
 var Line = Split('\n')
 
-// NUL is a framing discipline for messages terminated by a Unicode NUL (0).
-// This framing has the constraint that records may not contain NUL.
-var NUL = Split('\x00')
-
 // Split returns a framing in which each message is terminated by the specified
 // byte value. The framing has the constraint that outbound records may not
 // contain the split byte internally.
