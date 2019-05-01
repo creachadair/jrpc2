@@ -4,6 +4,8 @@ package code
 import (
 	"context"
 	"fmt"
+
+	"golang.org/x/xerrors"
 )
 
 // A Code is an error response code.
@@ -44,6 +46,12 @@ func (c codeError) Error() string {
 
 // Code trivially satisfies the Coder interface.
 func (c codeError) Code() Code { return Code(c) }
+
+// Is reports whether err is c or has a code equal to c.
+func (c codeError) Is(err error) bool {
+	v, ok := err.(Coder) // including codeError
+	return ok && v.Code() == Code(c)
+}
 
 // Err converts c to an error value, which is nil for code.NoError and
 // otherwise an error value whose code is c and whose text is based on the
@@ -105,18 +113,16 @@ func Register(value int32, message string) Code {
 // If err is context.DeadlineExceeded, it returns code.DeadlineExceeded.
 // Otherwise it returns code.SystemError.
 func FromError(err error) Code {
-	switch t := err.(type) {
-	case nil:
+	if err == nil {
 		return NoError
-	case Coder:
-		return t.Code()
 	}
-	switch err {
-	case context.Canceled:
+	var c Coder
+	if xerrors.As(err, &c) {
+		return c.Code()
+	} else if xerrors.Is(err, context.Canceled) {
 		return Cancelled
-	case context.DeadlineExceeded:
+	} else if xerrors.Is(err, context.DeadlineExceeded) {
 		return DeadlineExceeded
-	default:
-		return SystemError
 	}
+	return SystemError
 }
