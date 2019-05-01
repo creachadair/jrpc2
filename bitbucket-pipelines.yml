@@ -6,6 +6,7 @@ definitions:
         caches:
           - gopath
         script:
+          - if [[ ! -f "${GOPATH}/bin/staticcheck" ]] ; then (cd /tmp; go get honnef.co/go/tools/cmd/staticcheck); fi
           - export GO111MODULE=on
           - export GOPROXY=https://proxy.golang.org
           - go version # log the version of Go we are using to test
@@ -13,7 +14,6 @@ definitions:
           - mkdir -pv "${PACKAGE_PATH}"
           - tar -cO --exclude-vcs --exclude=bitbucket-pipelines.yml . | tar -xv -C "${PACKAGE_PATH}"
           - cd "${PACKAGE_PATH}"
-          - go get honnef.co/go/tools/cmd/staticcheck
           - go mod download -json
           - go build -v ./...
           - go test -v -race -cpu=1,4 ./...
