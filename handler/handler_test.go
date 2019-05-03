@@ -2,6 +2,9 @@ package handler
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"log"
 	"strings"
 	"testing"
 
@@ -113,4 +116,79 @@ func TestServiceMap(t *testing.T) {
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("Wrong method names: (-want, +got)\n%s", diff)
 	}
+}
+
+// Verify that argument decoding works.
+func TestArgs(t *testing.T) {
+	type stuff struct {
+		S string
+		Z int
+		F float64
+		B bool
+	}
+	var tmp stuff
+	tests := []struct {
+		json string
+		args Args
+		want stuff
+		ok   bool
+	}{
+		{``, nil, stuff{}, false},     // incomplete
+		{`{}`, nil, stuff{}, false},   // wrong type (object)
+		{`true`, nil, stuff{}, false}, // wrong type (bool)
+
+		{`[]`, nil, stuff{}, true},
+		{`[ ]`, nil, stuff{}, true},
+		{`null`, nil, stuff{}, true},
+
+		// Respect order of arguments and values.
+		{`["foo", 25]`, Args{&tmp.S, &tmp.Z}, stuff{S: "foo", Z: 25}, true},
+		{`[25, "foo"]`, Args{&tmp.Z, &tmp.S}, stuff{S: "foo", Z: 25}, true},
+
+		{`[true, 3.5, "blah"]`, Args{&tmp.B, &tmp.F, &tmp.S},
+			stuff{S: "blah", B: true, F: 3.5}, true},
+
+		// Skip values with a nil corresponding argument.
+		{`[true, 101, "ignored"]`, Args{&tmp.B, &tmp.Z, nil},
+			stuff{B: true, Z: 101}, true},
+		{`[true, 101, "observed"]`, Args{&tmp.B, nil, &tmp.S},
+			stuff{B: true, S: "observed"}, true},
+
+		// Mismatched argument/value count.
+		{`["wrong"]`, Args{&tmp.S, &tmp.Z}, stuff{}, false},   // too few values
+		{`["really", "wrong"]`, Args{&tmp.S}, stuff{}, false}, // too many values
+
+		// Mismatched argument/value types.
+		{`["nope"]`, Args{&tmp.B}, stuff{}, false}, // wrong value type
+		{`[{}]`, Args{&tmp.F}, stuff{}, false},     // "
+	}
+	for _, test := range tests {
+		tmp = stuff{} // reset
+		if err := json.Unmarshal([]byte(test.json), &test.args); err != nil {
+			if test.ok {
+				t.Errorf("Unmarshal %#q: unexpected error: %v", test.json, err)
+			} else {
+				t.Logf("Unmarshal %#q: got expected error: %v", test.json, err)
+			}
+			continue
+		}
+
+		if diff := cmp.Diff(test.want, tmp); diff != "" {
+			t.Errorf("Unmarshal %#q: (-want, +got)\n%s", test.json, diff)
+		}
+	}
+}
+
+func ExampleArgs() {
+	const input = `[25, "apple"]`
+
+	var count int
+	var item string
+
+	if err := json.Unmarshal([]byte(input), &Args{&count, &item}); err != nil {
+		log.Fatalf("Decoding failed: %v", err)
+	}
+	fmt.Printf("count=%d, item=%q\n", count, item)
+	// Output:
+	// count=25, item="apple"
 }

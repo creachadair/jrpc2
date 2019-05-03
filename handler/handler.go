@@ -4,6 +4,7 @@ package handler
 
 import (
 	"context"
+	"encoding/json"
 	"reflect"
 	"strings"
 
@@ -241,4 +242,42 @@ func checkFunctionType(fn interface{}) (reflect.Type, error) {
 		return nil, xerrors.New("result is not of type error")
 	}
 	return typ, nil
+}
+
+// Args is a wrapper that decodes a parameter array into specific values.
+// Unmarshaling a JSON value into an Args value v succeeds if the value encodes
+// an array with of length len(v), and for which unmarshaling each subvalue i
+// into the corresponding v[i] succeeds.
+//
+// As a special case, if v[i] == nil the corresponding value is discarded.
+//
+// Usage example:
+//
+//    func Handler(ctx context.Context, req *jrpc2.Request) (interface{}, error) {
+//       var x, y int
+//       var s string
+//       if err := req.UnmarshalParams(&handler.Args{&x, &y, &s}); err != nil {
+//          return err
+//       }
+//       // do useful work with x, y, and s
+//    }
+//
+type Args []interface{}
+
+// UnmarshalJSON supports JSON unmarshaling for a.
+func (a Args) UnmarshalJSON(data []byte) error {
+	var elts []json.RawMessage
+	if err := json.Unmarshal(data, &elts); err != nil {
+		return xerrors.Errorf("decoding args: %w", err)
+	} else if len(elts) != len(a) {
+		return xerrors.Errorf("wrong number of args (got %d, want %d)", len(elts), len(a))
+	}
+	for i, elt := range elts {
+		if a[i] == nil {
+			continue
+		} else if err := json.Unmarshal(elt, a[i]); err != nil {
+			return xerrors.Errorf("decoding argument %d: %w", i+1, err)
+		}
+	}
+	return nil
 }
