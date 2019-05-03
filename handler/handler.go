@@ -246,8 +246,8 @@ func checkFunctionType(fn interface{}) (reflect.Type, error) {
 
 // Args is a wrapper that decodes a parameter array into specific values.
 // Unmarshaling a JSON value into an Args value v succeeds if the value encodes
-// an array with of length len(v), and for which unmarshaling each subvalue i
-// into the corresponding v[i] succeeds.
+// an array with of length len(v), and unmarshaling each subvalue i into the
+// corresponding v[i] succeeds.
 //
 // As a special case, if v[i] == nil the corresponding value is discarded.
 //
@@ -256,8 +256,9 @@ func checkFunctionType(fn interface{}) (reflect.Type, error) {
 //    func Handler(ctx context.Context, req *jrpc2.Request) (interface{}, error) {
 //       var x, y int
 //       var s string
+//
 //       if err := req.UnmarshalParams(&handler.Args{&x, &y, &s}); err != nil {
-//          return err
+//          return nil, err
 //       }
 //       // do useful work with x, y, and s
 //    }
