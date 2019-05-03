@@ -156,32 +156,40 @@ func (c *Client) send(ctx context.Context, reqs jrequests) ([]*Response, error) 
 		return nil, errors.New("empty request batch")
 	}
 
+	// Marshal and prepare responses outside the lock. This may wind up being
+	// wasted work if there is already a failure, but in that case we're already
+	// on a closing path.
+	b, err := json.Marshal(reqs)
+	if err != nil {
+		return nil, Errorf(code.InternalError, "marshaling request failed: %v", err)
+	}
+
+	var pends []*Response
+	var pctxs []context.Context
+	for _, req := range reqs {
+		if id := string(req.ID); id != "" {
+			pctx, p := newPending(ctx, id)
+			pends = append(pends, p)
+			pctxs = append(pctxs, pctx)
+		}
+	}
+
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.err != nil {
 		return nil, c.err
-	}
-
-	b, err := json.Marshal(reqs)
-	if err != nil {
-		return nil, Errorf(code.InternalError, "marshaling request failed: %v", err)
 	}
 	c.log("Outgoing batch: %s", string(b))
 	if err := c.ch.Send(b); err != nil {
 		return nil, err
 	}
 
-	// Now that we have sent them, record pending requests for each that is not
-	// a notification. We do this after transmission so that an error does not
-	// leave us with dead pending requests awaiting responses.
-	var pends []*Response
-	for _, req := range reqs {
-		if id := string(req.ID); id != "" {
-			pctx, p := newPending(ctx, id)
-			c.pending[id] = p
-			pends = append(pends, p)
-			go c.waitComplete(pctx, id, p)
-		}
+	// Now that we have sent them, record the requests for which we are awaiting
+	// replies. We do this after transsmission so that an error in sending does
+	// not leave us with zombies that will never be fulfilled.
+	for i, p := range pends {
+		c.pending[p.id] = p
+		go c.waitComplete(pctxs[i], p.id, p)
 	}
 	return pends, nil
 }
