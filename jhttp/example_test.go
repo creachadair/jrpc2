@@ -39,6 +39,7 @@ func Example() {
 		log.Fatalf("POST request failed: %v", err)
 	}
 	body, err := ioutil.ReadAll(rsp.Body)
+	rsp.Body.Close()
 	if err != nil {
 		log.Fatalf("Reading response body: %v", err)
 	}
