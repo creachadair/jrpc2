@@ -93,7 +93,7 @@ func main() {
 		lw = log.New(os.Stdout, "", log.LstdFlags|log.Lshortfile)
 	}
 
-	lst, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
+	lst, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", *port))
 	if err != nil {
 		log.Fatalln("Listen:", err)
 	}
