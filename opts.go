@@ -33,8 +33,8 @@ type ServerOptions struct {
 	// along to the given assigner.
 	DisableBuiltin bool
 
-	// Allows up to the specified number of concurrent goroutines to execute
-	// when processing requests. A value less than 1 uses runtime.NumCPU().
+	// Allows up to the specified number of goroutines to execute concurrently
+	// in request handlers. A value less than 1 uses runtime.NumCPU().
 	Concurrency int
 
 	// If set, this function is called with the method name and encoded request
