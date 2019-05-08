@@ -73,6 +73,7 @@ func (m ServiceMap) Names() []string {
 // New adapts a function to a jrpc2.Handler. The concrete value of fn must be a
 // function with one of the following type signatures:
 //
+//    func(context.Context) error
 //    func(context.Context) (Y, error)
 //    func(context.Context, X) error
 //    func(context.Context, X) (Y, error)
@@ -232,13 +233,7 @@ func checkFunctionType(fn interface{}) (reflect.Type, error) {
 		return nil, xerrors.New("wrong number of results")
 	} else if typ.In(0) != ctxType {
 		return nil, xerrors.New("first parameter is not context.Context")
-	} else if no == 2 {
-		if typ.Out(1) != errType {
-			return nil, xerrors.New("second result is not of type error")
-		}
-	} else if np == 1 {
-		return nil, xerrors.New("no parameters and no result")
-	} else if typ.Out(0) != errType {
+	} else if typ.Out(no-1) != errType {
 		return nil, xerrors.New("result is not of type error")
 	}
 	return typ, nil
