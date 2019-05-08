@@ -239,10 +239,10 @@ func checkFunctionType(fn interface{}) (reflect.Type, error) {
 	return typ, nil
 }
 
-// Args is a wrapper that decodes a parameter array into specific values.
-// Unmarshaling a JSON value into an Args value v succeeds if the value encodes
-// an array with of length len(v), and unmarshaling each subvalue i into the
-// corresponding v[i] succeeds.
+// Args is a wrapper that decodes an array of positional parameters into
+// concrete locations.  Unmarshaling a JSON value into an Args value v succeeds
+// if the value encodes an array with of length len(v), and unmarshaling each
+// subvalue i into the corresponding v[i] succeeds.
 //
 // As a special case, if v[i] == nil the corresponding value is discarded.
 //
