@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -23,6 +24,7 @@ func TestNew(t *testing.T) {
 		{v: "not a function", bad: true}, // not a function
 
 		// All the legal kinds...
+		{v: func(context.Context) error { return nil }},
 		{v: func(context.Context, *jrpc2.Request) (interface{}, error) { return nil, nil }},
 		{v: func(context.Context) (int, error) { return 0, nil }},
 		{v: func(context.Context, []int) error { return nil }},
@@ -36,7 +38,6 @@ func TestNew(t *testing.T) {
 		{v: func(byte) {}, bad: true},                                         // wrong # of results
 		{v: func(byte) (int, bool, error) { return 0, true, nil }, bad: true}, // ...
 		{v: func(string) error { return nil }, bad: true},                     // missing context
-		{v: func(context.Context) error { return nil }, bad: true},            // no params, no result
 		{v: func(a, b string) error { return nil }, bad: true},                // P1 is not context
 		{v: func(context.Context, int) bool { return false }, bad: true},      // R1 is not error
 		{v: func(context.Context) (int, bool) { return 1, true }, bad: true},  // R2 is not error
@@ -61,6 +62,8 @@ func (dummy) Y2(_ context.Context, vs ...int) (int, error) { return len(vs), nil
 
 func (dummy) N2() bool { return false }
 
+func (dummy) Y3(context.Context) error { return errors.New("blah") }
+
 //lint:ignore U1000 verify unexported methods are not assigned
 func (dummy) n3(context.Context, []string) error { return nil }
 
@@ -68,7 +71,7 @@ func (dummy) n3(context.Context, []string) error { return nil }
 func TestNewService(t *testing.T) {
 	var stub dummy
 	m := NewService(stub)
-	for _, test := range []string{"Y1", "Y2", "N1", "N2", "n3", "foo"} {
+	for _, test := range []string{"Y1", "Y2", "Y3", "N1", "N2", "n3", "foo"} {
 		got := m.Assign(test) != nil
 		want := strings.HasPrefix(test, "Y")
 		if got != want {
@@ -101,7 +104,8 @@ func TestServiceMap(t *testing.T) {
 		{"Test.", false},   // empty method name in service
 		{"Test.Y1", true},  // OK
 		{"Test.Y2", true},
-		{"Test.Y3", false},
+		{"Test.Y3", true},
+		{"Test.Y4", false},
 		{"Test.N1", false},
 	}
 	m := ServiceMap{"Test": NewService(dummy{})}
@@ -112,7 +116,7 @@ func TestServiceMap(t *testing.T) {
 		}
 	}
 
-	got, want := m.Names(), []string{"Test.Y1", "Test.Y2"} // sorted
+	got, want := m.Names(), []string{"Test.Y1", "Test.Y2", "Test.Y3"} // sorted
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("Wrong method names: (-want, +got)\n%s", diff)
 	}
