@@ -243,7 +243,7 @@ func checkFunctionType(fn interface{}) (reflect.Type, error) {
 // concrete locations.
 //
 // Unmarshaling a JSON value into an Args value v succeeds if the JSON encodes
-// an array with of length len(v), and unmarshaling each subvalue i into the
+// an array with length len(v), and unmarshaling each subvalue i into the
 // corresponding v[i] succeeds.  As a special case, if v[i] == nil the
 // corresponding value is discarded.
 //
