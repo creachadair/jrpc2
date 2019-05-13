@@ -240,11 +240,16 @@ func checkFunctionType(fn interface{}) (reflect.Type, error) {
 }
 
 // Args is a wrapper that decodes an array of positional parameters into
-// concrete locations.  Unmarshaling a JSON value into an Args value v succeeds
-// if the value encodes an array with of length len(v), and unmarshaling each
-// subvalue i into the corresponding v[i] succeeds.
+// concrete locations.
 //
-// As a special case, if v[i] == nil the corresponding value is discarded.
+// Unmarshaling a JSON value into an Args value v succeeds if the JSON encodes
+// an array with of length len(v), and unmarshaling each subvalue i into the
+// corresponding v[i] succeeds.  As a special case, if v[i] == nil the
+// corresponding value is discarded.
+//
+// Marshaling an Args value v into JSON succeeds if each element of the slice
+// is JSON marshalable, and yields a JSON array of length len(v) containing the
+// JSON values corresponding to the elements of v.
 //
 // Usage example:
 //
@@ -276,4 +281,12 @@ func (a Args) UnmarshalJSON(data []byte) error {
 		}
 	}
 	return nil
+}
+
+// MarshalJSON supports JSON marshaling for a.
+func (a Args) MarshalJSON() ([]byte, error) {
+	if len(a) == 0 {
+		return []byte(`[]`), nil
+	}
+	return json.Marshal([]interface{}(a))
 }

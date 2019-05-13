@@ -183,7 +183,33 @@ func TestArgs(t *testing.T) {
 	}
 }
 
-func ExampleArgs() {
+func TestArgsMarshal(t *testing.T) {
+	tests := []struct {
+		input []interface{}
+		want  string
+	}{
+		{nil, "[]"},
+		{[]interface{}{}, "[]"},
+		{[]interface{}{12345}, "[12345]"},
+		{[]interface{}{"hey you"}, `["hey you"]`},
+		{[]interface{}{true, false}, "[true,false]"},
+		{[]interface{}{nil, 3.5}, "[null,3.5]"},
+		{[]interface{}{[]string{"a", "b"}, 33}, `[["a","b"],33]`},
+		{[]interface{}{1, map[string]string{
+			"ok": "yes",
+		}, 3}, `[1,{"ok":"yes"},3]`},
+	}
+	for _, test := range tests {
+		got, err := json.Marshal(Args(test.input))
+		if err != nil {
+			t.Errorf("Marshal %+v: unexpected error: %v", test.input, err)
+		} else if s := string(got); s != test.want {
+			t.Errorf("Marshal %+v: got %#q, want %#q", test.input, s, test.want)
+		}
+	}
+}
+
+func ExampleArgs_unmarshal() {
 	const input = `[25, "apple"]`
 
 	var count int
@@ -195,4 +221,14 @@ func ExampleArgs() {
 	fmt.Printf("count=%d, item=%q\n", count, item)
 	// Output:
 	// count=25, item="apple"
+}
+
+func ExampleArgs_marshal() {
+	bits, err := json.Marshal(Args{1, "foo", false, nil})
+	if err != nil {
+		log.Fatalf("Encoding failed: %v", err)
+	}
+	fmt.Println(string(bits))
+	// Output:
+	// [1,"foo",false,null]
 }
