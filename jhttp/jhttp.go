@@ -3,7 +3,6 @@
 package jhttp
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -104,7 +103,7 @@ func (b *Bridge) serveInternal(w http.ResponseWriter, req *http.Request) error {
 	// If the original request was a single message, make sure we encode the
 	// response the same way.
 	var reply []byte
-	if len(rsps) == 1 && !bytes.HasPrefix(body, []byte("[")) {
+	if len(rsps) == 1 && (len(body) == 0 || body[0] != '[') {
 		reply, err = json.Marshal(rsps[0])
 	} else {
 		reply, err = json.Marshal(rsps)
