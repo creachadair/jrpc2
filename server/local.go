@@ -27,14 +27,14 @@ func NewLocal(assigner jrpc2.Assigner, opts *LocalOptions) Local {
 	}
 	cpipe, spipe := channel.Direct()
 	return Local{
-		Server: jrpc2.NewServer(assigner, opts.ServerOptions).Start(spipe),
-		Client: jrpc2.NewClient(cpipe, opts.ClientOptions),
+		Server: jrpc2.NewServer(assigner, opts.Server).Start(spipe),
+		Client: jrpc2.NewClient(cpipe, opts.Client),
 	}
 }
 
 // LocalOptions control the behaviour of the server and client constructed by
 // the NewLocal function.
 type LocalOptions struct {
-	ClientOptions *jrpc2.ClientOptions
-	ServerOptions *jrpc2.ServerOptions
+	Client *jrpc2.ClientOptions
+	Server *jrpc2.ServerOptions
 }
