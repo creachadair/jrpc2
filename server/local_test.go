@@ -2,6 +2,8 @@ package server
 
 import (
 	"context"
+	"log"
+	"os"
 	"testing"
 
 	"bitbucket.org/creachadair/jrpc2"
@@ -9,7 +11,14 @@ import (
 )
 
 func TestLocal(t *testing.T) {
-	loc := NewLocal(make(handler.Map), nil)
+	loc := NewLocal(make(handler.Map), &LocalOptions{
+		Client: &jrpc2.ClientOptions{
+			Logger: log.New(os.Stderr, "[local client] ", 0),
+		},
+		Server: &jrpc2.ServerOptions{
+			Logger: log.New(os.Stderr, "[local server] ", 0),
+		},
+	})
 
 	ctx := context.Background()
 	si, err := jrpc2.RPCServerInfo(ctx, loc.Client)
