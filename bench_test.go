@@ -17,7 +17,7 @@ func BenchmarkRoundTrip(b *testing.B) {
 			return nil, nil
 		}),
 	}, &server.LocalOptions{
-		ServerOptions: &jrpc2.ServerOptions{
+		Server: &jrpc2.ServerOptions{
 			DisableBuiltin: true,
 			Concurrency:    1,
 		},

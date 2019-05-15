@@ -39,7 +39,7 @@ func main() {
 			return "OK: " + strings.Join(msg, ", "), nil
 		}),
 	}, &server.LocalOptions{
-		ServerOptions: &jrpc2.ServerOptions{
+		Server: &jrpc2.ServerOptions{
 			Logger:  log.New(os.Stderr, "[jhttp.Bridge] ", log.LstdFlags|log.Lshortfile),
 			Metrics: metrics.New(),
 		},

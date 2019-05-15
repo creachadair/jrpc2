@@ -22,7 +22,7 @@ func TestProxy(t *testing.T) {
 
 	// Set up a "local" proxy to check the plumbing.
 	local := server.NewLocal(New(remote.Client), &server.LocalOptions{
-		ServerOptions: &jrpc2.ServerOptions{
+		Server: &jrpc2.ServerOptions{
 			DisableBuiltin: true,
 		},
 	})

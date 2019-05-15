@@ -103,7 +103,7 @@ func TestCall(t *testing.T) {
 	loc := server.NewLocal(handler.ServiceMap{
 		"Test": handler.NewService(dummy{}),
 	}, &server.LocalOptions{
-		ServerOptions: &jrpc2.ServerOptions{
+		Server: &jrpc2.ServerOptions{
 			AllowV1:     true,
 			Concurrency: 16,
 		},
@@ -137,7 +137,7 @@ func TestCallResult(t *testing.T) {
 	loc := server.NewLocal(handler.ServiceMap{
 		"Test": handler.NewService(dummy{}),
 	}, &server.LocalOptions{
-		ServerOptions: &jrpc2.ServerOptions{Concurrency: 16},
+		Server: &jrpc2.ServerOptions{Concurrency: 16},
 	})
 	defer loc.Close()
 	c := loc.Client
@@ -160,7 +160,7 @@ func TestBatch(t *testing.T) {
 	loc := server.NewLocal(handler.ServiceMap{
 		"Test": handler.NewService(dummy{}),
 	}, &server.LocalOptions{
-		ServerOptions: &jrpc2.ServerOptions{
+		Server: &jrpc2.ServerOptions{
 			AllowV1:     true,
 			Concurrency: 16,
 		},
@@ -328,7 +328,7 @@ func TestErrors(t *testing.T) {
 			return false, jrpc2.ServerPush(ctx, "PushBack", nil)
 		}),
 	}, &server.LocalOptions{
-		ClientOptions: &jrpc2.ClientOptions{
+		Client: &jrpc2.ClientOptions{
 			OnNotify: func(req *jrpc2.Request) {
 				t.Errorf("Client received unexpected push: %#v", req)
 			},
@@ -567,10 +567,10 @@ func TestServerNotify(t *testing.T) {
 			return true, nil
 		}),
 	}, &server.LocalOptions{
-		ServerOptions: &jrpc2.ServerOptions{
+		Server: &jrpc2.ServerOptions{
 			AllowPush: true,
 		},
-		ClientOptions: &jrpc2.ClientOptions{
+		Client: &jrpc2.ClientOptions{
 			OnNotify: func(req *jrpc2.Request) {
 				notes = append(notes, req.Method())
 				t.Logf("OnNotify handler saw method %q", req.Method())
@@ -602,7 +602,7 @@ func TestServerNotify(t *testing.T) {
 // Verify that a server push after the client closes does not trigger a panic.
 func TestDeadServerPush(t *testing.T) {
 	loc := server.NewLocal(make(handler.Map), &server.LocalOptions{
-		ServerOptions: &jrpc2.ServerOptions{AllowPush: true},
+		Server: &jrpc2.ServerOptions{AllowPush: true},
 	})
 	loc.Client.Close()
 	if err := loc.Server.Push(context.Background(), "whatever", nil); err != jrpc2.ErrConnClosed {
@@ -628,8 +628,8 @@ func TestContextPlumbing(t *testing.T) {
 			return true, nil
 		}),
 	}, &server.LocalOptions{
-		ServerOptions: &jrpc2.ServerOptions{DecodeContext: jctx.Decode},
-		ClientOptions: &jrpc2.ClientOptions{EncodeContext: jctx.Encode},
+		Server: &jrpc2.ServerOptions{DecodeContext: jctx.Decode},
+		Client: &jrpc2.ClientOptions{EncodeContext: jctx.Encode},
 	})
 	defer loc.Close()
 
@@ -649,7 +649,7 @@ func TestRequestHook(t *testing.T) {
 		}),
 	}, &server.LocalOptions{
 		// Enable auth checking and context decoding for the server.
-		ServerOptions: &jrpc2.ServerOptions{
+		Server: &jrpc2.ServerOptions{
 			DecodeContext: jctx.Decode,
 			CheckRequest: func(ctx context.Context, req *jrpc2.Request) error {
 				var token []byte
@@ -669,7 +669,7 @@ func TestRequestHook(t *testing.T) {
 		},
 
 		// Enable context encoding for the client.
-		ClientOptions: &jrpc2.ClientOptions{
+		Client: &jrpc2.ClientOptions{
 			EncodeContext: jctx.Encode,
 		},
 	})
