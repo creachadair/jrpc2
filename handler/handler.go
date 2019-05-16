@@ -164,12 +164,12 @@ func newHandler(fn interface{}) (Func, error) {
 		// to create one either way to support unmarshaling, but we need to
 		// indirect it back off if the callee didn't want it.
 
-		// Case 3b: The function wants a bare value, not a pointer.
+		// Case 3a: The function wants a bare value, not a pointer.
 		argType := typ.In(1)
 		undo := reflect.Value.Elem
 
 		if argType.Kind() == reflect.Ptr {
-			// Case 3c: The function wants a pointer.
+			// Case 3b: The function wants a pointer.
 			undo = func(v reflect.Value) reflect.Value { return v }
 			argType = argType.Elem()
 		}
