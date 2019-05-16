@@ -139,8 +139,8 @@ func newHandler(fn interface{}) (Func, error) {
 		return nil, err
 	}
 
-	// Construct a function to unpack the request values from the request
-	// message, based on the signature of the user's callback.
+	// Construct a function to unpack the parameters from the request message,
+	// based on the signature of the user's callback.
 	var newinput func(req *jrpc2.Request) ([]reflect.Value, error)
 
 	if typ.NumIn() == 1 {
