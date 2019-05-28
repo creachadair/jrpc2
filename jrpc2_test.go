@@ -452,6 +452,9 @@ func TestOtherClient(t *testing.T) {
 		"X": handler.New(func(ctx context.Context) (string, error) {
 			return "OK", nil
 		}),
+		"Y": handler.New(func(context.Context) (interface{}, error) {
+			return nil, nil
+		}),
 	}, nil).Start(srv)
 	defer func() {
 		cli.Close()
@@ -487,9 +490,9 @@ func TestOtherClient(t *testing.T) {
 		{`{"jsonrpc": "2.0", "id": 6, "method": "X", "params": null}`,
 			`{"jsonrpc":"2.0","id":6,"result":"OK"}`},
 
-		// A correct request.
-		{`{"jsonrpc":"2.0","id": 5, "method": "X"}`,
-			`{"jsonrpc":"2.0","id":5,"result":"OK"}`},
+		// Correct requests, one with a non-null response, one with a null response.
+		{`{"jsonrpc":"2.0","id": 5, "method": "X"}`, `{"jsonrpc":"2.0","id":5,"result":"OK"}`},
+		{`{"jsonrpc":"2.0","id":21,"method":"Y"}`, `{"jsonrpc":"2.0","id":21,"result":null}`},
 
 		// A batch of correct requests.
 		{`[{"jsonrpc":"2.0", "id":"a1", "method":"X"}, {"jsonrpc":"2.0", "id":"a2", "method": "X"}]`,
