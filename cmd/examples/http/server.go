@@ -44,6 +44,6 @@ func main() {
 			Metrics: metrics.New(),
 		},
 	})
-	http.Handle("/rpc", jhttp.NewClientBridge(local.Client))
+	http.Handle("/rpc", jhttp.NewBridge(local.Client))
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", *port), nil))
 }

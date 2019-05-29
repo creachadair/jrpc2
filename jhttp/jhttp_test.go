@@ -24,7 +24,7 @@ func TestBridge(t *testing.T) {
 	defer srv.Stop()
 
 	// Bridge HTTP to the JSON-RPC server.
-	b := NewBridge(cc, nil)
+	b := NewBridge(jrpc2.NewClient(cc, nil))
 	defer b.Close()
 
 	// Create an HTTP test server to call into the bridge.

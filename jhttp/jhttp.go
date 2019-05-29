@@ -10,7 +10,6 @@ import (
 	"strconv"
 
 	"bitbucket.org/creachadair/jrpc2"
-	"bitbucket.org/creachadair/jrpc2/channel"
 )
 
 // A Bridge is a http.Handler that bridges requests to a JSON-RPC client.
@@ -121,11 +120,6 @@ func (b *Bridge) serveInternal(w http.ResponseWriter, req *http.Request) error {
 // its Close method.
 func (b *Bridge) Close() error { return b.cli.Close() }
 
-// NewBridge constructs a new Bridge that dispatches requests through a client
-// constructed from the specified channel and options.
-func NewBridge(ch channel.Channel, opts *jrpc2.ClientOptions) *Bridge {
-	return NewClientBridge(jrpc2.NewClient(ch, opts))
-}
-
-// NewClientBridge constructs a new Bridge that dispatches through the given client.
-func NewClientBridge(cli *jrpc2.Client) *Bridge { return &Bridge{cli: cli} }
+// NewBridge constructs a new Bridge that dispatches requests through c.  It is
+// safe for the caller to continue to use c concurrently with the bridge.
+func NewBridge(c *jrpc2.Client) *Bridge { return &Bridge{cli: c} }

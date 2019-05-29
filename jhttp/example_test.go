@@ -23,7 +23,7 @@ func Example() {
 	}, nil)
 	defer loc.Close()
 
-	b := jhttp.NewClientBridge(loc.Client)
+	b := jhttp.NewBridge(loc.Client)
 	defer b.Close()
 
 	hsrv := httptest.NewServer(b)
