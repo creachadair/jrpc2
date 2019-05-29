@@ -121,5 +121,6 @@ func (b *Bridge) serveInternal(w http.ResponseWriter, req *http.Request) error {
 func (b *Bridge) Close() error { return b.cli.Close() }
 
 // NewBridge constructs a new Bridge that dispatches requests through c.  It is
-// safe for the caller to continue to use c concurrently with the bridge.
+// safe for the caller to continue to use c concurrently with the bridge, as
+// long as it does not close the client.
 func NewBridge(c *jrpc2.Client) *Bridge { return &Bridge{cli: c} }
