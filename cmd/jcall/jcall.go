@@ -51,12 +51,11 @@ values are printed to stdout.
 The -f flag sets the framing discipline to use. The client must agree with the
 server in order for communication to work. The options are:
 
+  chunked    -- length-prefixed chunks
   decimal    -- length-prefixed, length as a decimal integer
   header:<t> -- header-framed, content-type <t>
-  json       -- header-framed, content-type application/json
   line       -- byte-terminated, records end in LF (Unicode 10)
   lsp        -- header-framed, content-type application/vscode-jsonrpc (like LSP)
-  nul        -- byte-terminated, records end in NUL (Unicode 0)
   raw        -- unframed, each message is a complete JSON value
   varint     -- length-prefixed, length is a binary varint
 
