@@ -8,7 +8,9 @@ env:
   - GO111MODULE=on GOPROXY=https://proxy.golang.org
 
 before_script:
-  - (cd /tmp && go get honnef.co/go/tools/cmd/staticcheck)
+  # Install the staticcheck tool. The nonsense with the temp directory
+  # is to work around differences between Go 1.11.x and subsequent versions.
+  - (cd "$(mktemp -d)" && go mod init temp && go get honnef.co/go/tools/cmd/staticcheck)
 
 script:
   - go build ./...
