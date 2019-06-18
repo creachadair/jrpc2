@@ -1,14 +1,16 @@
 language: go
 
-env:
-  - GO111MODULE=on
-  - GOPROXY=https://proxy.golang.org
-
 go:
   - 1.11.x
   - 1.12.x
 
+before_script:
+  - (cd /tmp && go get honnef.co/go/tools/cmd/staticcheck)
+
 script:
+  - export GO111MODULE=on
+  - export GOPROXY=https://proxy.golang.org
   - go build -v ./...
   - go test -v -race -cpu=2 ./...
   - go vet -v ./...
+  - staticcheck ./...
