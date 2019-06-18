@@ -39,15 +39,11 @@ func stat(ctx context.Context, cli *jrpc2.Client) (result string, err error) {
 	return
 }
 
-func alert(ctx context.Context, cli *jrpc2.Client, msg msg) error {
-	return cli.Notify(ctx, "Post.Alert", msg)
+func alert(ctx context.Context, cli *jrpc2.Client, msg string) error {
+	return cli.Notify(ctx, "Post.Alert", map[string]string{"message": msg})
 }
 
 type binarg struct{ X, Y int }
-
-type msg struct {
-	M string `json:"message"`
-}
 
 func intResult(rsp *jrpc2.Response) int {
 	var v int
@@ -81,7 +77,7 @@ func main() {
 	ctx := context.Background()
 
 	log.Print("\n-- Sending a notification...")
-	if err := alert(ctx, cli, msg{"There is a fire!"}); err != nil {
+	if err := alert(ctx, cli, "There is a fire!"); err != nil {
 		log.Fatalln("Notify:", err)
 	}
 

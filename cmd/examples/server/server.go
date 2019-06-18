@@ -70,13 +70,9 @@ func (math) Status(ctx context.Context) (string, error) {
 	return "OK", nil
 }
 
-type alert struct {
-	M string `json:"message"`
-}
-
 // Alert implements a notification handler that logs its argument.
-func Alert(ctx context.Context, a alert) error {
-	log.Printf("[ALERT]: %s", a.M)
+func Alert(ctx context.Context, a map[string]string) error {
+	log.Printf("[ALERT]: %s", a["message"])
 	return nil
 }
 
