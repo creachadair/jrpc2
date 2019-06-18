@@ -93,7 +93,7 @@ func BenchmarkFramingCost(b *testing.B) {
 				}
 			}()
 
-			// The "server" recieves a messaage from the client and sends it back.
+			// The "server" receives a messaage from the client and sends it back.
 			go func() {
 				defer wg.Done()
 				for i := 0; i < b.N; i++ {
