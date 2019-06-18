@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"bitbucket.org/creachadair/jrpc2/channel"
-	"bitbucket.org/creachadair/jrpc2/code"
+	"github.com/creachadair/jrpc2/channel"
+	"github.com/creachadair/jrpc2/code"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 )

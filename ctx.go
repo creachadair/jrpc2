@@ -5,7 +5,7 @@ import (
 
 	"golang.org/x/xerrors"
 
-	"bitbucket.org/creachadair/jrpc2/metrics"
+	"github.com/creachadair/jrpc2/metrics"
 )
 
 // ServerMetrics returns the server metrics collector associated with the given

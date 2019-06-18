@@ -6,8 +6,8 @@ import (
 	"errors"
 	"fmt"
 
-	"bitbucket.org/creachadair/jrpc2/channel"
-	"bitbucket.org/creachadair/jrpc2/code"
+	"github.com/creachadair/jrpc2/channel"
+	"github.com/creachadair/jrpc2/code"
 )
 
 // An Assigner assigns a Handler to handle the specified method name, or nil if

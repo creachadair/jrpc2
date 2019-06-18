@@ -1,9 +1,9 @@
 // Program server demonstrates how to set up a JSON-RPC 2.0 server using the
-// bitbucket.org/creachadair/jrpc2 package.
+// github.com/creachadair/jrpc2 package.
 //
 // Usage (see also the client example):
 //
-//   go build bitbucket.org/creachadair/jrpc2/cmd/examples/server
+//   go build github.com/creachadair/jrpc2/cmd/examples/server
 //   ./server -port 8080
 //
 // See also cmd/examples/client/client.go.
@@ -17,11 +17,11 @@ import (
 	"net"
 	"os"
 
-	"bitbucket.org/creachadair/jrpc2"
-	"bitbucket.org/creachadair/jrpc2/code"
-	"bitbucket.org/creachadair/jrpc2/handler"
-	"bitbucket.org/creachadair/jrpc2/metrics"
-	"bitbucket.org/creachadair/jrpc2/server"
+	"github.com/creachadair/jrpc2"
+	"github.com/creachadair/jrpc2/code"
+	"github.com/creachadair/jrpc2/handler"
+	"github.com/creachadair/jrpc2/metrics"
+	"github.com/creachadair/jrpc2/server"
 )
 
 // The math type defines several arithmetic methods we can expose via the

@@ -8,7 +8,7 @@ import (
 	"log"
 	"time"
 
-	"bitbucket.org/creachadair/jrpc2/jctx"
+	"github.com/creachadair/jrpc2/jctx"
 )
 
 func ExampleEncode_basic() {

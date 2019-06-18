@@ -21,10 +21,10 @@ import (
 	"strings"
 	"time"
 
-	"bitbucket.org/creachadair/jrpc2"
-	"bitbucket.org/creachadair/jrpc2/channel"
-	"bitbucket.org/creachadair/jrpc2/channel/chanutil"
-	"bitbucket.org/creachadair/jrpc2/jctx"
+	"github.com/creachadair/jrpc2"
+	"github.com/creachadair/jrpc2/channel"
+	"github.com/creachadair/jrpc2/channel/chanutil"
+	"github.com/creachadair/jrpc2/jctx"
 )
 
 var (
@@ -59,7 +59,7 @@ server in order for communication to work. The options are:
   raw        -- unframed, each message is a complete JSON value
   varint     -- length-prefixed, length is a binary varint
 
-See also: https://godoc.org/bitbucket.org/creachadair/jrpc2/channel
+See also: https://godoc.org/github.com/creachadair/jrpc2/channel
 
 Options:
 `, filepath.Base(os.Args[0]))

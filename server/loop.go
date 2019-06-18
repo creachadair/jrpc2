@@ -6,8 +6,8 @@ import (
 	"net"
 	"sync"
 
-	"bitbucket.org/creachadair/jrpc2"
-	"bitbucket.org/creachadair/jrpc2/channel"
+	"github.com/creachadair/jrpc2"
+	"github.com/creachadair/jrpc2/channel"
 )
 
 // Loop obtains connections from lst and starts a server for each with the

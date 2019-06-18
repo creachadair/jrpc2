@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"bitbucket.org/creachadair/jrpc2"
-	"bitbucket.org/creachadair/jrpc2/handler"
-	"bitbucket.org/creachadair/jrpc2/server"
+	"github.com/creachadair/jrpc2"
+	"github.com/creachadair/jrpc2/handler"
+	"github.com/creachadair/jrpc2/server"
 )
 
 func TestProxy(t *testing.T) {

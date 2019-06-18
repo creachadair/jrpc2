@@ -6,7 +6,7 @@ import (
 
 	"golang.org/x/xerrors"
 
-	"bitbucket.org/creachadair/jrpc2/code"
+	"github.com/creachadair/jrpc2/code"
 )
 
 // Error is the concrete type of errors returned from RPC calls.

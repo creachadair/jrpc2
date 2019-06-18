@@ -2,7 +2,7 @@
 // demonstration purposes.
 //
 // Usage:
-//    go build bitbucket.org/creachadair/jrpc2/cmd/examples/jsh
+//    go build github.com/creachadair/jrpc2/cmd/examples/jsh
 //    ./jsh -port 8080
 //
 // See also cmd/examples/jcl/jcl.go.
@@ -18,11 +18,11 @@ import (
 	"os"
 	"os/exec"
 
-	"bitbucket.org/creachadair/jrpc2"
-	"bitbucket.org/creachadair/jrpc2/code"
-	"bitbucket.org/creachadair/jrpc2/handler"
-	"bitbucket.org/creachadair/jrpc2/jctx"
-	"bitbucket.org/creachadair/jrpc2/server"
+	"github.com/creachadair/jrpc2"
+	"github.com/creachadair/jrpc2/code"
+	"github.com/creachadair/jrpc2/handler"
+	"github.com/creachadair/jrpc2/jctx"
+	"github.com/creachadair/jrpc2/server"
 )
 
 // RunReq is a request to invoke a program.

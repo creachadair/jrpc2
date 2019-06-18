@@ -1,9 +1,9 @@
 // Program client demonstrates how to set up a JSON-RPC 2.0 client using the
-// bitbucket.org/creachadair/jrpc2 package.
+// github.com/creachadair/jrpc2 package.
 //
 // Usage (communicates with the server example):
 //
-//   go build bitbucket.org/creachadair/jrpc2/cmd/examples/client
+//   go build github.com/creachadair/jrpc2/cmd/examples/client
 //   ./client -server :8080
 //
 // See also cmd/examples/server/server.go.
@@ -18,8 +18,8 @@ import (
 	"net"
 	"sync"
 
-	"bitbucket.org/creachadair/jrpc2"
-	"bitbucket.org/creachadair/jrpc2/channel"
+	"github.com/creachadair/jrpc2"
+	"github.com/creachadair/jrpc2/channel"
 )
 
 var serverAddr = flag.String("server", "", "Server address")

@@ -9,9 +9,9 @@ import (
 	"net/http/httptest"
 	"strings"
 
-	"bitbucket.org/creachadair/jrpc2/handler"
-	"bitbucket.org/creachadair/jrpc2/jhttp"
-	"bitbucket.org/creachadair/jrpc2/server"
+	"github.com/creachadair/jrpc2/handler"
+	"github.com/creachadair/jrpc2/jhttp"
+	"github.com/creachadair/jrpc2/server"
 )
 
 func Example() {

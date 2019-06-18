@@ -16,7 +16,7 @@
 // Use the command ":stderr" to toggle reporting of stderr from commands.
 //
 // Usage:
-//    go build bitbucket.org/creachadair/jrpc2/cmd/examples/jcl
+//    go build github.com/creachadair/jrpc2/cmd/examples/jcl
 //    ./jcl -server :8080
 //
 // See also cmd/examples/jsh/jsh.go.
@@ -35,10 +35,10 @@ import (
 	"os"
 	"strings"
 
-	"bitbucket.org/creachadair/jrpc2"
-	"bitbucket.org/creachadair/jrpc2/channel"
-	"bitbucket.org/creachadair/jrpc2/jctx"
 	"bitbucket.org/creachadair/shell"
+	"github.com/creachadair/jrpc2"
+	"github.com/creachadair/jrpc2/channel"
+	"github.com/creachadair/jrpc2/jctx"
 )
 
 var (

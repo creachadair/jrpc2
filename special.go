@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
-	"bitbucket.org/creachadair/jrpc2/code"
+	"github.com/creachadair/jrpc2/code"
 )
 
 const (

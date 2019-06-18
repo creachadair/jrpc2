@@ -10,9 +10,9 @@ import (
 
 	"golang.org/x/xerrors"
 
-	"bitbucket.org/creachadair/jrpc2"
-	"bitbucket.org/creachadair/jrpc2/code"
 	"bitbucket.org/creachadair/stringset"
+	"github.com/creachadair/jrpc2"
+	"github.com/creachadair/jrpc2/code"
 )
 
 // A Func adapts a function having the correct signature to a jrpc2.Handler.

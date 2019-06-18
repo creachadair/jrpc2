@@ -1,4 +1,4 @@
-module bitbucket.org/creachadair/jrpc2
+module github.com/creachadair/jrpc2
 
 require (
 	bitbucket.org/creachadair/shell v0.0.6

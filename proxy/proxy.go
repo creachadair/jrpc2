@@ -6,7 +6,7 @@ import (
 	"context"
 	"encoding/json"
 
-	"bitbucket.org/creachadair/jrpc2"
+	"github.com/creachadair/jrpc2"
 )
 
 // New creates a proxy that dispatches inbound requests to the given client.

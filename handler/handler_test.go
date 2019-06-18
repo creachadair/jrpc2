@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"bitbucket.org/creachadair/jrpc2"
+	"github.com/creachadair/jrpc2"
 	"github.com/google/go-cmp/cmp"
 )
 

@@ -6,8 +6,8 @@ import (
 	"os"
 	"testing"
 
-	"bitbucket.org/creachadair/jrpc2"
-	"bitbucket.org/creachadair/jrpc2/handler"
+	"github.com/creachadair/jrpc2"
+	"github.com/creachadair/jrpc2/handler"
 )
 
 func TestLocal(t *testing.T) {

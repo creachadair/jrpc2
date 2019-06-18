@@ -8,7 +8,7 @@ import (
 	"runtime"
 	"time"
 
-	"bitbucket.org/creachadair/jrpc2/metrics"
+	"github.com/creachadair/jrpc2/metrics"
 )
 
 // ServerOptions control the behaviour of a server created by NewServer.
