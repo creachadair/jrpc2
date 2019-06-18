@@ -4,6 +4,13 @@ go:
   - 1.11.x
   - 1.12.x
 
+cache:
+  # I cargo-culted these cache directory paths from
+  # https://restic.net/blog/2018-09-02/travis-build-cache.
+  directories:
+    - $HOME/.cache/go-build
+    - $HOME/gopath/pkg/mod
+
 env:
   - GO111MODULE=on GOPROXY=https://proxy.golang.org
 
