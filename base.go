@@ -188,7 +188,7 @@ func (j jrequests) MarshalJSON() ([]byte, error) {
 }
 
 // N.B. Not UnmarshalJSON, because json.Unmarshal checks for validity early and
-// hwere we want to control the error that is returned.
+// here we want to control the error that is returned.
 func (j *jrequests) parseJSON(data []byte) error {
 	*j = (*j)[:0] // reset state
 
