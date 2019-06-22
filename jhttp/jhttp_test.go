@@ -2,6 +2,8 @@ package jhttp
 
 import (
 	"context"
+	"encoding/json"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -9,22 +11,21 @@ import (
 	"testing"
 
 	"github.com/creachadair/jrpc2"
-	"github.com/creachadair/jrpc2/channel"
 	"github.com/creachadair/jrpc2/handler"
+	"github.com/creachadair/jrpc2/server"
 )
 
 func TestBridge(t *testing.T) {
 	// Set up a JSON-RPC server to answer requests bridged from HTTP.
-	cc, cs := channel.Direct()
-	srv := jrpc2.NewServer(handler.Map{
+	loc := server.NewLocal(handler.Map{
 		"Test": handler.New(func(ctx context.Context, ss ...string) (string, error) {
 			return strings.Join(ss, " "), nil
 		}),
-	}, nil).Start(cs)
-	defer srv.Stop()
+	}, nil)
+	defer loc.Close()
 
 	// Bridge HTTP to the JSON-RPC server.
-	b := NewBridge(jrpc2.NewClient(cc, nil))
+	b := NewBridge(loc.Client)
 	defer b.Close()
 
 	// Create an HTTP test server to call into the bridge.
@@ -145,4 +146,49 @@ func TestBridge(t *testing.T) {
 			t.Errorf("POST body: got %q, want empty", got)
 		}
 	})
+}
+
+func TestChannel(t *testing.T) {
+	loc := server.NewLocal(handler.Map{
+		"Test": handler.New(func(ctx context.Context, arg json.RawMessage) (int, error) {
+			return len(arg), nil
+		}),
+	}, nil)
+	defer loc.Close()
+
+	b := NewBridge(loc.Client)
+	defer b.Close()
+	hsrv := httptest.NewServer(b)
+	defer hsrv.Close()
+
+	ctx := context.Background()
+	ch := NewChannel(hsrv.URL)
+	cli := jrpc2.NewClient(ch, nil)
+
+	tests := []struct {
+		params interface{}
+		want   int
+	}{
+		{nil, 0},
+		{[]string{"foo"}, 7},
+		{map[string]int{"hi": 3}, 8},
+	}
+	for _, test := range tests {
+		var got int
+		if err := cli.CallResult(ctx, "Test", test.params, &got); err != nil {
+			t.Errorf("Call Test(%v): unexpected error: %v", test.params, err)
+		} else if got != test.want {
+			t.Errorf("Call Test(%v): got %d, want %d", test.params, got, test.want)
+		}
+	}
+
+	cli.Close() // also closes the channel
+
+	// Verify that a closed channel reports errors for Send and Recv.
+	if err := ch.Send([]byte("whatever")); err == nil {
+		t.Error("Send on a closed channel unexpectedly worked")
+	}
+	if got, err := ch.Recv(); err != io.EOF {
+		t.Errorf("Recv = (%#q, %v), want (nil, %v", string(got), err, io.EOF)
+	}
 }
