@@ -19,6 +19,8 @@ There is also a working [example in the Go playground](https://play.golang.org/p
 
 *  Package [jctx](http://godoc.org/github.com/creachadair/jrpc2/jctx) implements an encoder and decoder for request context values, allowing context metadata to be propagated through JSON-RPC requests.
 
+*  Package [jhttp](http://godoc.org/github.com/creachadair/jrpc2/jhttp) allows clients and servers to use HTTP as a transport.
+
 *  Package [metrics](http://godoc.org/github.com/creachadair/jrpc2/metrics) defines a server metrics collector.
 
 *  Package [proxy](http://godoc.org/github.com/creachadair/jrpc2/proxy) defines a transparent proxy that allows a connected client to be re-exported as a server.
