@@ -180,7 +180,7 @@ func (r *Response) wait() {
 // the decoding of batch requests in JSON-RPC 2.0.
 type jrequests []*jrequest
 
-func (j jrequests) MarshalJSON() ([]byte, error) {
+func (j jrequests) toJSON() ([]byte, error) {
 	if len(j) == 1 {
 		return json.Marshal(j[0])
 	}
@@ -212,7 +212,7 @@ func (j *jrequests) parseJSON(data []byte) error {
 	// know that the messages are intact, but validity is checked at usage.
 	for _, raw := range msgs {
 		req := new(jrequest)
-		json.Unmarshal(raw, req)
+		req.parseJSON(raw)
 		req.batch = batch
 		*j = append(*j, req)
 	}
@@ -235,7 +235,7 @@ func (j *jrequest) fail(code code.Code, msg string) error {
 	return j.err
 }
 
-func (j *jrequest) UnmarshalJSON(data []byte) error {
+func (j *jrequest) parseJSON(data []byte) error {
 	// Unmarshal into a map so we can check for extra keys.  The json.Decoder
 	// has DisallowUnknownFields, but fails decoding eagerly for fields that do
 	// not map to known tags. We want to fully parse the object so we can
@@ -286,14 +286,14 @@ func (j *jrequest) UnmarshalJSON(data []byte) error {
 // exactly one.
 type jresponses []*jresponse
 
-func (j jresponses) MarshalJSON() ([]byte, error) {
+func (j jresponses) toJSON() ([]byte, error) {
 	if len(j) == 1 && !j[0].batch {
 		return json.Marshal(j[0])
 	}
 	return json.Marshal([]*jresponse(j))
 }
 
-func (j *jresponses) UnmarshalJSON(data []byte) error {
+func (j *jresponses) parseJSON(data []byte) error {
 	if len(data) == 0 {
 		return errors.New("empty request message")
 	} else if data[0] != '[' {
@@ -344,9 +344,9 @@ func fixID(id json.RawMessage) json.RawMessage {
 	return nil
 }
 
-// encode marshals v as JSON and forwards it to the channel.
-func encode(ch channel.Sender, v interface{}) (int, error) {
-	bits, err := json.Marshal(v)
+// encode marshals rsps as JSON and forwards it to the channel.
+func encode(ch channel.Sender, rsps jresponses) (int, error) {
+	bits, err := rsps.toJSON()
 	if err != nil {
 		return 0, err
 	}

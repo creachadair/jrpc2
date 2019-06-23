@@ -68,7 +68,7 @@ func (c *Client) accept(ch channel.Receiver) error {
 	var in jresponses
 	bits, err := ch.Recv()
 	if err == nil {
-		err = json.Unmarshal(bits, &in)
+		err = in.parseJSON(bits)
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -159,7 +159,7 @@ func (c *Client) send(ctx context.Context, reqs jrequests) ([]*Response, error) 
 	// Marshal and prepare responses outside the lock. This may wind up being
 	// wasted work if there is already a failure, but in that case we're already
 	// on a closing path.
-	b, err := json.Marshal(reqs)
+	b, err := reqs.toJSON()
 	if err != nil {
 		return nil, Errorf(code.InternalError, "marshaling request failed: %v", err)
 	}
