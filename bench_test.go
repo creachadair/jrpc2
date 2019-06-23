@@ -68,3 +68,38 @@ func BenchmarkRoundTrip(b *testing.B) {
 		})
 	}
 }
+
+func BenchmarkParseRequests(b *testing.B) {
+	reqs := []struct {
+		desc, input string
+	}{
+		{"Minimal", `{"jsonrpc":"2.0","id":1,"method":"Foo.Bar","params":null}`},
+		{"Medium", `{
+  "jsonrpc": "2.0",
+  "id": 23593,
+  "method": "Four square meals in one day",
+  "params": [
+     "year",
+     1994,
+     {"month": "July", "day": 26},
+     true
+  ]
+}`},
+		{"Batch", `[{"jsonrpc":"2.0","id":1,"method":"Abel","params":[1,3,5]},
+        {"jsonrpc":"2.0","id":2,"method":"Baker","params":{"x":99}},
+        {"jsonrpc":"2.0","id":3,"method":"Charlie","params":["foo",19,true]},
+        {"jsonrpc":"2.0","id":4,"method":"Delta","params":{}},
+        {"jsonrpc":"2.0","id":5,"method":"Echo","params":[]}]`},
+	}
+	for _, req := range reqs {
+		msg := []byte(req.input)
+		b.Run(req.desc, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				_, err := jrpc2.ParseRequests(msg)
+				if err != nil {
+					b.Fatalf("ParseRequests %#q failed: %v", req.input, err)
+				}
+			}
+		})
+	}
+}
