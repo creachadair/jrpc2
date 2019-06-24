@@ -136,4 +136,14 @@ func TestMetadata(t *testing.T) {
 	} else if output != input {
 		t.Errorf("Metadata(dec): got %+v, want %+v", output, input)
 	}
+
+	// "Attaching" nil removes the metadata.
+	clr, err := WithMetadata(ctx, nil)
+	if err != nil {
+		t.Fatalf("WithMetadata(ctx, nil): unexpected error: %v", err)
+	}
+	var bad interface{}
+	if err := UnmarshalMetadata(clr, &bad); err != ErrNoMetadata {
+		t.Errorf("Metadata(clr): got %+v, %v; want %v", bad, err, ErrNoMetadata)
+	}
 }

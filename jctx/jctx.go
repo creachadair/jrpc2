@@ -116,8 +116,15 @@ type metadataKey struct{}
 
 // WithMetadata attaches the specified metadata value to the context.  The meta
 // value must support encoding to JSON. In case of error, the original value of
-// ctx is returned along with the error.
+// ctx is returned along with the error. If meta == nil, the resulting context
+// has no metadata attached; this can be used to remove metadata from a context
+// that has it.
 func WithMetadata(ctx context.Context, meta interface{}) (context.Context, error) {
+	if meta == nil {
+		// Note we explicitly attach a value even if meta == nil, since ctx might
+		// already have metadata so we need to mask it.
+		return context.WithValue(ctx, metadataKey{}, json.RawMessage(nil)), nil
+	}
 	bits, err := json.Marshal(meta)
 	if err != nil {
 		return ctx, err
@@ -129,7 +136,11 @@ func WithMetadata(ctx context.Context, meta interface{}) (context.Context, error
 // returns ErrNoMetadata if ctx does not have metadata attached.
 func UnmarshalMetadata(ctx context.Context, meta interface{}) error {
 	if v := ctx.Value(metadataKey{}); v != nil {
-		return json.Unmarshal(v.(json.RawMessage), meta)
+		// If the metadata value is explicitly nil, we should report that there
+		// is no metadata message.
+		if msg := v.(json.RawMessage); msg != nil {
+			return json.Unmarshal(v.(json.RawMessage), meta)
+		}
 	}
 	return ErrNoMetadata
 }
