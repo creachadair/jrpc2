@@ -346,6 +346,8 @@ func (c *Client) stop(err error) {
 		return // nothing is running
 	}
 	c.ch.Close()
+
+	// Unblock and fail any pending requests.
 	for _, p := range c.pending {
 		p.cancel()
 	}

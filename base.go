@@ -162,7 +162,6 @@ func (r *Response) wait() {
 		// The first waiter must update the response value, THEN close the
 		// channel and cancel the context. This order ensures that subsequent
 		// waiters all get the same response, and do not race on accessing it.
-		r.id = string(fixID(raw.ID))
 		if e := raw.E; e != nil {
 			r.err = &Error{
 				message: e.Msg,
@@ -173,6 +172,12 @@ func (r *Response) wait() {
 		r.result = raw.R
 		close(r.ch)
 		r.cancel() // release the context observer
+
+		// Sanity check: The response IDs should match. Do this after delivery so
+		// a failure does not orphan resources.
+		if id := string(fixID(raw.ID)); id != r.id {
+			panic(fmt.Sprintf("Mismatched response ID %q expecting %q", id, r.id))
+		}
 	}
 }
 
