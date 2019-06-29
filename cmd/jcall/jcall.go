@@ -93,7 +93,7 @@ func main() {
 	// connection; the HTTP client will handle that.
 	start := time.Now()
 	var cc channel.Channel
-	if *doHTTP {
+	if *doHTTP || isHTTP(flag.Arg(0)) {
 		cc = jhttp.NewChannel(flag.Arg(0))
 	} else if nc := chanutil.Framing(*chanFraming); nc == nil {
 		log.Fatalf("Unknown channel framing %q", *chanFraming)
@@ -204,4 +204,8 @@ func param(s string) interface{} {
 		return nil
 	}
 	return json.RawMessage(s)
+}
+
+func isHTTP(addr string) bool {
+	return strings.HasPrefix(addr, "http:") || strings.HasPrefix(addr, "https:")
 }
