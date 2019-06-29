@@ -331,7 +331,7 @@ func (c *Client) Close() error {
 	c.stop(errClientStopped)
 	c.mu.Unlock()
 	<-c.done
-	// Dont' remark on a closed channel or EOF as a noteworthy failure.
+	// Don't remark on a closed channel or EOF as a noteworthy failure.
 	if c.err == io.EOF || channel.IsErrClosing(c.err) || c.err == errClientStopped {
 		return nil
 	}
