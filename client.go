@@ -211,12 +211,19 @@ func (c *Client) waitComplete(pctx context.Context, id string, p *Response) {
 		return
 	}
 
-	c.log("Context ended for id %q, err=%v", id, pctx.Err())
+	err := pctx.Err()
+	ecode := code.FromError(err)
+	c.log("Context ended for id %q, err=%v", id, err)
 	delete(c.pending, id)
-	code := code.FromError(pctx.Err())
+
+	if c.err != nil && !isUninteresting(c.err) {
+		ecode = code.InternalError
+		err = c.err
+	}
+
 	p.ch <- &jresponse{
 		ID: json.RawMessage(id),
-		E:  jerrorf(code, "%v", pctx.Err()),
+		E:  jerrorf(ecode, "%v", err),
 	}
 
 	// Inform the server, best effort only. N.B. Use a background context here,
@@ -332,10 +339,14 @@ func (c *Client) Close() error {
 	c.mu.Unlock()
 	<-c.done
 	// Don't remark on a closed channel or EOF as a noteworthy failure.
-	if c.err == io.EOF || channel.IsErrClosing(c.err) || c.err == errClientStopped {
+	if isUninteresting(c.err) {
 		return nil
 	}
 	return c.err
+}
+
+func isUninteresting(err error) bool {
+	return err == io.EOF || channel.IsErrClosing(err) || err == errClientStopped
 }
 
 // stop closes down the reader for c and records err as its final state.  The
