@@ -3,7 +3,6 @@ package code
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"testing"
 
@@ -94,7 +93,7 @@ func TestErr(t *testing.T) {
 	tests := []test{
 		{NoError, nil},
 		{0, errors.New("error code 0")},
-		{1, errors.New("[1] look for the bear necessities")},
+		{1, errors.New("look for the bear necessities")},
 		{-17, errors.New("error code -17")},
 	}
 
@@ -103,10 +102,9 @@ func TestErr(t *testing.T) {
 		if code == NoError {
 			continue
 		}
-		s := fmt.Sprintf("[%d] %s", code, msg)
 		tests = append(tests, test{
 			code: code,
-			want: errors.New(s),
+			want: errors.New(msg),
 		})
 	}
 	for _, test := range tests {
