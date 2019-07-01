@@ -41,7 +41,7 @@ func (c codeError) Error() string {
 	if s, ok := stdError[Code(c)]; ok {
 		return fmt.Sprintf("[%d] %s", c, s)
 	}
-	return Code(c).String()
+	return fmt.Sprintf("error code %d", c)
 }
 
 // Code trivially satisfies the Coder interface.
