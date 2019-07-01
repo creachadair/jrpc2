@@ -94,6 +94,7 @@ func TestErr(t *testing.T) {
 	tests := []test{
 		{NoError, nil},
 		{0, errors.New("error code 0")},
+		{1, errors.New("[1] look for the bear necessities")},
 		{-17, errors.New("error code -17")},
 	}
 
