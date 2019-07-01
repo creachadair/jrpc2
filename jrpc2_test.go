@@ -327,6 +327,9 @@ func TestErrors(t *testing.T) {
 		"Push": handler.New(func(ctx context.Context) (bool, error) {
 			return false, jrpc2.ServerPush(ctx, "PushBack", nil)
 		}),
+		"Code": handler.New(func(ctx context.Context) error {
+			return code.Code(12345).Err()
+		}),
 	}, &server.LocalOptions{
 		Client: &jrpc2.ClientOptions{
 			OnNotify: func(req *jrpc2.Request) {
@@ -360,6 +363,12 @@ func TestErrors(t *testing.T) {
 		t.Errorf("Call(Push): got %#v, wanted error", got)
 	} else {
 		t.Logf("Call(Push): got expected error: %v", err)
+	}
+
+	if got, err := c.Call(context.Background(), "Code", nil); err == nil {
+		t.Errorf("Call(Code): got %#v, wanted error", got)
+	} else if s, exp := err.Error(), "[12345] error code 12345"; s != exp {
+		t.Errorf("Call(Code): got error %q, want %q", s, exp)
 	}
 }
 

@@ -335,7 +335,7 @@ type jerror struct {
 func jerrorf(code code.Code, msg string, args ...interface{}) *jerror {
 	return &jerror{
 		Code: int32(code),
-		Msg:  fmt.Sprintf(code.String()+": "+msg, args...),
+		Msg:  fmt.Sprintf(msg, args...),
 	}
 }
 
