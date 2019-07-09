@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/creachadair/jrpc2/channel"
 	"github.com/creachadair/jrpc2/code"
@@ -356,4 +357,41 @@ func encode(ch channel.Sender, rsps jresponses) (int, error) {
 		return 0, err
 	}
 	return len(bits), ch.Send(bits)
+}
+
+// Network guesses a network type for the specified address.  The assignment of
+// a network type uses the following heuristics:
+//
+// If s does not have the form [host]:port, the network is assigned as "unix".
+// The network "unix" is also assigned if port == "", port contains characters
+// other than ASCII letters, digits, and "-", or if host contains a "/".
+//
+// Otherwise, the network is assigned as "tcp". Note that this function does
+// not verify whether the address is lexically valid.
+func Network(s string) string {
+	i := strings.LastIndex(s, ":")
+	if i < 0 {
+		return "unix"
+	}
+	host, port := s[:i], s[i+1:]
+	if port == "" || !isServiceName(port) {
+		return "unix"
+	} else if strings.IndexByte(host, '/') >= 0 {
+		return "unix"
+	}
+	return "tcp"
+}
+
+// isServiceName reports whether s looks like a legal service name from the
+// services(5) file. The grammar of such names is not well-defined, but for our
+// purposes it includes letters, digits, and "-".
+func isServiceName(s string) bool {
+	for i := range s {
+		b := s[i]
+		if b >= '0' && b <= '9' || b >= 'A' && b <= 'Z' || b >= 'a' && b <= 'z' || b == '-' {
+			continue
+		}
+		return false
+	}
+	return true
 }

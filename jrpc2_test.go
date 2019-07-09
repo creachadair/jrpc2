@@ -767,3 +767,30 @@ func TestRPCServerInfo(t *testing.T) {
 		}
 	}
 }
+
+func TestNetwork(t *testing.T) {
+	tests := []struct {
+		input, want string
+	}{
+		{"", "unix"},
+		{":", "unix"},
+
+		{"nothing", "unix"},        // no colon
+		{"like/a/file", "unix"},    // no colon
+		{"no-port:", "unix"},       // empty port
+		{"file/with:port", "unix"}, // slashes in host
+		{"path/with:404", "unix"},  // slashes in host
+		{"mangled:@3", "unix"},     // non-alphanumerics in port
+
+		{":80", "tcp"},            // numeric port
+		{":dumb-crud", "tcp"},     // service name
+		{"localhost:80", "tcp"},   // host and numeric port
+		{"localhost:http", "tcp"}, // host and service name
+	}
+	for _, test := range tests {
+		got := jrpc2.Network(test.input)
+		if got != test.want {
+			t.Errorf("Network(%q): got %q, want %q", test.input, got, test.want)
+		}
+	}
+}
