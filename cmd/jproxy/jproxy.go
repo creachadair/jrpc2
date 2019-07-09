@@ -12,7 +12,6 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
-	"strings"
 
 	"github.com/creachadair/jrpc2"
 	"github.com/creachadair/jrpc2/channel"
@@ -93,13 +92,9 @@ func run(ctx context.Context, cframe, sframe channel.Framing) error {
 	}))
 	defer pc.Close()
 
-	kind, addr := "tcp", *address
-	if !strings.Contains(addr, ":") {
-		kind = "unix"
-	}
-	lst, err := net.Listen(kind, addr)
+	lst, err := net.Listen(jrpc2.Network(*address), *address)
 	if err != nil {
-		return fmt.Errorf("listen %s %q: %v", kind, addr, err)
+		return fmt.Errorf("listen %q: %v", *address, err)
 	}
 	go func() {
 		<-ctx.Done()
