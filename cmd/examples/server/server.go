@@ -4,7 +4,7 @@
 // Usage (see also the client example):
 //
 //   go build github.com/creachadair/jrpc2/cmd/examples/server
-//   ./server -port 8080
+//   ./server -address :8080
 //
 // See also cmd/examples/client/client.go.
 package main
@@ -12,7 +12,6 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"log"
 	"net"
 	"os"
@@ -77,14 +76,14 @@ func Alert(ctx context.Context, a map[string]string) error {
 }
 
 var (
-	port     = flag.Int("port", 0, "Service port")
+	address  = flag.String("address", "", "Service address")
 	maxTasks = flag.Int("max", 1, "Maximum concurrent tasks")
 )
 
 func main() {
 	flag.Parse()
-	if *port <= 0 {
-		log.Fatal("You must provide a positive -port to listen on")
+	if *address == "" {
+		log.Fatal("You must provide a network -address to listen on")
 	}
 
 	// Bind the methods of the math type to an assigner.
@@ -93,7 +92,7 @@ func main() {
 		"Post": handler.Map{"Alert": handler.New(Alert)},
 	}
 
-	lst, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", *port))
+	lst, err := net.Listen(jrpc2.Network(*address), *address)
 	if err != nil {
 		log.Fatalln("Listen:", err)
 	}
