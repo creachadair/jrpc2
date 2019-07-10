@@ -28,7 +28,7 @@ var (
 	doPipe        = flag.Bool("pipe", false, "Communicate with stdin/stdout")
 	doStderr      = flag.Bool("stderr", false, "Send subprocess stderr to proxy stderr")
 	doVerbose     = flag.Bool("v", false, "Enable verbose logging")
-	graceTime     = flag.Duration("grace", 2*time.Second, "SHutdown grace period on signal")
+	graceTime     = flag.Duration("grace", 2*time.Second, "Shutdown grace period on signal")
 
 	logger *log.Logger
 )
