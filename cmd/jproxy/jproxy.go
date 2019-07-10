@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"time"
 
 	"github.com/creachadair/jrpc2"
 	"github.com/creachadair/jrpc2/channel"
@@ -27,6 +28,7 @@ var (
 	doPipe        = flag.Bool("pipe", false, "Communicate with stdin/stdout")
 	doStderr      = flag.Bool("stderr", false, "Send subprocess stderr to proxy stderr")
 	doVerbose     = flag.Bool("v", false, "Enable verbose logging")
+	graceTime     = flag.Duration("grace", 2*time.Second, "SHutdown grace period on signal")
 
 	logger *log.Logger
 )
@@ -75,18 +77,22 @@ func main() {
 
 func run(ctx context.Context, cframe, sframe channel.Framing) error {
 	ctx, cancel := context.WithCancel(ctx)
+	ch, err := start(ctx, sframe)
+	if err != nil {
+		cancel()
+		return err
+	}
+
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt)
 	go func() {
-		log.Printf("Received signal: %v", <-sig)
+		log.Printf("Received signal: %v [waiting %v]", <-sig, *graceTime)
+		ch.Close()
+		time.Sleep(*graceTime)
 		cancel()
 		signal.Stop(sig)
 	}()
 
-	ch, err := start(ctx, sframe)
-	if err != nil {
-		return err
-	}
 	pc := proxy.New(jrpc2.NewClient(channel.WithTrigger(ch, cancel), &jrpc2.ClientOptions{
 		Logger: logger,
 	}))
