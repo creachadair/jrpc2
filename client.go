@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"strconv"
 	"sync"
@@ -102,7 +103,10 @@ func (c *Client) deliver(rsp *jresponse) {
 		delete(c.pending, id)
 		p.ch <- &jresponse{
 			ID: rsp.ID,
-			E:  jerrorf(code.InvalidRequest, "incorrect version marker %q", rsp.V),
+			E: &Error{
+				code:    code.InvalidRequest,
+				message: fmt.Sprintf("incorrect version marker %q", rsp.V),
+			},
 		}
 		c.log("Invalid response for ID %q", id)
 	} else {
@@ -212,18 +216,19 @@ func (c *Client) waitComplete(pctx context.Context, id string, p *Response) {
 	}
 
 	err := pctx.Err()
-	ecode := code.FromError(err)
 	c.log("Context ended for id %q, err=%v", id, err)
 	delete(c.pending, id)
 
+	var jerr *Error
 	if c.err != nil && !isUninteresting(c.err) {
-		ecode = code.InternalError
-		err = c.err
+		jerr = &Error{code: code.InternalError, message: c.err.Error()}
+	} else if err != nil {
+		jerr = &Error{code: code.FromError(err), message: err.Error()}
 	}
 
 	p.ch <- &jresponse{
 		ID: json.RawMessage(id),
-		E:  jerrorf(ecode, "%v", err),
+		E:  jerr,
 	}
 
 	// Inform the server, best effort only. N.B. Use a background context here,

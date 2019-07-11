@@ -140,15 +140,12 @@ func (r *Response) UnmarshalResult(v interface{}) error {
 
 // MarshalJSON converts the response to equivalent JSON.
 func (r *Response) MarshalJSON() ([]byte, error) {
-	jr := &jresponse{
+	return json.Marshal(&jresponse{
 		V:  Version,
 		ID: json.RawMessage(r.id),
 		R:  r.result,
-	}
-	if r.err != nil {
-		jr.E = r.err.tojerror()
-	}
-	return json.Marshal(jr)
+		E:  r.err,
+	})
 }
 
 // wait blocks until p is complete. It is safe to call this multiple times and
@@ -163,13 +160,7 @@ func (r *Response) wait() {
 		// The first waiter must update the response value, THEN close the
 		// channel and cancel the context. This order ensures that subsequent
 		// waiters all get the same response, and do not race on accessing it.
-		if e := raw.E; e != nil {
-			r.err = &Error{
-				message: e.Msg,
-				code:    code.Code(e.Code),
-				data:    e.Data,
-			}
-		}
+		r.err = raw.E
 		r.result = raw.R
 		close(r.ch)
 		r.cancel() // release the context observer
@@ -313,7 +304,7 @@ func (j *jresponses) parseJSON(data []byte) error {
 type jresponse struct {
 	V  string          `json:"jsonrpc"`          // must be Version
 	ID json.RawMessage `json:"id,omitempty"`     // set if request had an ID
-	E  *jerror         `json:"error,omitempty"`  // set on error
+	E  *Error          `json:"error,omitempty"`  // set on error
 	R  json.RawMessage `json:"result,omitempty"` // set on success
 
 	// Allow the server to send a response that looks like a notification.
@@ -326,18 +317,10 @@ type jresponse struct {
 
 func (j jresponse) isServerRequest() bool { return j.E == nil && j.R == nil && j.M != "" }
 
-// jerror is the transmission format of an error object.
 type jerror struct {
-	Code int32           `json:"code"`
-	Msg  string          `json:"message,omitempty"` // optional
-	Data json.RawMessage `json:"data,omitempty"`    // optional
-}
-
-func jerrorf(code code.Code, msg string, args ...interface{}) *jerror {
-	return &jerror{
-		Code: int32(code),
-		Msg:  fmt.Sprintf(msg, args...),
-	}
+	C int32           `json:"code"`
+	M string          `json:"message,omitempty"`
+	D json.RawMessage `json:"data,omitempty"`
 }
 
 // fixID filters id, treating "null" as a synonym for an unset ID.  This

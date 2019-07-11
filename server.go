@@ -494,11 +494,11 @@ func (s *Server) assign(name string) Handler {
 // hold s.mu when calling this method.
 func (s *Server) pushError(err error) {
 	s.log("Invalid request: %v", err)
-	var jerr *jerror
+	var jerr *Error
 	if e, ok := err.(*Error); ok {
-		jerr = e.tojerror()
+		jerr = e
 	} else {
-		jerr = jerrorf(code.FromError(err), "%v", err)
+		jerr = &Error{code: code.FromError(err), message: err.Error()}
 	}
 
 	nw, err := encode(s.ch, jresponses{{
@@ -571,11 +571,11 @@ func (ts tasks) responses() jresponses {
 		if task.err == nil {
 			rsp.R = task.val
 		} else if e, ok := task.err.(*Error); ok {
-			rsp.E = e.tojerror()
+			rsp.E = e
 		} else if c := code.FromError(task.err); c != code.NoError {
-			rsp.E = jerrorf(c, "%v", task.err)
+			rsp.E = &Error{code: c, message: task.err.Error()}
 		} else {
-			rsp.E = jerrorf(code.InternalError, "%v", task.err)
+			rsp.E = &Error{code: code.InternalError, message: task.err.Error()}
 		}
 		rsps = append(rsps, rsp)
 	}
