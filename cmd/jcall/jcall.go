@@ -110,17 +110,20 @@ func main() {
 
 	cli := newClient(cc)
 	rsps, err := issueCalls(ctx, cli, flag.Args()[1:])
-	if err != nil {
-		log.Fatalf("Call failed: %v", err)
-	}
+	// defer failure on error till after we print timing stats
 	tcall := time.Now()
-	if ok := printResults(rsps); !ok {
-		os.Exit(1)
+	if err != nil {
+		log.Printf("Call failed: %v", err)
+	} else if ok := printResults(rsps); !ok {
+		log.Fatal("Printing results failed") // should not generally happen
 	}
 	tprint := time.Now()
 	if *doTiming {
-		fmt.Fprintf(os.Stderr, "%v elapsed: %v dial, %v call, %v print\n",
-			tprint.Sub(start), tdial.Sub(start), tcall.Sub(tdial), tprint.Sub(tcall))
+		fmt.Fprintf(os.Stderr, "%v elapsed: %v dial, %v call, %v print [succeeded: %v]\n",
+			tprint.Sub(start), tdial.Sub(start), tcall.Sub(tdial), tprint.Sub(tcall), err == nil)
+	}
+	if err != nil {
+		os.Exit(1)
 	}
 }
 
