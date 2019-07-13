@@ -42,7 +42,7 @@ func init() {
 		fmt.Fprintf(os.Stderr, `Usage: %s [options] <address> {<method> <params>}...
 
 Connect to the specified address and transmit the specified JSON-RPC method
-calls (as a batch, if more than one is provided).  The resulting response
+calls in sequence (or as a batch, if -batch is set).  The resulting response
 values are printed to stdout.
 
 The -f flag sets the framing discipline to use. The client must agree with the
