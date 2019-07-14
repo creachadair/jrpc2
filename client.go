@@ -75,7 +75,9 @@ func (c *Client) accept(ch channel.Receiver) error {
 	defer c.mu.Unlock()
 
 	if err != nil {
-		c.log("Decoding error: %v", err)
+		if !isUninteresting(err) {
+			c.log("Decoding error: %v", err)
+		}
 		c.stop(err)
 		return err
 	}
