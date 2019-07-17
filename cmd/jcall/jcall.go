@@ -73,6 +73,8 @@ func main() {
 		log.Fatal("Arguments are <address> {<method> <params>}...")
 	}
 
+	// Set up the context for the call, including timeouts and any metadata that
+	// are specified on the command line. Setting -meta also implicitly sets -c.
 	ctx := context.Background()
 	if *withMeta != "" {
 		mc, err := jctx.WithMetadata(ctx, json.RawMessage(*withMeta))
@@ -109,19 +111,15 @@ func main() {
 	tdial := time.Now()
 
 	cli := newClient(cc)
-	rsps, err := issueCalls(ctx, cli, flag.Args()[1:])
-	// defer failure on error till after we print timing stats
+	pdur, err := issueCalls(ctx, cli, flag.Args()[1:])
+	// defer failure on error till after we print aggregate timing stats
 	tcall := time.Now()
 	if err != nil {
 		log.Printf("Call failed: %v", err)
-	} else if ok := printResults(rsps); !ok {
-		log.Fatal("Printing results failed") // should not generally happen
 	}
-	tprint := time.Now()
-	if *doTiming {
-		fmt.Fprintf(os.Stderr, "%v elapsed: %v dial, %v call, %v print [succeeded: %v]\n",
-			tprint.Sub(start), tdial.Sub(start), tcall.Sub(tdial), tprint.Sub(tcall), err == nil)
-	}
+	cdur := tcall.Sub(tdial) - pdur
+	tprintf("%v elapsed: %v dial, %v call, %v print [succeeded=%v]",
+		tcall.Sub(start), tdial.Sub(start), cdur, pdur, err == nil)
 	if err != nil {
 		os.Exit(1)
 	}
@@ -144,47 +142,83 @@ func newClient(conn channel.Channel) *jrpc2.Client {
 	return jrpc2.NewClient(conn, opts)
 }
 
-func printResults(rsps []*jrpc2.Response) bool {
-	ok := true
+func printResults(rsps []*jrpc2.Response) (time.Duration, error) {
+	var err error
+	set := func(e error) {
+		if err == nil {
+			err = e
+		}
+	}
+	var dur time.Duration
 	for i, rsp := range rsps {
 		if rerr := rsp.Error(); rerr != nil {
 			log.Printf("Error (%d): %v", i+1, rerr)
-			ok = false
+			set(rerr)
 			continue
 		}
+		pstart := time.Now()
 		var result json.RawMessage
-		if err := rsp.UnmarshalResult(&result); err != nil {
-			log.Printf("Decoding (%d): %v", i+1, err)
-			ok = false
+		if perr := rsp.UnmarshalResult(&result); perr != nil {
+			log.Printf("Decoding (%d): %v", i+1, perr)
+			set(perr)
 			continue
 		}
 		fmt.Println(string(result))
+		dur += time.Since(pstart)
 	}
-	return ok
+	return dur, err
 }
 
-func issueCalls(ctx context.Context, cli *jrpc2.Client, args []string) ([]*jrpc2.Response, error) {
+func issueCalls(ctx context.Context, cli *jrpc2.Client, args []string) (time.Duration, error) {
 	specs := newSpecs(args)
 	if *doBatch {
-		return cli.Batch(ctx, specs)
+		rsps, err := cli.Batch(ctx, specs)
+		if err != nil {
+			return 0, err
+		}
+		return printResults(rsps)
 	}
 	return issueSequential(ctx, cli, specs)
 }
 
-func issueSequential(ctx context.Context, cli *jrpc2.Client, specs []jrpc2.Spec) ([]*jrpc2.Response, error) {
-	var rsps []*jrpc2.Response
-	for _, spec := range specs {
-		if spec.Notify {
-			if err := cli.Notify(ctx, spec.Method, spec.Params); err != nil {
-				return nil, err
-			}
-		} else if rsp, err := cli.Call(ctx, spec.Method, spec.Params); err != nil {
-			return nil, err
-		} else {
-			rsps = append(rsps, rsp)
-		}
+func tprintf(msg string, args ...interface{}) {
+	if !*doTiming {
+		return
 	}
-	return rsps, nil
+	fmt.Fprint(os.Stderr, fmt.Sprintf(msg, args...))
+	if !strings.HasSuffix(msg, "\n") {
+		fmt.Fprintln(os.Stderr)
+	}
+}
+
+func issueSequential(ctx context.Context, cli *jrpc2.Client, specs []jrpc2.Spec) (time.Duration, error) {
+	var dur time.Duration
+	for _, spec := range specs {
+		cstart := time.Now()
+		if spec.Notify {
+			err := cli.Notify(ctx, spec.Method, spec.Params)
+			tprintf("[notify %s]: %v call [succeeded=%v]", spec.Method, time.Since(cstart), err == nil)
+			if err != nil {
+				return dur, err
+			}
+			continue
+		}
+		rsp, err := cli.Call(ctx, spec.Method, spec.Params)
+		if err != nil {
+			return dur, err
+		}
+		cdur := time.Since(cstart)
+		pstart := time.Now()
+		var result json.RawMessage
+		if perr := rsp.UnmarshalResult(&result); perr != nil {
+			return dur, err
+		}
+		fmt.Println(string(result))
+		pdur := time.Since(pstart)
+		dur += pdur
+		tprintf("[call %s]: %v call, %v print [succeeded=%v]\n", spec.Method, cdur, pdur, err == nil)
+	}
+	return dur, nil
 }
 
 func newSpecs(args []string) []jrpc2.Spec {
