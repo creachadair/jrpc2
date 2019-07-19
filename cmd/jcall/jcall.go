@@ -75,8 +75,10 @@ func main() {
 
 	// There must be at least one request, and more are permitted.  Each method
 	// must have an argument, though it may be empty.
-	if *doMulti && flag.NArg() < 3 {
-		log.Fatal("Arguments are <address> <method> <params>...")
+	if *doMulti {
+		if flag.NArg() < 3 {
+			log.Fatal("Arguments are <address> <method> <params>...")
+		}
 	} else if flag.NArg() < 3 || flag.NArg()%2 == 0 {
 		log.Fatal("Arguments are <address> {<method> <params>}...")
 	}
