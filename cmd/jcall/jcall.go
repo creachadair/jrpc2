@@ -32,6 +32,7 @@ var (
 	withContext = flag.Bool("c", false, "Send context with request")
 	chanFraming = flag.String("f", "raw", "Channel framing")
 	doBatch     = flag.Bool("batch", false, "Issue calls as a batch rather than sequentially")
+	doMulti     = flag.Bool("m", false, "Issue the same call repeatedly with different arguments")
 	doTiming    = flag.Bool("T", false, "Print call timing stats")
 	withLogging = flag.Bool("v", false, "Enable verbose logging")
 	withMeta    = flag.String("meta", "", "Attach this JSON value as request metadata (implies -c)")
@@ -39,11 +40,16 @@ var (
 
 func init() {
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, `Usage: %s [options] <address> {<method> <params>}...
+		fmt.Fprintf(os.Stderr, `Usage: %[1]s [options] <address> {<method> <params>}...
+       %[1]s [options] -m <address> <method> <params>...
 
 Connect to the specified address and transmit the specified JSON-RPC method
 calls in sequence (or as a batch, if -batch is set).  The resulting response
 values are printed to stdout.
+
+Without -m, each pair of arguments names a method and its parameters to call.
+With -m, the first argument names a method to be repeatedly called with each of
+the remaining arguments as its parameter.
 
 The -f flag sets the framing discipline to use. The client must agree with the
 server in order for communication to work. The options are:
@@ -69,7 +75,9 @@ func main() {
 
 	// There must be at least one request, and more are permitted.  Each method
 	// must have an argument, though it may be empty.
-	if flag.NArg() < 3 || flag.NArg()%2 == 0 {
+	if *doMulti && flag.NArg() < 3 {
+		log.Fatal("Arguments are <address> <method> <params>...")
+	} else if flag.NArg() < 3 || flag.NArg()%2 == 0 {
 		log.Fatal("Arguments are <address> {<method> <params>}...")
 	}
 
@@ -222,6 +230,18 @@ func issueSequential(ctx context.Context, cli *jrpc2.Client, specs []jrpc2.Spec)
 }
 
 func newSpecs(args []string) []jrpc2.Spec {
+	if *doMulti {
+		specs := make([]jrpc2.Spec, 0, len(args)-1)
+		method := args[0]
+		for _, arg := range args[1:] {
+			specs = append(specs, jrpc2.Spec{
+				Method: method,
+				Params: param(arg),
+				Notify: *doNotify,
+			})
+		}
+		return specs
+	}
 	specs := make([]jrpc2.Spec, 0, len(args)/2)
 	for i := 0; i < len(args); i += 2 {
 		specs = append(specs, jrpc2.Spec{
