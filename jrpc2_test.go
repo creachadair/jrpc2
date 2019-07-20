@@ -19,6 +19,10 @@ import (
 
 var notAuthorized = code.Register(-32095, "request not authorized")
 
+var testOK = handler.New(func(ctx context.Context) (string, error) {
+	return "OK", nil
+})
+
 type dummy struct{}
 
 // Add is a request-based method.
@@ -458,9 +462,7 @@ func TestServerInfo(t *testing.T) {
 func TestOtherClient(t *testing.T) {
 	srv, cli := channel.Direct()
 	s := jrpc2.NewServer(handler.Map{
-		"X": handler.New(func(ctx context.Context) (string, error) {
-			return "OK", nil
-		}),
+		"X": testOK,
 		"Y": handler.New(func(context.Context) (interface{}, error) {
 			return nil, nil
 		}),
@@ -732,11 +734,7 @@ func TestRequestHook(t *testing.T) {
 // Verify that calling a wrapped method which takes no parameters, but in which
 // the caller provided parameters, will correctly report an error.
 func TestNoParams(t *testing.T) {
-	loc := server.NewLocal(handler.Map{
-		"Test": handler.New(func(ctx context.Context) (string, error) {
-			return "OK", nil // this should not be reached
-		}),
-	}, nil)
+	loc := server.NewLocal(handler.Map{"Test": testOK}, nil)
 	defer loc.Close()
 
 	var rsp string
@@ -749,11 +747,7 @@ func TestNoParams(t *testing.T) {
 
 // Verify that the rpc.serverInfo handler and client wrapper work together.
 func TestRPCServerInfo(t *testing.T) {
-	loc := server.NewLocal(handler.Map{
-		"Test": handler.New(func(ctx context.Context) (string, error) {
-			return "OK", nil // this should not be reached
-		}),
-	}, nil)
+	loc := server.NewLocal(handler.Map{"Test": testOK}, nil)
 	defer loc.Close()
 
 	si, err := jrpc2.RPCServerInfo(context.Background(), loc.Client)
@@ -794,3 +788,32 @@ func TestNetwork(t *testing.T) {
 		}
 	}
 }
+
+// Verify that the context passed to an assigner has the correct structure.
+func TestAssignContext(t *testing.T) {
+	loc := server.NewLocal(assignFunc(func(ctx context.Context, method string) jrpc2.Handler {
+		req := jrpc2.InboundRequest(ctx)
+		if req == nil {
+			t.Errorf("No inbound request for assignment of %q", method)
+		} else if req.Method() != method {
+			t.Errorf("Assign inbound: got %q, want %q", req.Method(), method)
+		} else {
+			t.Logf("Inbound request id=%v method=%q OK", req.ID(), req.Method())
+		}
+		return testOK
+	}), nil)
+	defer loc.Close()
+
+	ctx := context.Background()
+	var got string
+	if err := loc.Client.CallResult(ctx, "NerbleFleeger", nil, &got); err != nil {
+		t.Errorf("CallResult unexpectedly failed: %v", err)
+	} else if got != "OK" {
+		t.Errorf("CallResult: got %q, want %q", got, "OK")
+	}
+}
+
+type assignFunc func(context.Context, string) jrpc2.Handler
+
+func (a assignFunc) Assign(ctx context.Context, m string) jrpc2.Handler { return a(ctx, m) }
+func (assignFunc) Names() []string                                      { return nil }
