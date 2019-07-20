@@ -15,7 +15,7 @@ import (
 // no method is available to handle the request.
 type Assigner interface {
 	// Assign returns the handler for the named method, or nil.
-	Assign(method string) Handler
+	Assign(ctx context.Context, method string) Handler
 
 	// Names returns a slice of all known method names for the assigner.  The
 	// resulting slice is ordered lexicographically and contains no duplicates.

@@ -232,11 +232,13 @@ func (s *Server) checkAndAssign(next jrequests) tasks {
 			t.err = ErrInvalidVersion
 		} else if req.M == "" {
 			t.err = Errorf(code.InvalidRequest, "empty method name")
-		} else if m := s.assign(req.M); m == nil {
-			t.err = Errorf(code.MethodNotFound, "no such method %q", req.M)
 		} else if s.setContext(t, id, req.M, req.P) {
-			t.m = m
+			t.m = s.assign(t.ctx, req.M)
+			if t.m == nil {
+				t.err = Errorf(code.MethodNotFound, "no such method %q", req.M)
+			}
 		}
+
 		if t.err != nil {
 			s.log("Task error: %v", t.err)
 			s.metrics.Count("rpc.errors", 1)
@@ -475,7 +477,7 @@ type ServerInfo struct {
 
 // assign returns a Handler to handle the specified name, or nil.
 // The caller must hold s.mu.
-func (s *Server) assign(name string) Handler {
+func (s *Server) assign(ctx context.Context, name string) Handler {
 	if s.builtin && strings.HasPrefix(name, "rpc.") {
 		switch name {
 		case rpcServerInfo:
@@ -486,7 +488,7 @@ func (s *Server) assign(name string) Handler {
 			return nil // reserved
 		}
 	}
-	return s.mux.Assign(name)
+	return s.mux.Assign(ctx, name)
 }
 
 // pushError reports an error for the given request ID directly back to the

@@ -35,7 +35,7 @@ func (p *Proxy) Close() error { return p.h.client.Close() }
 // Assign implements part of the jrpc2.Assigner interface. All methods are
 // assigned to the proxy's internal handler, which forwards them across the
 // client.
-func (p *Proxy) Assign(_ string) jrpc2.Handler { return p.h }
+func (p *Proxy) Assign(context.Context, string) jrpc2.Handler { return p.h }
 
 // Names implements part of the jrpc2.Assigner interface.  It always returns
 // nil, since the resolution of method names is delegated to the remote server.

@@ -119,8 +119,8 @@ func TestUnmarshalParams(t *testing.T) {
 
 type hmap map[string]Handler
 
-func (h hmap) Assign(method string) Handler { return h[method] }
-func (h hmap) Names() []string              { return nil }
+func (h hmap) Assign(_ context.Context, method string) Handler { return h[method] }
+func (h hmap) Names() []string                                 { return nil }
 
 // Verify that if the client context terminates during a request, the client
 // will terminate and report failure.
@@ -193,12 +193,13 @@ func TestSpecialMethods(t *testing.T) {
 			return true, nil
 		}),
 	}, nil)
+	ctx := context.Background()
 	for _, name := range []string{rpcServerInfo, rpcCancel, "donkeybait"} {
-		if got := s.assign(name); got == nil {
+		if got := s.assign(ctx, name); got == nil {
 			t.Errorf("s.assign(%s): no method assigned", name)
 		}
 	}
-	if got := s.assign("rpc.nonesuch"); got != nil {
+	if got := s.assign(ctx, "rpc.nonesuch"); got != nil {
 		t.Errorf("s.assign(rpc.nonesuch): got %v, want nil", got)
 	}
 }
@@ -211,16 +212,17 @@ func TestDisableBuiltin(t *testing.T) {
 			return "OK", nil
 		}),
 	}, &ServerOptions{DisableBuiltin: true})
+	ctx := context.Background()
 
 	// With builtins disabled, the default rpc.* methods should not get assigned.
 	for _, name := range []string{rpcServerInfo, rpcCancel} {
-		if got := s.assign(name); got != nil {
+		if got := s.assign(ctx, name); got != nil {
 			t.Errorf("s.assign(%s): got %+v, wanted nil", name, got)
 		}
 	}
 
 	// However, user-assigned methods with this prefix should now work.
-	if got := s.assign("rpc.nonesuch"); got == nil {
+	if got := s.assign(ctx, "rpc.nonesuch"); got == nil {
 		t.Error("s.assign(rpc.nonesuch): missing assignment")
 	}
 }

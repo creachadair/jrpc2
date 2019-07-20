@@ -70,9 +70,10 @@ func (dummy) n3(context.Context, []string) error { return nil }
 // Verify that the NewService function obtains the correct functions.
 func TestNewService(t *testing.T) {
 	var stub dummy
+	ctx := context.Background()
 	m := NewService(stub)
 	for _, test := range []string{"Y1", "Y2", "Y3", "N1", "N2", "n3", "foo"} {
-		got := m.Assign(test) != nil
+		got := m.Assign(ctx, test) != nil
 		want := strings.HasPrefix(test, "Y")
 		if got != want {
 			t.Errorf("Assign %q: got %v, want %v", test, got, want)
@@ -108,9 +109,10 @@ func TestServiceMap(t *testing.T) {
 		{"Test.Y4", false},
 		{"Test.N1", false},
 	}
+	ctx := context.Background()
 	m := ServiceMap{"Test": NewService(dummy{})}
 	for _, test := range tests {
-		got := m.Assign(test.name) != nil
+		got := m.Assign(ctx, test.name) != nil
 		if got != test.want {
 			t.Errorf("Assign(%q): got %v, want %v", test.name, got, test.want)
 		}
