@@ -128,8 +128,8 @@ func main() {
 		log.Printf("Call failed: %v", err)
 	}
 	cdur := tcall.Sub(tdial) - pdur
-	tprintf("%v elapsed: %v dial, %v call, %v print [succeeded=%v]",
-		tcall.Sub(start), tdial.Sub(start), cdur, pdur, err == nil)
+	tprintf("%v elapsed: %v dial, %v call, %v print [%s]",
+		tcall.Sub(start), tdial.Sub(start), cdur, pdur, callStatus(err))
 	if err != nil {
 		os.Exit(1)
 	}
@@ -207,7 +207,7 @@ func issueSequential(ctx context.Context, cli *jrpc2.Client, specs []jrpc2.Spec)
 		cstart := time.Now()
 		if spec.Notify {
 			err := cli.Notify(ctx, spec.Method, spec.Params)
-			tprintf("[notify %s]: %v call [succeeded=%v]", spec.Method, time.Since(cstart), err == nil)
+			tprintf("[notify %s]: %v call [%s]", spec.Method, time.Since(cstart), callStatus(err))
 			if err != nil {
 				return dur, err
 			}
@@ -226,7 +226,7 @@ func issueSequential(ctx context.Context, cli *jrpc2.Client, specs []jrpc2.Spec)
 		fmt.Println(string(result))
 		pdur := time.Since(pstart)
 		dur += pdur
-		tprintf("[call %s]: %v call, %v print [succeeded=%v]\n", spec.Method, cdur, pdur, err == nil)
+		tprintf("[call %s]: %v call, %v print [%s]\n", spec.Method, cdur, pdur, callStatus(err))
 	}
 	return dur, nil
 }
@@ -264,4 +264,15 @@ func param(s string) interface{} {
 
 func isHTTP(addr string) bool {
 	return strings.HasPrefix(addr, "http:") || strings.HasPrefix(addr, "https:")
+}
+
+func callStatus(err error) string {
+	switch err.(type) {
+	case nil:
+		return "OK"
+	case *jrpc2.Error:
+		return "server error"
+	default:
+		return "failed"
+	}
 }
