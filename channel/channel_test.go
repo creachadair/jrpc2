@@ -78,7 +78,6 @@ var tests = []struct {
 	framing Framing
 }{
 	{"Chunked", Chunked},
-	{"Decimal", Decimal},
 	{"Header", Header("binary/octet-stream")},
 	{"LSP", LSP},
 	{"Line", Line},
