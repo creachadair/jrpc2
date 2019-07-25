@@ -54,7 +54,6 @@ the remaining arguments as its parameter.
 The -f flag sets the framing discipline to use. The client must agree with the
 server in order for communication to work. The options are:
 
-  chunked    -- length-prefixed chunks
   header:<t> -- header-framed, content-type <t>
   line       -- byte-terminated, records end in LF (Unicode 10)
   lsp        -- header-framed, content-type application/vscode-jsonrpc (like LSP)

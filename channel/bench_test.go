@@ -39,7 +39,6 @@ func BenchmarkFramingCost(b *testing.B) {
 		name    string
 		framing channel.Framing
 	}{
-		{"Chunked", channel.Chunked},
 		{"Line", channel.Line},
 		{"LSP", channel.LSP},
 		{"NUL", channel.Split('\x00')},

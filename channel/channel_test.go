@@ -77,7 +77,6 @@ var tests = []struct {
 	name    string
 	framing Framing
 }{
-	{"Chunked", Chunked},
 	{"Header", Header("binary/octet-stream")},
 	{"LSP", LSP},
 	{"Line", Line},
@@ -99,11 +98,8 @@ var messages = []string{
 	"{}",
 	"[null]",
 
-	// Include a very long message to ensure the chunked channel gets exercised.
+	// Include a long message to ensure size-dependent cases get exercised.
 	`[` + strings.Repeat(`"ABCDefghIJKLmnopQRSTuvwxYZ!",`, 8000) + `"END"]`,
-
-	// Include an exactly chunk-sized message to exercise the chunked channel.
-	`"` + strings.Repeat("p", chunkMaxBytes-2) + `"`, // -2 for the quotes
 }
 
 func clip(msg string) string {
