@@ -261,7 +261,7 @@ func (j *jrequest) parseJSON(data []byte) error {
 		case "params":
 			// As a special case, reduce "null" to nil in the parameters.
 			// Otherwise, require per spec that val is an array or object.
-			if string(val) != "null" {
+			if !isNull(val) {
 				j.P = val
 			}
 			if len(j.P) != 0 && j.P[0] != '[' && j.P[0] != '{' {
@@ -327,7 +327,7 @@ type jerror struct {
 // supports interoperation with JSON-RPC v1 where "null" is used as an ID for
 // notifications.
 func fixID(id json.RawMessage) json.RawMessage {
-	if string(id) != "null" {
+	if !isNull(id) {
 		return id
 	}
 	return nil
@@ -377,4 +377,9 @@ func isServiceName(s string) bool {
 		return false
 	}
 	return true
+}
+
+// isNull reports whether msg is exactly the JSON "null" value.
+func isNull(msg json.RawMessage) bool {
+	return len(msg) == 4 && msg[0] == 'n' && msg[1] == 'u' && msg[2] == 'l' && msg[3] == 'l'
 }

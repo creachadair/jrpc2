@@ -1,7 +1,6 @@
 package channel
 
 import (
-	"bytes"
 	"encoding/json"
 	"io"
 )
@@ -33,8 +32,6 @@ func (c jsonc) Send(msg []byte) error {
 	return err
 }
 
-func isNull(msg json.RawMessage) bool { return bytes.Equal(msg, []byte("null")) }
-
 // Recv implements part of the Channel interface. It reports an error if the
 // message is not a structurally valid JSON value. It is safe for the caller to
 // treat any record returned as a json.RawMessage.
@@ -49,3 +46,7 @@ func (c jsonc) Recv() ([]byte, error) {
 
 // Close implements part of the Channel interface.
 func (c jsonc) Close() error { return c.wc.Close() }
+
+func isNull(msg json.RawMessage) bool {
+	return len(msg) == 4 && msg[0] == 'n' && msg[1] == 'u' && msg[2] == 'l' && msg[3] == 'l'
+}
