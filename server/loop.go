@@ -16,8 +16,9 @@ import (
 // servers currently active have returned.
 //
 // While running, Loop maintains a pool of *jrpc2.Server values to reduce setup
-// and memory overhead. However, it does not rate-limit connections. Instead,
-// the listener is responsible for deciding how and whether to shed load.
+// and memory overhead. However, it does not rate-limit connections.
+//
+// TODO: Add options to support sensible rate-limitation.
 func Loop(lst net.Listener, assigner jrpc2.Assigner, opts *LoopOptions) error {
 	newChannel := opts.framing()
 	serverOpts := opts.serverOpts()
