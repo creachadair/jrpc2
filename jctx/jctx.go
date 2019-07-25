@@ -53,7 +53,7 @@ const wireVersion = "1"
 // request parameters. The resulting message replaces the parameters of the
 // original JSON-RPC request.
 type wireContext struct {
-	V string `json:"jctx"` // must be wireVersion
+	V *string `json:"jctx"` // must be wireVersion
 
 	Deadline *time.Time      `json:"deadline,omitempty"` // encoded in UTC
 	Payload  json.RawMessage `json:"payload,omitempty"`
@@ -64,7 +64,8 @@ type wireContext struct {
 // If a deadline is set on ctx, it is converted to UTC before encoding.
 // If metadata are set on ctx (see jctx.WithMetadata), they are included.
 func Encode(ctx context.Context, method string, params json.RawMessage) (json.RawMessage, error) {
-	c := wireContext{V: wireVersion, Payload: params}
+	v := wireVersion
+	c := wireContext{V: &v, Payload: params}
 	if dl, ok := ctx.Deadline(); ok {
 		utcdl := dl.In(time.UTC)
 		c.Deadline = &utcdl
@@ -88,17 +89,14 @@ func Encode(ctx context.Context, method string, params json.RawMessage) (json.Ra
 // If the request includes context metadata, they are attached and can be
 // recovered using jctx.UnmarshalMetadata.
 func Decode(ctx context.Context, method string, req json.RawMessage) (context.Context, json.RawMessage, error) {
-	if len(req) == 0 {
-		return ctx, req, nil // an empty message has no wrapper
+	if len(req) == 0 || req[0] != '{' {
+		return ctx, req, nil // an empty message or non-object has no wrapper
 	}
 	var c wireContext
-	if err := json.Unmarshal(req, &c); err != nil {
-		if _, ok := err.(*json.UnmarshalTypeError); ok {
-			return ctx, req, nil // fall back assuming an un-wrapped message
-		}
-		return nil, nil, err
-	} else if c.V != wireVersion {
-		return nil, nil, fmt.Errorf("invalid context version %q", c.V)
+	if err := json.Unmarshal(req, &c); err != nil || c.V == nil {
+		return ctx, req, nil // fall back assuming an un-wrapped message
+	} else if *c.V != wireVersion {
+		return nil, nil, fmt.Errorf("invalid context version %q", *c.V)
 	}
 	if c.Metadata != nil {
 		ctx = context.WithValue(ctx, metadataKey{}, c.Metadata)

@@ -53,8 +53,12 @@ func TestDecoding(t *testing.T) {
 		deadline    time.Time
 		want        string
 	}{
-		{"zero-void", `{"jctx":"1"}`, time.Time{}, ""},
-		{"zero-void-naked", "", time.Time{}, ""},
+		{"empty context", "", time.Time{}, ""},
+		{"empty parameters", `{"jctx":"1"}`, time.Time{}, ""},
+		{"non-object input", `[1, 5]`, time.Time{}, `[1, 5]`},
+		{"non-context empty object", `{}`, time.Time{}, `{}`},
+		{"non-context object", `{"kiss":"me"}`, time.Time{}, `{"kiss":"me"}`},
+		{"invalid context", `{"jctx":2, "ok":true}`, time.Time{}, `{"jctx":2, "ok":true}`},
 
 		{"zero-payload", `{"jctx":"1","payload":["a","b","c"]}`, time.Time{}, `["a","b","c"]`},
 		{"zero-payload-naked", `["a", "b", "c"]`, time.Time{}, `["a", "b", "c"]`},
