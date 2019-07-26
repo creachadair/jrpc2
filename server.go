@@ -279,10 +279,7 @@ func (s *Server) setContext(t *task, id string) bool {
 // invoke invokes the handler m for the specified request type, and marshals
 // the return value into JSON if there is one.
 func (s *Server) invoke(base context.Context, h Handler, req *Request) (json.RawMessage, error) {
-	ctx := context.WithValue(base, serverMetricsKey{}, s.metrics)
-	if s.allowP {
-		ctx = context.WithValue(ctx, serverPushKey{}, s.Push)
-	}
+	ctx := context.WithValue(base, serverKey{}, s)
 	if err := s.sem.Acquire(ctx, 1); err != nil {
 		return nil, err
 	}
