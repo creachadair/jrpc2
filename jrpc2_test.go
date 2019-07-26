@@ -318,6 +318,56 @@ func TestServerStopCancellation(t *testing.T) {
 	}
 }
 
+// Test that a handler can cancel an in-flight request with jrpc2.CancelRequest.
+func TestHandlerCancel(t *testing.T) {
+	ready := make(chan struct{})
+	loc := server.NewLocal(handler.Map{
+		"Stall": handler.New(func(ctx context.Context) error {
+			close(ready)
+			t.Log("Stall handler: waiting for context cancellation")
+			<-ctx.Done()
+			return ctx.Err()
+		}),
+		"Test": handler.New(func(ctx context.Context, req *jrpc2.Request) error {
+			var id string
+			if err := req.UnmarshalParams(&handler.Args{&id}); err != nil {
+				return err
+			}
+			t.Logf("Test handler: cancelling %q...", id)
+			jrpc2.CancelRequest(ctx, id)
+			return nil
+		}),
+	}, nil)
+	defer loc.Close()
+
+	ctx := context.Background()
+
+	// Start a call in the background that will stall until cancelled.
+	errc := make(chan error, 1)
+	go func() {
+		_, err := loc.Client.Call(ctx, "Stall", nil)
+		errc <- err
+		close(errc)
+	}()
+
+	// Wait until the handler is in progress.
+	<-ready
+
+	// Call the test method to cancel the stalled method, and verify that we got
+	// back the expected error.
+	if _, err := loc.Client.Call(ctx, "Test", []string{"1"}); err != nil {
+		t.Errorf("Test call failed: %v", err)
+	}
+
+	err := <-errc
+	got := code.FromError(err)
+	if got != code.Cancelled {
+		t.Errorf("Stall: got %v (%v), want %v", err, got, code.Cancelled)
+	} else {
+		t.Logf("Cancellation succeeded, got expected error: %v", err)
+	}
+}
+
 // Test that an error with data attached to it is correctly propagated back
 // from the server to the client, in a value of concrete type *Error.
 func TestErrors(t *testing.T) {

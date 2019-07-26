@@ -2,6 +2,7 @@ package jrpc2
 
 import (
 	"context"
+	"encoding/json"
 
 	"golang.org/x/xerrors"
 
@@ -42,6 +43,14 @@ func ServerPush(ctx context.Context, method string, params interface{}) error {
 		return ErrNotifyUnsupported
 	}
 	return s.Push(ctx, method, params)
+}
+
+// CancelRequest requests the cancellation of the pending or in-flight request
+// with the specified ID.  If no request exists with that ID, this is a no-op
+// without error.
+func CancelRequest(ctx context.Context, id string) {
+	s := ctx.Value(serverKey{}).(*Server)
+	s.cancelRequests(ctx, []json.RawMessage{json.RawMessage(id)})
 }
 
 type serverKey struct{}
