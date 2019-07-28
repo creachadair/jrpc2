@@ -1,6 +1,7 @@
 package jrpc2
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -67,12 +68,18 @@ func (r *Request) Method() string { return r.method }
 func (r *Request) HasParams() bool { return len(r.params) != 0 }
 
 // UnmarshalParams decodes the parameters into v. If r has empty parameters, it
-// returns nil without modifying v.
+// returns nil without modifying v. If r is invalid it returns an InvalidParams
+// error.
 func (r *Request) UnmarshalParams(v interface{}) error {
 	if len(r.params) == 0 {
 		return nil
 	}
-	return json.Unmarshal(r.params, v)
+	dec := json.NewDecoder(bytes.NewReader(r.params))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(v); err != nil {
+		return Errorf(code.InvalidParams, "invalid parameters: %v", err.Error())
+	}
+	return nil
 }
 
 // ErrInvalidVersion is returned by ParseRequests if one or more of the

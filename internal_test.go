@@ -81,18 +81,32 @@ func errEQ(x, y error) bool {
 }
 
 func TestUnmarshalParams(t *testing.T) {
+	type xy struct {
+		X int  `json:"x"`
+		Y bool `json:"y"`
+	}
+
 	tests := []struct {
 		input string
 		want  interface{}
+		code  code.Code
 	}{
 		// If parameters are set, the target should be updated.
-		{`{"jsonrpc":"2.0", "id":1, "method":"X", "params":[1,2]}`, []int{1, 2}},
+		{`{"jsonrpc":"2.0", "id":1, "method":"X", "params":[1,2]}`, []int{1, 2}, code.NoError},
 
 		// If parameters are null, the target should not be modified.
-		{`{"jsonrpc":"2.0", "id":2, "method":"Y", "params":null}`, ""},
+		{`{"jsonrpc":"2.0", "id":2, "method":"Y", "params":null}`, "", code.NoError},
 
 		// If parameters are not set, the target should not be modified.
-		{`{"jsonrpc":"2.0", "id":2, "method":"Y"}`, 0},
+		{`{"jsonrpc":"2.0", "id":2, "method":"Y"}`, 0, code.NoError},
+
+		// Unmarshaling should work into a struct as long as the fields match.
+		{`{"jsonrpc":"2.0", "id":3, "method":"Z", "params":{}}`, xy{}, code.NoError},
+		{`{"jsonrpc":"2.0", "id":4, "method":"Z", "params":{"x":17}}`, xy{X: 17}, code.NoError},
+		{`{"jsonrpc":"2.0", "id":5, "method":"Z", "params":{"x":23, "y":true}}`,
+			xy{X: 23, Y: true}, code.NoError},
+		{`{"jsonrpc":"2.0", "id":6, "method":"Z", "params":{"x":23, "z":"wat"}}`,
+			xy{}, code.InvalidParams},
 	}
 	for _, test := range tests {
 		req, err := ParseRequests([]byte(test.input))
@@ -104,9 +118,14 @@ func TestUnmarshalParams(t *testing.T) {
 
 		// Allocate a zero of the expected type to unmarshal into.
 		target := reflect.New(reflect.TypeOf(test.want)).Interface()
-		if err := req[0].UnmarshalParams(target); err != nil {
-			t.Errorf("Unmarshaling parameters failed: %v", err)
-			continue
+		{
+			err := req[0].UnmarshalParams(target)
+			if got := code.FromError(err); got != test.code {
+				t.Errorf("UnmarshalParams error: got code %d, want %d [%v]", got, test.code, err)
+			}
+			if err != nil {
+				continue
+			}
 		}
 
 		// Dereference the target to get the value to compare.
