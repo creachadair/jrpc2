@@ -84,6 +84,9 @@ func main() {
 	// Set up the context for the call, including timeouts and any metadata that
 	// are specified on the command line. Setting -meta also implicitly sets -c.
 	ctx := context.Background()
+	if *withMeta == "" {
+		*withMeta = os.Getenv("JCALL_META")
+	}
 	if *withMeta != "" {
 		mc, err := jctx.WithMetadata(ctx, json.RawMessage(*withMeta))
 		if err != nil {
