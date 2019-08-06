@@ -8,6 +8,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -32,6 +33,7 @@ var (
 	withContext = flag.Bool("c", false, "Send context with request")
 	chanFraming = flag.String("f", "raw", "Channel framing")
 	doBatch     = flag.Bool("batch", false, "Issue calls as a batch rather than sequentially")
+	doErrors    = flag.Bool("e", false, "Print error values to stdout")
 	doMulti     = flag.Bool("m", false, "Issue the same call repeatedly with different arguments")
 	doTiming    = flag.Bool("T", false, "Print call timing stats")
 	withLogging = flag.Bool("v", false, "Enable verbose logging")
@@ -125,7 +127,10 @@ func main() {
 	pdur, err := issueCalls(ctx, cli, flag.Args()[1:])
 	// defer failure on error till after we print aggregate timing stats
 	tcall := time.Now()
-	if err != nil {
+	if e, ok := err.(*jrpc2.Error); ok && *doErrors {
+		etxt, _ := json.Marshal(e)
+		fmt.Println(string(etxt))
+	} else if err != nil {
 		log.Printf("Call failed: %v", err)
 	}
 	cdur := tcall.Sub(tdial) - pdur
@@ -163,8 +168,13 @@ func printResults(rsps []*jrpc2.Response) (time.Duration, error) {
 	var dur time.Duration
 	for i, rsp := range rsps {
 		if rerr := rsp.Error(); rerr != nil {
-			log.Printf("Error (%d): %v", i+1, rerr)
-			set(rerr)
+			if *doErrors {
+				etxt, _ := json.Marshal(rerr)
+				fmt.Println(string(etxt))
+			} else {
+				log.Printf("Error (%d): %v", i+1, rerr)
+			}
+			set(errors.New("batch contained errors"))
 			continue
 		}
 		pstart := time.Now()
