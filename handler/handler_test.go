@@ -31,6 +31,8 @@ func TestNew(t *testing.T) {
 		{v: func(context.Context, []bool) (float64, error) { return 0, nil }},
 		{v: func(context.Context, ...string) (bool, error) { return false, nil }},
 		{v: func(context.Context, *jrpc2.Request) (byte, error) { return '0', nil }},
+		{v: func(context.Context) bool { return true }},
+		{v: func(context.Context, int) bool { return true }},
 
 		// Things that aren't supposed to work.
 		{v: func() error { return nil }, bad: true},                           // wrong # of params
@@ -39,8 +41,10 @@ func TestNew(t *testing.T) {
 		{v: func(byte) (int, bool, error) { return 0, true, nil }, bad: true}, // ...
 		{v: func(string) error { return nil }, bad: true},                     // missing context
 		{v: func(a, b string) error { return nil }, bad: true},                // P1 is not context
-		{v: func(context.Context, int) bool { return false }, bad: true},      // R1 is not error
 		{v: func(context.Context) (int, bool) { return 1, true }, bad: true},  // R2 is not error
+
+		//lint:ignore ST1008 verify permuted error position does not match
+		{v: func(context.Context) (error, float64) { return nil, 0 }, bad: true}, // ...
 	}
 	for _, test := range tests {
 		got, err := newHandler(test.v)
@@ -108,6 +112,7 @@ func TestServiceMap(t *testing.T) {
 		{"Test.Y3", true},
 		{"Test.Y4", false},
 		{"Test.N1", false},
+		{"Test.N2", false},
 	}
 	ctx := context.Background()
 	m := ServiceMap{"Test": NewService(dummy{})}

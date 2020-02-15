@@ -74,8 +74,10 @@ func (m ServiceMap) Names() []string {
 // function with one of the following type signatures:
 //
 //    func(context.Context) error
+//    func(context.Context) Y
 //    func(context.Context) (Y, error)
 //    func(context.Context, X) error
+//    func(context.Context, X) Y
 //    func(context.Context, X) (Y, error)
 //    func(context.Context, ...X) (Y, error)
 //    func(context.Context, *jrpc2.Request) (Y, error)
@@ -187,16 +189,24 @@ func newHandler(fn interface{}) (Func, error) {
 	// Construct a function to decode the result values.
 	var decodeOut func([]reflect.Value) (interface{}, error)
 
-	if typ.NumOut() == 1 {
-		// A function that returns only error: Result is always nil.
-		decodeOut = func(vals []reflect.Value) (interface{}, error) {
-			oerr := vals[0].Interface()
-			if oerr != nil {
-				return nil, oerr.(error)
+	switch typ.NumOut() {
+	case 1:
+		if typ.Out(0) == errType {
+			// A function that returns only error: Result is always nil.
+			decodeOut = func(vals []reflect.Value) (interface{}, error) {
+				oerr := vals[0].Interface()
+				if oerr != nil {
+					return nil, oerr.(error)
+				}
+				return nil, nil
 			}
-			return nil, nil
+		} else {
+			// A function that returns a single non-error: err is always nil.
+			decodeOut = func(vals []reflect.Value) (interface{}, error) {
+				return vals[0].Interface(), nil
+			}
 		}
-	} else {
+	default:
 		// A function that returns a value and an error.
 		decodeOut = func(vals []reflect.Value) (interface{}, error) {
 			out, oerr := vals[0].Interface(), vals[1].Interface()
@@ -233,7 +243,7 @@ func checkFunctionType(fn interface{}) (reflect.Type, error) {
 		return nil, xerrors.New("wrong number of results")
 	} else if typ.In(0) != ctxType {
 		return nil, xerrors.New("first parameter is not context.Context")
-	} else if typ.Out(no-1) != errType {
+	} else if no == 2 && typ.Out(1) != errType {
 		return nil, xerrors.New("result is not of type error")
 	}
 	return typ, nil
