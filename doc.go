@@ -19,12 +19,12 @@ For example, suppose we have defined the following Add function, and would like
 to export it as a JSON-RPC method:
 
    // Add returns the sum of a slice of integers.
-   func Add(ctx context.Context, values []int) (int, error) {
+   func Add(ctx context.Context, values []int) int {
       sum := 0
       for _, v := range values {
          sum += v
       }
-      return sum, nil
+      return sum
    }
 
 To convert Add to a jrpc2.Handler, call the handler.New function, which uses

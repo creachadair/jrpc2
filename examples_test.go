@@ -26,8 +26,8 @@ type Msg struct {
 func ExampleNewServer() {
 	// Construct a new server with a single method "Hello".
 	s = jrpc2.NewServer(handler.Map{
-		"Hello": handler.New(func(ctx context.Context) (string, error) {
-			return "Hello, world!", nil
+		"Hello": handler.New(func(ctx context.Context) string {
+			return "Hello, world!"
 		}),
 		"Log": handler.New(func(ctx context.Context, msg Msg) (bool, error) {
 			fmt.Println("Log:", msg.Text)

@@ -34,22 +34,22 @@ type binop struct {
 }
 
 // Add returns the sum of vs, or 0 if len(vs) == 0.
-func (math) Add(ctx context.Context, vs []int) (int, error) {
+func (math) Add(ctx context.Context, vs []int) int {
 	sum := 0
 	for _, v := range vs {
 		sum += v
 	}
-	return sum, nil
+	return sum
 }
 
 // Sub returns the difference arg.X - arg.Y.
-func (math) Sub(ctx context.Context, arg binop) (int, error) {
-	return arg.X - arg.Y, nil
+func (math) Sub(ctx context.Context, arg binop) int {
+	return arg.X - arg.Y
 }
 
 // Mul returns the product arg.X * arg.Y.
-func (math) Mul(ctx context.Context, arg binop) (int, error) {
-	return arg.X * arg.Y, nil
+func (math) Mul(ctx context.Context, arg binop) int {
+	return arg.X * arg.Y
 }
 
 // Div converts its arguments to floating point and returns their ratio.

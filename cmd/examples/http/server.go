@@ -35,8 +35,8 @@ func main() {
 
 	// Start a local server with a single trivial method and bridge it to HTTP.
 	local := server.NewLocal(handler.Map{
-		"Ping": handler.New(func(ctx context.Context, msg ...string) (string, error) {
-			return "OK: " + strings.Join(msg, ", "), nil
+		"Ping": handler.New(func(ctx context.Context, msg ...string) string {
+			return "OK: " + strings.Join(msg, ", ")
 		}),
 	}, &server.LocalOptions{
 		Server: &jrpc2.ServerOptions{
