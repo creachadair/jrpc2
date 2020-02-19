@@ -80,7 +80,7 @@ var tests = []struct {
 	framing Framing
 }{
 	{"Header", Header("binary/octet-stream")},
-	{"LSP", LSP},
+	{"StrictLSP", Header(lspMimeType)},
 	{"Line", Line},
 	{"NoMIME", Header("")},
 	{"RS", Split('\x1e')},
@@ -200,6 +200,12 @@ func TestHeaderFraming(t *testing.T) {
 		{
 			name:         "incoming message without Content-Type is tolerated",
 			framing:      OptionalHeader("application/json"),
+			readerBuf:    "Content-Length: 18\r\n\r\n{\"hello\": \"world\"}",
+			expectedRecv: []byte(`{"hello": "world"}`),
+		},
+		{
+			name:         "incoming LSP message without Content-Type is tolerated",
+			framing:      LSP,
 			readerBuf:    "Content-Length: 18\r\n\r\n{\"hello\": \"world\"}",
 			expectedRecv: []byte(`{"hello": "world"}`),
 		},

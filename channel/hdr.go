@@ -144,8 +144,10 @@ func (h *hdr) Recv() ([]byte, error) {
 // Close implements part of the Channel interface.
 func (h *hdr) Close() error { return h.wc.Close() }
 
+const lspMimeType = "application/vscode-jsonrpc; charset=utf-8"
+
 // LSP is a header framing (see Header) that transmits and receives messages on
 // r and wc using the MIME type application/vscode-jsonrpc. This is the format
 // preferred by the Language Server Protocol (LSP), defined by
 // https://microsoft.github.io/language-server-protocol
-var LSP = Header("application/vscode-jsonrpc; charset=utf-8")
+var LSP = OptionalHeader(lspMimeType)
