@@ -52,6 +52,8 @@ type Request struct {
 	id     json.RawMessage // the request ID, nil for notifications
 	method string          // the name of the method being requested
 	params json.RawMessage // method parameters
+
+	ignoreUnknownFields bool
 }
 
 // IsNotification reports whether the request is a notification, and thus does
@@ -75,7 +77,9 @@ func (r *Request) UnmarshalParams(v interface{}) error {
 		return nil
 	}
 	dec := json.NewDecoder(bytes.NewReader(r.params))
-	dec.DisallowUnknownFields()
+	if !r.ignoreUnknownFields {
+		dec.DisallowUnknownFields()
+	}
 	if err := dec.Decode(v); err != nil {
 		return Errorf(code.InvalidParams, "invalid parameters: %v", err.Error())
 	}

@@ -87,26 +87,30 @@ func TestUnmarshalParams(t *testing.T) {
 	}
 
 	tests := []struct {
-		input string
-		want  interface{}
-		code  code.Code
+		input               string
+		want                interface{}
+		ignoreUnknownFields bool
+
+		code code.Code
 	}{
 		// If parameters are set, the target should be updated.
-		{`{"jsonrpc":"2.0", "id":1, "method":"X", "params":[1,2]}`, []int{1, 2}, code.NoError},
+		{`{"jsonrpc":"2.0", "id":1, "method":"X", "params":[1,2]}`, []int{1, 2}, false, code.NoError},
 
 		// If parameters are null, the target should not be modified.
-		{`{"jsonrpc":"2.0", "id":2, "method":"Y", "params":null}`, "", code.NoError},
+		{`{"jsonrpc":"2.0", "id":2, "method":"Y", "params":null}`, "", false, code.NoError},
 
 		// If parameters are not set, the target should not be modified.
-		{`{"jsonrpc":"2.0", "id":2, "method":"Y"}`, 0, code.NoError},
+		{`{"jsonrpc":"2.0", "id":2, "method":"Y"}`, 0, false, code.NoError},
 
 		// Unmarshaling should work into a struct as long as the fields match.
-		{`{"jsonrpc":"2.0", "id":3, "method":"Z", "params":{}}`, xy{}, code.NoError},
-		{`{"jsonrpc":"2.0", "id":4, "method":"Z", "params":{"x":17}}`, xy{X: 17}, code.NoError},
+		{`{"jsonrpc":"2.0", "id":3, "method":"Z", "params":{}}`, xy{}, false, code.NoError},
+		{`{"jsonrpc":"2.0", "id":4, "method":"Z", "params":{"x":17}}`, xy{X: 17}, false, code.NoError},
 		{`{"jsonrpc":"2.0", "id":5, "method":"Z", "params":{"x":23, "y":true}}`,
-			xy{X: 23, Y: true}, code.NoError},
+			xy{X: 23, Y: true}, false, code.NoError},
 		{`{"jsonrpc":"2.0", "id":6, "method":"Z", "params":{"x":23, "z":"wat"}}`,
-			xy{}, code.InvalidParams},
+			xy{}, false, code.InvalidParams},
+		{`{"jsonrpc":"2.0", "id":6, "method":"Z", "params":{"x":23, "extra":"experiment"}}`,
+			xy{X: 23}, true, code.NoError},
 	}
 	for _, test := range tests {
 		req, err := ParseRequests([]byte(test.input))
@@ -115,6 +119,8 @@ func TestUnmarshalParams(t *testing.T) {
 		} else if len(req) != 1 {
 			t.Fatalf("Wrong number of requests: got %d, want 1", len(req))
 		}
+
+		req[0].ignoreUnknownFields = test.ignoreUnknownFields
 
 		// Allocate a zero of the expected type to unmarshal into.
 		target := reflect.New(reflect.TypeOf(test.want)).Interface()

@@ -26,6 +26,12 @@ type ServerOptions struct {
 	// method of the server will report an error when called.
 	AllowPush bool
 
+	// Instructs JSON decoder to ignore unknown fields when unmarshaling request.
+	//
+	// As JSON-RPC specification states:
+	// "The absence of expected names MAY result in an error being generated."
+	IgnoreUnknownFields bool
+
 	// Instructs the server to disable the built-in rpc.* handler methods.
 	//
 	// By default, a server reserves all rpc.* methods, even if the given
@@ -67,9 +73,10 @@ func (s *ServerOptions) logger() logger {
 	return func(msg string, args ...interface{}) { logger.Output(2, fmt.Sprintf(msg, args...)) }
 }
 
-func (s *ServerOptions) allowV1() bool      { return s != nil && s.AllowV1 }
-func (s *ServerOptions) allowPush() bool    { return s != nil && s.AllowPush }
-func (s *ServerOptions) allowBuiltin() bool { return s == nil || !s.DisableBuiltin }
+func (s *ServerOptions) allowV1() bool             { return s != nil && s.AllowV1 }
+func (s *ServerOptions) allowPush() bool           { return s != nil && s.AllowPush }
+func (s *ServerOptions) ignoreUnknownFields() bool { return s != nil && s.IgnoreUnknownFields }
+func (s *ServerOptions) allowBuiltin() bool        { return s == nil || !s.DisableBuiltin }
 
 func (s *ServerOptions) concurrency() int64 {
 	if s == nil || s.Concurrency < 1 {

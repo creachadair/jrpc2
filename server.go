@@ -21,18 +21,19 @@ type logger = func(string, ...interface{})
 // responses on a channel.Channel provided by the caller, and dispatches
 // requests to user-defined Handlers.
 type Server struct {
-	wg      sync.WaitGroup      // ready when workers are done at shutdown time
-	mux     Assigner            // associates method names with handlers
-	sem     *semaphore.Weighted // bounds concurrent execution (default 1)
-	allow1  bool                // allow v1 requests with no version marker
-	allowP  bool                // allow server notifications to the client
-	log     logger              // write debug logs here
-	dectx   decoder             // decode context from request
-	ckreq   verifier            // request checking hook
-	expctx  bool                // whether to expect request context
-	metrics *metrics.M          // metrics collected during execution
-	start   time.Time           // when Start was called
-	builtin bool                // whether built-in rpc.* methods are enabled
+	wg       sync.WaitGroup      // ready when workers are done at shutdown time
+	mux      Assigner            // associates method names with handlers
+	sem      *semaphore.Weighted // bounds concurrent execution (default 1)
+	allow1   bool                // allow v1 requests with no version marker
+	allowP   bool                // allow server notifications to the client
+	ignoreUF bool                // ignore unknown fields in requests
+	log      logger              // write debug logs here
+	dectx    decoder             // decode context from request
+	ckreq    verifier            // request checking hook
+	expctx   bool                // whether to expect request context
+	metrics  *metrics.M          // metrics collected during execution
+	start    time.Time           // when Start was called
+	builtin  bool                // whether built-in rpc.* methods are enabled
 
 	mu *sync.Mutex // protects the fields below
 
@@ -59,20 +60,21 @@ func NewServer(mux Assigner, opts *ServerOptions) *Server {
 	}
 	dc, exp := opts.decodeContext()
 	s := &Server{
-		mux:     mux,
-		sem:     semaphore.NewWeighted(opts.concurrency()),
-		allow1:  opts.allowV1(),
-		allowP:  opts.allowPush(),
-		log:     opts.logger(),
-		dectx:   dc,
-		ckreq:   opts.checkRequest(),
-		expctx:  exp,
-		mu:      new(sync.Mutex),
-		metrics: opts.metrics(),
-		start:   opts.startTime(),
-		builtin: opts.allowBuiltin(),
-		inq:     list.New(),
-		used:    make(map[string]context.CancelFunc),
+		mux:      mux,
+		sem:      semaphore.NewWeighted(opts.concurrency()),
+		allow1:   opts.allowV1(),
+		allowP:   opts.allowPush(),
+		ignoreUF: opts.ignoreUnknownFields(),
+		log:      opts.logger(),
+		dectx:    dc,
+		ckreq:    opts.checkRequest(),
+		expctx:   exp,
+		mu:       new(sync.Mutex),
+		metrics:  opts.metrics(),
+		start:    opts.startTime(),
+		builtin:  opts.allowBuiltin(),
+		inq:      list.New(),
+		used:     make(map[string]context.CancelFunc),
 	}
 	s.work = sync.NewCond(s.mu)
 	return s
@@ -221,7 +223,13 @@ func (s *Server) checkAndAssign(next jrequests) tasks {
 		s.log("Checking request for %q: %s", req.M, string(req.P))
 		fid := fixID(req.ID)
 		t := &task{
-			hreq:  &Request{id: fid, method: req.M, params: req.P},
+			hreq: &Request{
+				id:     fid,
+				method: req.M,
+				params: req.P,
+
+				ignoreUnknownFields: s.ignoreUF,
+			},
 			batch: req.batch,
 		}
 		if req.err != nil {
