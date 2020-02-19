@@ -1,6 +1,8 @@
 package channel
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"strconv"
@@ -148,6 +150,106 @@ func TestEmptyMessage(t *testing.T) {
 
 			t.Log(`Testing client → server :: "" (empty line)`)
 			testSendRecv(t, client, server, "")
+		})
+	}
+}
+
+type writeCloser struct {
+	*bufio.Writer
+}
+
+func (wc *writeCloser) Close() error {
+	return wc.Flush()
+}
+
+func newWriteCloser(w *bufio.Writer) *writeCloser {
+	return &writeCloser{w}
+}
+
+func TestHeaderFraming(t *testing.T) {
+	testCases := []struct {
+		name    string
+		framing Framing
+
+		toSend    string
+		readerBuf string
+		writerBuf string
+
+		expectedSent    []byte
+		expectedRecv    []byte
+		expectedRecvErr string
+	}{
+		{
+			name:         "outgoing message has Content-Type",
+			framing:      Header("application/json"),
+			toSend:       `{"hello": "world"}`,
+			expectedSent: []byte("Content-Type: application/json\r\nContent-Length: 18\r\n\r\n{\"hello\": \"world\"}"),
+		},
+		{
+			name:         "incoming message with Content-Type is accepted",
+			framing:      Header("application/json"),
+			readerBuf:    "Content-Type: application/json\r\nContent-Length: 18\r\n\r\n{\"hello\": \"world\"}",
+			expectedRecv: []byte(`{"hello": "world"}`),
+		},
+		{
+			name:            "incoming message without Content-Type is rejected",
+			framing:         Header("application/json"),
+			readerBuf:       "Content-Length: 18\r\n\r\n{\"hello\": \"world\"}",
+			expectedRecvErr: "invalid content-type",
+		},
+		{
+			name:         "incoming message without Content-Type is tolerated",
+			framing:      OptionalHeader("application/json"),
+			readerBuf:    "Content-Length: 18\r\n\r\n{\"hello\": \"world\"}",
+			expectedRecv: []byte(`{"hello": "world"}`),
+		},
+	}
+
+	for i, tc := range testCases {
+		t.Run(fmt.Sprintf("%d-%s", i, tc.name), func(t *testing.T) {
+			reader := bytes.NewBufferString(tc.readerBuf)
+			writer := bytes.NewBufferString(tc.writerBuf)
+
+			wc := newWriteCloser(bufio.NewWriter(writer))
+			ch := tc.framing(reader, wc)
+
+			if tc.toSend != "" {
+				err := ch.Send([]byte(tc.toSend))
+				if err != nil {
+					t.Fatal(err)
+				}
+				wc.Close()
+
+				sent := writer.Bytes()
+				if !bytes.Equal(sent, tc.expectedSent) {
+					t.Fatalf("sent message doesn't match.\nexpected: %q\nsent: %q\n",
+						string(tc.expectedSent), string(sent))
+				}
+			}
+
+			var bytesReceived []byte
+			var recvErr error
+			if tc.expectedRecvErr != "" || len(tc.expectedRecv) > 0 {
+				bytesReceived, recvErr = ch.Recv()
+			}
+
+			if tc.expectedRecvErr != "" {
+				if recvErr == nil {
+					t.Fatalf("expected error from Recv: %q", tc.expectedRecvErr)
+				}
+				if tc.expectedRecvErr != recvErr.Error() {
+					t.Fatalf("unexpected error: %q\nexpected: %q\n",
+						recvErr.Error(), tc.expectedRecvErr)
+				}
+			} else if recvErr != nil {
+				t.Fatalf("unexpected error: %s", recvErr.Error())
+			}
+			if len(tc.expectedRecv) > 0 {
+				if !bytes.Equal(bytesReceived, tc.expectedRecv) {
+					t.Fatalf("received bytes don't match.\nexpected: %q\nreceived: %q\n",
+						tc.expectedRecv, bytesReceived)
+				}
+			}
 		})
 	}
 }

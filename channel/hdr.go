@@ -47,6 +47,21 @@ func Header(mimeType string) Framing {
 	}
 }
 
+func OptionalHeader(mimeType string) Framing {
+	return func(r io.Reader, wc io.WriteCloser) Channel {
+		var ctype string
+		if mimeType != "" {
+			ctype = "Content-Type: " + mimeType + "\r\n"
+		}
+		return &hdr{
+			ctype: ctype,
+			wc:    wc,
+			rd:    bufio.NewReader(r),
+			buf:   bytes.NewBuffer(nil),
+		}
+	}
+}
+
 // An hdr implements Channel. Messages sent on a hdr channel are framed as a
 // header/body transaction, similar to HTTP.
 type hdr struct {
