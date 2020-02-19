@@ -291,9 +291,18 @@ func (s *Server) invoke(base context.Context, h Handler, req *Request) (json.Raw
 			s.log("Discarding error from notification to %q: %v", req.Method(), err)
 			return nil, nil // a notification
 		}
+		s.log("Error returned from %q handler: %s", req.Method(), err)
 		return nil, err // a call reporting an error
 	}
-	return json.Marshal(v)
+
+	msg, err := json.Marshal(v)
+	if err != nil {
+		s.log("Failed to marshal %q response: %s", req.Method(), err)
+		return nil, err
+	}
+
+	s.log("Response to %q: %s", req.Method(), string(msg))
+	return msg, nil
 }
 
 // ServerInfo returns an atomic snapshot of the current server info for s.
