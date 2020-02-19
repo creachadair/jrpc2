@@ -51,22 +51,22 @@ const message1 = `["Full plate and packing steel"]`
 const message2 = `{"slogan":"Jump on your sword, evil!"}`
 
 func TestDirect(t *testing.T) {
-	lhs, rhs := Direct()
-	defer lhs.Close()
-	defer rhs.Close()
+	client, server := Direct()
+	defer client.Close()
+	defer server.Close()
 
-	t.Logf("Testing lhs ⇒ rhs :: %s", message1)
-	testSendRecv(t, lhs, rhs, message1)
-	t.Logf("Testing rhs ⇒ lhs :: %s", message2)
-	testSendRecv(t, rhs, lhs, message2)
+	t.Logf("Testing client ⇒ server :: %s", message1)
+	testSendRecv(t, client, server, message1)
+	t.Logf("Testing server ⇒ client :: %s", message2)
+	testSendRecv(t, server, client, message2)
 }
 
 func TestDirectClosed(t *testing.T) {
-	lhs, rhs := Direct()
-	defer rhs.Close()
-	lhs.Close() // immediately
+	client, server := Direct()
+	defer server.Close()
+	client.Close() // immediately
 
-	if err := lhs.Send([]byte("nonsense")); err == nil {
+	if err := client.Send([]byte("nonsense")); err == nil {
 		t.Error("Send on closed channel did not fail")
 	} else {
 		t.Logf("Send correctly failed: %v", err)
@@ -112,19 +112,19 @@ func clip(msg string) string {
 func TestChannelTypes(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			lhs, rhs := newPipe(test.framing)
-			defer lhs.Close()
-			defer rhs.Close()
+			client, server := newPipe(test.framing)
+			defer client.Close()
+			defer server.Close()
 
 			for i, msg := range messages {
 				n := strconv.Itoa(i + 1)
-				t.Run("LR-"+n, func(t *testing.T) {
-					t.Logf("Testing lhs → rhs :: %s", clip(msg))
-					testSendRecv(t, lhs, rhs, message1)
+				t.Run("client-2-server-"+n, func(t *testing.T) {
+					t.Logf("Testing client → server :: %s", clip(msg))
+					testSendRecv(t, client, server, message1)
 				})
-				t.Run("RL-"+n, func(t *testing.T) {
-					t.Logf("Testing rhs → lhs :: %s", clip(msg))
-					testSendRecv(t, rhs, lhs, message2)
+				t.Run("server-2-client-"+n, func(t *testing.T) {
+					t.Logf("Testing server → client :: %s", clip(msg))
+					testSendRecv(t, server, client, message2)
 				})
 			}
 		})
@@ -134,20 +134,20 @@ func TestChannelTypes(t *testing.T) {
 func TestEmptyMessage(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			lhs, rhs := newPipe(test.framing)
-			defer lhs.Close()
-			defer rhs.Close()
+			client, server := newPipe(test.framing)
+			defer client.Close()
+			defer server.Close()
 
-			t.Log(`Testing lhs → rhs :: "" (empty line)`)
-			testSendRecv(t, lhs, rhs, "")
+			t.Log(`Testing client → server :: "" (empty line)`)
+			testSendRecv(t, client, server, "")
 		})
 		t.Run(test.name, func(t *testing.T) {
-			lhs, rhs := Direct()
-			defer lhs.Close()
-			defer rhs.Close()
+			client, server := Direct()
+			defer client.Close()
+			defer server.Close()
 
-			t.Log(`Testing lhs → rhs :: "" (empty line)`)
-			testSendRecv(t, lhs, rhs, "")
+			t.Log(`Testing client → server :: "" (empty line)`)
+			testSendRecv(t, client, server, "")
 		})
 	}
 }
