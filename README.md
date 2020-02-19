@@ -23,8 +23,6 @@ There is also a working [example in the Go playground](https://play.golang.org/p
 
 *  Package [metrics](http://godoc.org/github.com/creachadair/jrpc2/metrics) defines a server metrics collector.
 
-*  Package [proxy](http://godoc.org/github.com/creachadair/jrpc2/proxy) defines a transparent proxy that allows a connected client to be re-exported as a server.
-
 *  Package [server](http://godoc.org/github.com/creachadair/jrpc2/server) provides support for running a server to handle multiple connections, and an in-memory implementation for testing.
 
 [spec]: http://www.jsonrpc.org/specification
