@@ -2,9 +2,8 @@ package jrpc2
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
-
-	"golang.org/x/xerrors"
 
 	"github.com/creachadair/jrpc2/code"
 )
@@ -55,19 +54,19 @@ func (e *Error) UnmarshalJSON(data []byte) error {
 }
 
 // ErrNoData indicates that there are no data to unmarshal.
-var ErrNoData = xerrors.New("no data to unmarshal")
+var ErrNoData = errors.New("no data to unmarshal")
 
 // errServerStopped is returned by Server.Wait when the server was shut down by
 // an explicit call to its Stop method or orderly termination of its channel.
-var errServerStopped = xerrors.New("the server has been stopped")
+var errServerStopped = errors.New("the server has been stopped")
 
 // errClientStopped is the error reported when a client is shut down by an
 // explicit call to its Close method.
-var errClientStopped = xerrors.New("the client has been stopped")
+var errClientStopped = errors.New("the client has been stopped")
 
 // ErrConnClosed is returned by a server's Push method if it is called after
 // the client connection is closed.
-var ErrConnClosed = xerrors.New("client connection is closed")
+var ErrConnClosed = errors.New("client connection is closed")
 
 // Errorf returns an error value of concrete type *Error having the specified
 // code and formatted message string.

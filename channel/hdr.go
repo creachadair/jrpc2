@@ -3,11 +3,10 @@ package channel
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"io"
 	"strconv"
 	"strings"
-
-	"golang.org/x/xerrors"
 )
 
 // Header defines a framing that transmits and receives messages using a header
@@ -94,22 +93,22 @@ func (h *hdr) Recv() ([]byte, error) {
 				contentLength = clean
 			}
 		} else {
-			return nil, xerrors.New("invalid header line")
+			return nil, errors.New("invalid header line")
 		}
 	}
 
 	// Verify that the content-type matches what we expect.
 	if contentType != h.mtype {
-		return nil, xerrors.New("invalid content-type")
+		return nil, errors.New("invalid content-type")
 	}
 
 	// Parse out the required content-length field.
 	if contentLength == "" {
-		return nil, xerrors.New("missing required content-length")
+		return nil, errors.New("missing required content-length")
 	}
 	size, err := strconv.Atoi(contentLength)
 	if err != nil || size < 0 {
-		return nil, xerrors.New("invalid content-length")
+		return nil, errors.New("invalid content-length")
 	}
 
 	// We need to use ReadFull here because the buffered reader may not have a

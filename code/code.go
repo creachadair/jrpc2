@@ -3,9 +3,8 @@ package code
 
 import (
 	"context"
+	"errors"
 	"fmt"
-
-	"golang.org/x/xerrors"
 )
 
 // A Code is an error response code.
@@ -112,11 +111,11 @@ func FromError(err error) Code {
 		return NoError
 	}
 	var c Coder
-	if xerrors.As(err, &c) {
+	if errors.As(err, &c) {
 		return c.Code()
-	} else if xerrors.Is(err, context.Canceled) {
+	} else if errors.Is(err, context.Canceled) {
 		return Cancelled
-	} else if xerrors.Is(err, context.DeadlineExceeded) {
+	} else if errors.Is(err, context.DeadlineExceeded) {
 		return DeadlineExceeded
 	}
 	return SystemError
