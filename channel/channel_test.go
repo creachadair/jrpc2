@@ -164,7 +164,9 @@ func TestHeaderTypeMismatch(t *testing.T) {
 		ok      func(error) bool
 	}{
 		// With a content type provided, no error is reported.
+		// Order of headers and extra headers should not affect this.
 		{"Content-Type: text/plain\r\nContent-Length: 3\r\n\r\nfoo", noError},
+		{"Extra: ok\r\nContent-Length: 4\r\nContent-Type: text/plain\r\n\r\nquux", noError},
 
 		// With a content type omitted, a sentinel error is reported.
 		{"Content-Length: 5\r\n\r\nabcde", func(err error) bool {
