@@ -83,6 +83,7 @@ var tests = []struct {
 	{"NoMIME", Header("")},
 	{"RS", Split('\x1e')},
 	{"RawJSON", RawJSON},
+	{"StrictHeader", StrictHeader("text/plain")},
 	{"Varint", Varint},
 }
 
@@ -149,6 +150,47 @@ func TestEmptyMessage(t *testing.T) {
 			t.Log(`Testing lhs → rhs :: "" (empty line)`)
 			testSendRecv(t, lhs, rhs, "")
 		})
+	}
+}
+
+func TestHeaderTypeMismatch(t *testing.T) {
+	cli, srv := newPipe(StrictHeader("text/plain"))
+	defer cli.Close()
+	defer srv.Close()
+
+	noError := func(err error) bool { return err == nil }
+	tests := []struct {
+		payload string
+		ok      func(error) bool
+	}{
+		// With a content type provided, no error is reported.
+		{"Content-Type: text/plain\r\nContent-Length: 3\r\n\r\nfoo", noError},
+
+		// With a content type omitted, a sentinel error is reported.
+		{"Content-Length: 5\r\n\r\nabcde", func(err error) bool {
+			v, ok := err.(*ContentTypeMismatchError)
+			return ok && v.Got == "" && v.Want == "text/plain"
+		}},
+
+		// Other errors do not use this sentinel.
+		{"Nothing: nohow\r\n\r\nfailure\n", func(err error) bool {
+			_, isSentinel := err.(*ContentTypeMismatchError)
+			return err != nil && !isSentinel
+		}},
+	}
+	h := cli.(*hdr)
+	for _, test := range tests {
+		go func() {
+			if _, err := h.wc.Write([]byte(test.payload)); err != nil {
+				t.Errorf("Send %q failed: %v", test.payload, err)
+			}
+		}()
+		msg, err := srv.Recv()
+		if !test.ok(err) {
+			t.Errorf("Recv failed: %v\n >> %q", err, msg)
+		} else {
+			t.Logf("Recv OK: %q", msg)
+		}
 	}
 }
 
