@@ -168,6 +168,12 @@ func TestHeaderTypeMismatch(t *testing.T) {
 		{"Content-Type: text/plain\r\nContent-Length: 3\r\n\r\nfoo", noError},
 		{"Extra: ok\r\nContent-Length: 4\r\nContent-Type: text/plain\r\n\r\nquux", noError},
 
+		// With a content type provided, report an error if it doesn't match.
+		{"Content-Length: 2\r\nContent-Type: application/json\r\n\r\nno", func(err error) bool {
+			v, ok := err.(*ContentTypeMismatchError)
+			return ok && v.Got == "application/json" && v.Want == "text/plain"
+		}},
+
 		// With a content type omitted, a sentinel error is reported.
 		{"Content-Length: 5\r\n\r\nabcde", func(err error) bool {
 			v, ok := err.(*ContentTypeMismatchError)

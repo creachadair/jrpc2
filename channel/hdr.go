@@ -150,8 +150,9 @@ func (h *hdr) Recv() ([]byte, error) {
 // Close implements part of the Channel interface.
 func (h *hdr) Close() error { return h.wc.Close() }
 
-// Header returns a framing that behaves as StrictHeader, but filters out
-// content-type mismatches on received messages.
+// Header returns a framing that behaves as StrictHeader, but allows received
+// messages to omit the Content-Type header without error. An error will still
+// be reported if a content-type is set but does not match.
 func Header(mimeType string) Framing {
 	strict := StrictHeader(mimeType)
 	return func(r io.Reader, wc io.WriteCloser) Channel {
@@ -159,13 +160,13 @@ func Header(mimeType string) Framing {
 	}
 }
 
-// An opthdr is a wrapper around hdr that filters out ContentTypeMismatchError
-// when receiving messages.
+// An opthdr is a wrapper around hdr that filters out the error reported when
+// the inbound message does not specify a content-type.
 type opthdr struct{ *hdr }
 
 func (o opthdr) Recv() ([]byte, error) {
 	msg, err := o.hdr.Recv()
-	if _, ok := err.(*ContentTypeMismatchError); ok {
+	if v, ok := err.(*ContentTypeMismatchError); ok && v.Got == "" {
 		err = nil
 	}
 	return msg, err
