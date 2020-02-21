@@ -1,0 +1,32 @@
+name: Go presubmit
+on: [push]
+jobs:
+  build:
+    name: Presubmit
+    runs-on: ubuntu-latest
+    steps:
+    - name: Install Go 1.13
+      uses: actions/setup-go@v1
+      with:
+        go-version: 1.13
+      id: go
+    - name: Install staticcheck
+      env:
+        GO111MODULE: on
+        GOPROXY: https://proxy.golang.org
+      run: |
+        go get honnef.co/go/tools/cmd/staticcheck@2019.2.3
+
+    - uses: actions/checkout@v2
+
+    - name: Verify source format
+      run: |
+        /bin/sh -s -- gofmt -l -s ./...
+    - name: Fetch module dependencies
+      run: |
+        go mod download
+    - name: Run unit tests
+      run: go test -race -cpu=1,2 ./...
+    - name: Run staticcheck
+      run: |
+        ~/go/bin/staticcheck ./...
