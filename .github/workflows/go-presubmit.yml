@@ -1,11 +1,12 @@
 name: Go presubmit
+
 on:
   push:
     branches:
       - master
   pull_request:
-    branches:
-      -master
+    types: [open, edited, synchronize]
+
 jobs:
   build:
     name: Presubmit
