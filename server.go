@@ -27,6 +27,7 @@ type Server struct {
 	allow1  bool                // allow v1 requests with no version marker
 	allowP  bool                // allow server notifications to the client
 	log     logger              // write debug logs here
+	rpcLog  RPCLogger           // log RPC requests and responses here
 	dectx   decoder             // decode context from request
 	ckreq   verifier            // request checking hook
 	expctx  bool                // whether to expect request context
@@ -64,6 +65,7 @@ func NewServer(mux Assigner, opts *ServerOptions) *Server {
 		allow1:  opts.allowV1(),
 		allowP:  opts.allowPush(),
 		log:     opts.logger(),
+		rpcLog:  opts.rpcLog(),
 		dectx:   dc,
 		ckreq:   opts.checkRequest(),
 		expctx:  exp,
@@ -189,7 +191,7 @@ func (s *Server) dispatch(next jrequests, ch channel.Sender) func() error {
 	// Wait for all the handlers to return, then deliver any responses.
 	return func() error {
 		wg.Wait()
-		return s.deliver(tasks.responses(), ch, time.Since(start))
+		return s.deliver(tasks.responses(s.rpcLog), ch, time.Since(start))
 	}
 }
 
@@ -285,6 +287,7 @@ func (s *Server) invoke(base context.Context, h Handler, req *Request) (json.Raw
 	}
 	defer s.sem.Release(1)
 
+	s.rpcLog.LogRequest(ctx, req)
 	v, err := h.Handle(ctx, req)
 	if err != nil {
 		if req.IsNotification() {
@@ -540,7 +543,7 @@ type task struct {
 
 type tasks []*task
 
-func (ts tasks) responses() jresponses {
+func (ts tasks) responses(rpcLog RPCLogger) jresponses {
 	var rsps jresponses
 	for _, task := range ts {
 		if task.hreq.id == nil {
@@ -569,6 +572,11 @@ func (ts tasks) responses() jresponses {
 		} else {
 			rsp.E = &Error{code: code.InternalError, message: task.err.Error()}
 		}
+		rpcLog.LogResponse(task.ctx, &Response{
+			id:     string(rsp.ID),
+			err:    rsp.E,
+			result: rsp.R,
+		})
 		rsps = append(rsps, rsp)
 	}
 	return rsps

@@ -17,6 +17,10 @@ type ServerOptions struct {
 	// If not nil, send debug logs here.
 	Logger *log.Logger
 
+	// If not nil, the methods of this value are called to log each request
+	// received and each response or error returned.
+	RPCLog RPCLogger
+
 	// Instructs the server to tolerate requests that do not include the
 	// required "jsonrpc" version marker.
 	AllowV1 bool
@@ -112,6 +116,13 @@ func (s *ServerOptions) metrics() *metrics.M {
 	return s.Metrics
 }
 
+func (s *ServerOptions) rpcLog() RPCLogger {
+	if s == nil || s.RPCLog == nil {
+		return nullRPCLogger{}
+	}
+	return s.RPCLog
+}
+
 // ClientOptions control the behaviour of a client created by NewClient.
 // A nil *ClientOptions provides sensible defaults.
 type ClientOptions struct {
@@ -175,3 +186,20 @@ func (c *ClientOptions) handleNotification() func(*jresponse) bool {
 		return false
 	}
 }
+
+// An RPCLogger receives callbacks from a server to record the receipt of
+// requests and the delivery of responses. These callbacks are invoked
+// synchronously with the processing of the request.
+type RPCLogger interface {
+	// Called for each request received prior to invoking its handler.
+	LogRequest(ctx context.Context, req *Request)
+
+	// Called for each response produced by a handler. The inbound request can
+	// be recovered from the context using jrpc2.InboundRequest.
+	LogResponse(ctx context.Context, rsp *Response)
+}
+
+type nullRPCLogger struct{}
+
+func (nullRPCLogger) LogRequest(context.Context, *Request)   {}
+func (nullRPCLogger) LogResponse(context.Context, *Response) {}
