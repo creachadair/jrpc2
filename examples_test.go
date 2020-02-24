@@ -2,12 +2,14 @@ package jrpc2_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
 
 	"github.com/creachadair/jrpc2"
 	"github.com/creachadair/jrpc2/channel"
+	"github.com/creachadair/jrpc2/code"
 	"github.com/creachadair/jrpc2/handler"
 )
 
@@ -93,4 +95,51 @@ func ExampleClient_Batch() {
 	// Log: Sing it!
 	// len(rsps) = 1
 	// Response #1: Hello, world!
+}
+
+func ExampleRequest_UnmarshalParams() {
+	const msg = `{"jsonrpc":"2.0", "id":101, "method":"M", "params":{"a":1, "b":2, "c":3}}`
+
+	reqs, err := jrpc2.ParseRequests([]byte(msg))
+	if err != nil {
+		log.Fatalf("ParseRequests: %v", err)
+	}
+
+	var t, u struct {
+		A int `json:"a"`
+		B int `json:"b"`
+	}
+
+	// By default, unmarshaling prohibits unknown fields (here, "c").
+	err = reqs[0].UnmarshalParams(&t)
+	if code.FromError(err) != code.InvalidParams {
+		log.Fatalf("Expected invalid parameters, got: %v", err)
+	}
+
+	// Solution 1: Decode explicitly.
+	var tmp json.RawMessage
+	if err := reqs[0].UnmarshalParams(&tmp); err != nil {
+		log.Fatalf("UnmarshalParams: %v", err)
+	}
+	if err := json.Unmarshal(tmp, &t); err != nil {
+		log.Fatalf("Unmarshal: %v", err)
+	}
+	fmt.Printf("t.A=%d, t.B=%d\n", t.A, t.B)
+
+	// Solution 2: Provide a type (here, "lax") that implements json.Unmarshaler.
+	if err := reqs[0].UnmarshalParams((*lax)(&u)); err != nil {
+		log.Fatalf("UnmarshalParams: %v", err)
+	}
+	fmt.Printf("u.A=%d, u.B=%d\n", u.A, u.B)
+
+	// Output:
+	// t.A=1, t.B=2
+	// u.A=1, u.B=2
+}
+
+type lax struct{ A, B int }
+
+func (v *lax) UnmarshalJSON(bits []byte) error {
+	type T lax
+	return json.Unmarshal(bits, (*T)(v))
 }

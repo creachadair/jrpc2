@@ -3,10 +3,9 @@ package code
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"testing"
-
-	"golang.org/x/xerrors"
 )
 
 func TestRegistration(t *testing.T) {
@@ -43,11 +42,11 @@ func TestFromError(t *testing.T) {
 		{nil, NoError},
 		{testCoder(ParseError), ParseError},
 		{testCoder(InvalidRequest), InvalidRequest},
-		{xerrors.Errorf("wrapped parse error: %w", ParseError.Err()), ParseError},
+		{fmt.Errorf("wrapped parse error: %w", ParseError.Err()), ParseError},
 		{context.Canceled, Cancelled},
-		{xerrors.Errorf("wrapped cancellation: %w", context.Canceled), Cancelled},
+		{fmt.Errorf("wrapped cancellation: %w", context.Canceled), Cancelled},
 		{context.DeadlineExceeded, DeadlineExceeded},
-		{xerrors.Errorf("wrapped deadline: %w", context.DeadlineExceeded), DeadlineExceeded},
+		{fmt.Errorf("wrapped deadline: %w", context.DeadlineExceeded), DeadlineExceeded},
 		{errors.New("other"), SystemError},
 		{io.EOF, SystemError},
 	}
@@ -68,12 +67,12 @@ func TestCodeIs(t *testing.T) {
 		{0, nil, false},
 		{1, Code(1).Err(), true},
 		{2, Code(3).Err(), false},
-		{4, xerrors.Errorf("blah: %w", Code(4).Err()), true},
-		{5, xerrors.Errorf("nope: %w", Code(6).Err()), false},
+		{4, fmt.Errorf("blah: %w", Code(4).Err()), true},
+		{5, fmt.Errorf("nope: %w", Code(6).Err()), false},
 	}
 	for _, test := range tests {
 		cerr := test.code.Err()
-		got := xerrors.Is(test.err, cerr)
+		got := errors.Is(test.err, cerr)
 		if got != test.want {
 			t.Errorf("Is(%v, %v): got %v, want %v", test.err, cerr, got, test.want)
 		}
