@@ -206,7 +206,7 @@ func tprintf(msg string, args ...interface{}) {
 	if !*doTiming {
 		return
 	}
-	fmt.Fprint(os.Stderr, fmt.Sprintf(msg, args...))
+	fmt.Fprintf(os.Stderr, msg, args...)
 	if !strings.HasSuffix(msg, "\n") {
 		fmt.Fprintln(os.Stderr)
 	}
