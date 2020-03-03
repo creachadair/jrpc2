@@ -194,8 +194,9 @@ type RPCLogger interface {
 	// Called for each request received prior to invoking its handler.
 	LogRequest(ctx context.Context, req *Request)
 
-	// Called for each response produced by a handler. The inbound request can
-	// be recovered from the context using jrpc2.InboundRequest.
+	// Called for each response produced by a handler, immediately prior to
+	// sending it back to the client. The inbound request can be recovered from
+	// the context using jrpc2.InboundRequest.
 	LogResponse(ctx context.Context, rsp *Response)
 }
 
