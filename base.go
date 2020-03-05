@@ -87,6 +87,10 @@ func (r *Request) UnmarshalParams(v interface{}) error {
 	return nil
 }
 
+// ParamString returns the encoded request parameters of r as a string.
+// If r has no parameters, it returns "".
+func (r *Request) ParamString() string { return string(r.params) }
+
 // ErrInvalidVersion is returned by ParseRequests if one or more of the
 // requests in the input has a missing or invalid version marker.
 var ErrInvalidVersion = Errorf(code.InvalidRequest, "incorrect version marker")
@@ -149,6 +153,10 @@ func (r *Response) UnmarshalResult(v interface{}) error {
 	}
 	return json.Unmarshal(r.result, v)
 }
+
+// ResultString returns the encoded result message of r as a string.
+// If r has no result, for example if r is an error response, it returns "".
+func (r *Response) ResultString() string { return string(r.result) }
 
 // MarshalJSON converts the response to equivalent JSON.
 func (r *Response) MarshalJSON() ([]byte, error) {
