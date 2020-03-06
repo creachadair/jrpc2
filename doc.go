@@ -153,7 +153,7 @@ Services with Multiple Methods
 The examples above show a server with only one method using handler.New; you
 will often want to expose more than one. The handler.NewService function
 supports this by applying New to all the exported methods of a concrete value
-to produce a MapAssigner for those methods:
+to produce a handler.Map for those methods:
 
    type math struct{}
 
@@ -165,7 +165,7 @@ to produce a MapAssigner for those methods:
 This assigner maps the name "Add" to the Add method, and the name "Mul" to the
 Mul method, of the math value.
 
-This may be further combined with the ServiceMap type to allow different
+This may be further combined with the handler.Map type to allow different
 services to work together:
 
    type status struct{}
