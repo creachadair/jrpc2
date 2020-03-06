@@ -300,3 +300,42 @@ func (a Args) MarshalJSON() ([]byte, error) {
 	}
 	return json.Marshal([]interface{}(a))
 }
+
+// Obj is a wrapper that decodes object fields into concrete locations.
+//
+// Unmarshaling a JSON text into an Obj value v succeeds if the JSON encodes an
+// object, and unmarshaling the value for each key k of the object into v[k]
+// succeeds. If k does not exist in v, it is ignored.
+//
+// Usage example:
+//
+//    var x, y int
+//    var s string
+//
+//    if err := req.UnmarshalParams(handler.Obj{
+//       "left":  &x,
+//       "right": &x,
+//       "tag":   &s,
+//    }); err != nil {
+//       return nil, err
+//    }
+//    // do useful work with x, y, and s
+//
+type Obj map[string]interface{}
+
+// UnmarshalJSON supports JSON unmarshaling into o.
+func (o Obj) UnmarshalJSON(data []byte) error {
+	var base map[string]json.RawMessage
+	if err := json.Unmarshal(data, &base); err != nil {
+		return fmt.Errorf("decoding object: %v", err)
+	}
+	for key, val := range base {
+		arg, ok := o[key]
+		if !ok {
+			continue
+		} else if err := json.Unmarshal(val, arg); err != nil {
+			return fmt.Errorf("decoding %q: %v", key, err)
+		}
+	}
+	return nil
+}

@@ -216,6 +216,65 @@ func TestArgsMarshal(t *testing.T) {
 	}
 }
 
+func TestObjUnmarshal(t *testing.T) {
+	// N.B. Exported field names here to satisfy cmp.Diff.
+	type sub struct {
+		Foo string `json:"foo"`
+	}
+	type values struct {
+		Z int
+		S string
+		T sub
+		L []int
+	}
+	var v values
+
+	tests := []struct {
+		input string
+		obj   Obj
+		want  *values
+	}{
+		{"", nil, nil},                      // error: empty text
+		{"true", nil, nil},                  // error: not an object
+		{"[]", nil, nil},                    // error: not an object
+		{`{"x":true}`, Obj{"x": &v.S}, nil}, // error: wrong type
+
+		// Nothing to unpack, no place to put it.
+		{"{}", nil, &values{}},
+
+		// Ignore non-matching keys but keep matching ones.
+		{`{"apple":true, "laser":"sauce"}`, Obj{"laser": &v.S}, &values{S: "sauce"}},
+
+		// Assign to matching fields including compound types.
+		{`{"x": 25, "q": "snark", "sub": {"foo":"bark"}, "yawp": false, "#":[5,3,2,4,7]}`, Obj{
+			"x":   &v.Z,
+			"q":   &v.S,
+			"sub": &v.T,
+			"#":   &v.L,
+		}, &values{
+			Z: 25,
+			S: "snark",
+			T: sub{Foo: "bark"},
+			L: []int{5, 3, 2, 4, 7},
+		}},
+	}
+	for _, test := range tests {
+		v = values{} // reset
+
+		if err := json.Unmarshal([]byte(test.input), &test.obj); err != nil {
+			if test.want == nil {
+				t.Logf("Unmarshal: got expected error: %v", err)
+			} else {
+				t.Errorf("Unmarshal %q: %v", test.input, err)
+			}
+			continue
+		}
+		if diff := cmp.Diff(*test.want, v); diff != "" {
+			t.Errorf("Wrong values: (-want, +got)\n%s", diff)
+		}
+	}
+}
+
 func ExampleArgs_unmarshal() {
 	const input = `[25, "apple"]`
 
@@ -238,4 +297,21 @@ func ExampleArgs_marshal() {
 	fmt.Println(string(bits))
 	// Output:
 	// [1,"foo",false,null]
+}
+
+func ExampleObj_unmarshal() {
+	const input = `{"uid": 501, "name": "P. T. Barnum", "tags": [1, 3]}`
+
+	var uid int
+	var name string
+
+	if err := json.Unmarshal([]byte(input), &Obj{
+		"uid":  &uid,
+		"name": &name,
+	}); err != nil {
+		log.Fatalf("Decoding failed: %v", err)
+	}
+	fmt.Printf("uid=%d, name=%q\n", uid, name)
+	// Output:
+	// uid=501, name="P. T. Barnum"
 }
