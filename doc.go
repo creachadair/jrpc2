@@ -157,8 +157,8 @@ to produce a handler.Map for those methods:
 
    type math struct{}
 
-   func (math) Add(ctx context.Context, vals ...int) (int, error) { ... }
-   func (math) Mul(ctx context.Context, vals []int) (int, error) { ... }
+   func (math) Add(ctx context.Context, vals ...int) int { ... }
+   func (math) Mul(ctx context.Context, vals []int) int { ... }
 
    assigner := handler.NewService(math{})
 
