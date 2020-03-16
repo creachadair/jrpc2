@@ -12,6 +12,7 @@ import (
 // the name is unknown. The framing types currently understood are:
 //
 //    header:t -- corresponds to channel.Header(t)
+//    strict:t -- corresponds to channel.StrictHeader(t)
 //    line     -- corresponds to channel.Line
 //    lsp      -- corresponds to channel.LSP
 //    raw      -- corresponds to channel.RawJSON
@@ -20,6 +21,9 @@ import (
 func Framing(name string) channel.Framing {
 	if t := strings.TrimPrefix(name, "header:"); t != name {
 		return channel.Header(t)
+	}
+	if t := strings.TrimPrefix(name, "strict:"); t != name {
+		return channel.StrictHeader(t)
 	}
 	return framings[name]
 }
