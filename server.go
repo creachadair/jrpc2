@@ -16,6 +16,7 @@ import (
 )
 
 type logger = func(string, ...interface{})
+type onStopFunc = func(error)
 
 // A Server is a JSON-RPC 2.0 server. The server receives requests and sends
 // responses on a channel.Channel provided by the caller, and dispatches
@@ -28,6 +29,7 @@ type Server struct {
 	allowP  bool                // allow server notifications to the client
 	log     logger              // write debug logs here
 	rpcLog  RPCLogger           // log RPC requests and responses here
+	onStop  onStopFunc          // runs after server is stopped
 	dectx   decoder             // decode context from request
 	ckreq   verifier            // request checking hook
 	expctx  bool                // whether to expect request context
@@ -66,6 +68,7 @@ func NewServer(mux Assigner, opts *ServerOptions) *Server {
 		allowP:  opts.allowPush(),
 		log:     opts.logger(),
 		rpcLog:  opts.rpcLog(),
+		onStop:  opts.onStopFunc(),
 		dectx:   dc,
 		ckreq:   opts.checkRequest(),
 		expctx:  exp,
@@ -367,6 +370,9 @@ func (s *Server) Wait() error {
 	if s.inq.Len() != 0 {
 		panic("s.inq is not empty at shutdown")
 	}
+
+	s.onStop(s.err)
+
 	// Don't remark on a closed channel or EOF as a noteworthy failure.
 	if s.err == io.EOF || channel.IsErrClosing(s.err) || s.err == errServerStopped {
 		return nil

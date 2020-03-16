@@ -53,6 +53,10 @@ type ServerOptions struct {
 	// the request fails with that error without invoking the handler.
 	CheckRequest func(ctx context.Context, req *Request) error
 
+	// If set, this function is called after server is shut down
+	// to allow for any cleanup if server was not shut down explicitly via Stop()
+	OnStop onStopFunc
+
 	// If set, use this value to record server metrics. All servers created
 	// from the same options will share the same metrics collector.  If none is
 	// set, an empty collector will be created for each new server.
@@ -121,6 +125,13 @@ func (s *ServerOptions) rpcLog() RPCLogger {
 		return nullRPCLogger{}
 	}
 	return s.RPCLog
+}
+
+func (s *ServerOptions) onStopFunc() onStopFunc {
+	if s == nil || s.OnStop == nil {
+		return func(error) {}
+	}
+	return s.OnStop
 }
 
 // ClientOptions control the behaviour of a client created by NewClient.
