@@ -364,6 +364,12 @@ type ServerStatus struct {
 	Stopped bool  // reports whether Stop was called
 }
 
+// Success reports whether the server exited without error.
+func (s ServerStatus) Success() bool { return s.Err == nil }
+
+// Closed reports whether the server exited due to a channel close.
+func (s ServerStatus) Closed() bool { return s.Err == nil && !s.Stopped }
+
 // WaitStatus blocks until the server terminates, and returns the resulting
 // status. After WaitStatus returns, whether or not there was an error, it is
 // safe to call s.Start again to restart the server with a fresh channel.
