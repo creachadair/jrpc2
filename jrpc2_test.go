@@ -561,7 +561,7 @@ func TestOtherClient(t *testing.T) {
 
 		// Extra fields on an otherwise-correct request.
 		{`{"jsonrpc":"2.0","id": 7, "method": "Z", "params":[], "bogus":true}`,
-			`{"jsonrpc":"2.0","id":7,"error":{"code":-32600,"message":"extra fields in request"}}`},
+			`{"jsonrpc":"2.0","id":7,"error":{"code":-32600,"message":"extra fields in request","data":["bogus"]}}`},
 
 		// An empty batch request should report a single error object.
 		{`[]`, `{"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"empty request batch"}}`},
