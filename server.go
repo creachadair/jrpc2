@@ -360,15 +360,19 @@ func (s *Server) Stop() {
 
 // ServerStatus describes the status of a stopped server.
 type ServerStatus struct {
-	Err     error // the error that caused the server to stop (nil on success)
-	Stopped bool  // reports whether Stop was called
+	Err error // the error that caused the server to stop (nil on success)
+
+	stopped bool // whether Stop was called
 }
 
 // Success reports whether the server exited without error.
 func (s ServerStatus) Success() bool { return s.Err == nil }
 
+// Stopped reports whether the server exited due to Stop being called.
+func (s ServerStatus) Stopped() bool { return s.Err == nil && s.stopped }
+
 // Closed reports whether the server exited due to a channel close.
-func (s ServerStatus) Closed() bool { return s.Err == nil && !s.Stopped }
+func (s ServerStatus) Closed() bool { return s.Err == nil && !s.stopped }
 
 // WaitStatus blocks until the server terminates, and returns the resulting
 // status. After WaitStatus returns, whether or not there was an error, it is
@@ -384,7 +388,7 @@ func (s *Server) WaitStatus() ServerStatus {
 	if s.err == io.EOF || channel.IsErrClosing(s.err) || s.err == errServerStopped {
 		exitErr = nil
 	}
-	return ServerStatus{Err: exitErr, Stopped: s.err == errServerStopped}
+	return ServerStatus{Err: exitErr, stopped: s.err == errServerStopped}
 }
 
 // Wait blocks until the server terminates and returns the resulting error.
