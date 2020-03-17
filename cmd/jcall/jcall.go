@@ -31,7 +31,7 @@ var (
 	doHTTP      = flag.Bool("http", false, "Connect via HTTP (address is the endpoint URL)")
 	doNotify    = flag.Bool("notify", false, "Send a notification")
 	withContext = flag.Bool("c", false, "Send context with request")
-	chanFraming = flag.String("f", "raw", "Channel framing")
+	chanFraming = flag.String("f", envOrDefault("JCALL_FRAMING", "raw"), "Channel framing")
 	doBatch     = flag.Bool("batch", false, "Issue calls as a batch rather than sequentially")
 	doErrors    = flag.Bool("e", false, "Print error values to stdout")
 	doMulti     = flag.Bool("m", false, "Issue the same call repeatedly with different arguments")
@@ -57,12 +57,15 @@ The -f flag sets the framing discipline to use. The client must agree with the
 server in order for communication to work. The options are:
 
   header:<t> -- header-framed, content-type <t>
+  strict:<t> -- strict header-framed, content-type <t>
   line       -- byte-terminated, records end in LF (Unicode 10)
   lsp        -- header-framed, content-type application/vscode-jsonrpc (like LSP)
   raw        -- unframed, each message is a complete JSON value
   varint     -- length-prefixed, length is a binary varint
 
-See also: https://godoc.org/github.com/creachadair/jrpc2/channel
+See also: https://godoc.org/github.com/creachadair/jrpc2/channel.
+The default framing is read from the JCALL_FRAMING environment variable, if set.
+The -f flag overrides the environment.
 
 Options:
 `, filepath.Base(os.Args[0]))
@@ -286,4 +289,11 @@ func callStatus(err error) string {
 	default:
 		return "failed"
 	}
+}
+
+func envOrDefault(env, dflt string) string {
+	if s, ok := os.LookupEnv(env); ok {
+		return s
+	}
+	return dflt
 }

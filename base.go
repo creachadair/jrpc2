@@ -294,7 +294,7 @@ func (j *jrequest) parseJSON(data []byte) error {
 
 	// Report an error for extraneous fields.
 	if len(extra) != 0 {
-		j.fail(code.InvalidRequest, "extra fields in request")
+		j.err = DataErrorf(code.InvalidRequest, extra, "extra fields in request")
 	}
 	return nil
 }
