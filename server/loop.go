@@ -2,7 +2,6 @@
 package server
 
 import (
-	"io"
 	"net"
 	"sync"
 
@@ -50,7 +49,7 @@ func Loop(lst net.Listener, assigner jrpc2.Assigner, opts *LoopOptions) error {
 			defer wg.Done()
 			srv := pool.Get().(*jrpc2.Server).Start(ch)
 			defer pool.Put(srv)
-			if err := srv.Wait(); err != nil && err != io.EOF {
+			if err := srv.Wait(); err != nil {
 				log("Server exit: %v", err)
 			}
 		}()
