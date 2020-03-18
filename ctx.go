@@ -9,7 +9,7 @@ import (
 )
 
 // ServerMetrics returns the server metrics collector associated with the given
-// context, or nil if ctx doees not have a collector attached.  The context
+// context, or nil if ctx does not have a collector attached.  The context
 // passed to a handler by *jrpc2.Server will include this value.
 func ServerMetrics(ctx context.Context) *metrics.M {
 	return ctx.Value(serverKey{}).(*Server).metrics
