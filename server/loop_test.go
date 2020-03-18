@@ -48,7 +48,7 @@ func mustServe(t *testing.T, lst net.Listener) <-chan struct{} {
 				return "OK", nil
 			}),
 		}
-		if err := Loop(lst, service, &LoopOptions{
+		if err := Loop(lst, NewStatic(service), &LoopOptions{
 			Framing: newChan,
 		}); err != nil {
 			t.Errorf("Loop: unexpected failure: %v", err)
