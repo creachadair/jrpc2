@@ -41,6 +41,15 @@ func (c *Channel) Send(msg []byte) error {
 	if cli == nil {
 		return errors.New("channel is closed")
 	}
+
+	// Each Send starts a goroutine to wait for the corresponding reply from the
+	// HTTP server, and c.wg tracks these goroutines. Responses are delivered to
+	// the c.rsp channel without interpretation; error handling happens in Recv.
+	//
+	// The goroutine for a Send cannot exit until either a Recv occurs, or until
+	// the channel is closed (draining any further undelivered responses).  The
+	// caller should thus avoid calling Send a large number of times with no
+	// intervening Recv calls.
 	req, err := http.NewRequest("POST", c.url, bytes.NewReader(msg))
 	if err != nil {
 		return err
