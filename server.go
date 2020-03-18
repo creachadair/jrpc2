@@ -358,21 +358,42 @@ func (s *Server) Stop() {
 	s.stop(errServerStopped)
 }
 
-// Wait blocks until the connection terminates and returns the resulting error.
-// After Wait returns, whether or not there was an error, it is safe to call
-// s.Start again to restart the server with a fresh channel.
-func (s *Server) Wait() error {
+// ServerStatus describes the status of a stopped server.
+type ServerStatus struct {
+	Err error // the error that caused the server to stop (nil on success)
+
+	stopped bool // whether Stop was called
+}
+
+// Success reports whether the server exited without error.
+func (s ServerStatus) Success() bool { return s.Err == nil }
+
+// Stopped reports whether the server exited due to Stop being called.
+func (s ServerStatus) Stopped() bool { return s.Err == nil && s.stopped }
+
+// Closed reports whether the server exited due to a channel close.
+func (s ServerStatus) Closed() bool { return s.Err == nil && !s.stopped }
+
+// WaitStatus blocks until the server terminates, and returns the resulting
+// status. After WaitStatus returns, whether or not there was an error, it is
+// safe to call s.Start again to restart the server with a fresh channel.
+func (s *Server) WaitStatus() ServerStatus {
 	s.wg.Wait()
 	// Sanity check.
 	if s.inq.Len() != 0 {
 		panic("s.inq is not empty at shutdown")
 	}
+	exitErr := s.err
 	// Don't remark on a closed channel or EOF as a noteworthy failure.
 	if s.err == io.EOF || channel.IsErrClosing(s.err) || s.err == errServerStopped {
-		return nil
+		exitErr = nil
 	}
-	return s.err
+	return ServerStatus{Err: exitErr, stopped: s.err == errServerStopped}
 }
+
+// Wait blocks until the server terminates and returns the resulting error.
+// It is equivalent to s.WaitStatus().Err.
+func (s *Server) Wait() error { return s.WaitStatus().Err }
 
 // stop shuts down the connection and records err as its final state.  The
 // caller must hold s.mu. If multiple callers invoke stop, only the first will

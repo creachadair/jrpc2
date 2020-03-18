@@ -867,3 +867,49 @@ type assignFunc func(context.Context, string) jrpc2.Handler
 
 func (a assignFunc) Assign(ctx context.Context, m string) jrpc2.Handler { return a(ctx, m) }
 func (assignFunc) Names() []string                                      { return nil }
+
+func TestWaitStatus(t *testing.T) {
+	check := func(t *testing.T, stat jrpc2.ServerStatus, closed, stopped bool, wantErr error) {
+		t.Helper()
+		t.Logf("Server status: %+v", stat)
+		if got, want := stat.Success(), wantErr == nil; got != want {
+			t.Errorf("Status success: got %v, want %v", got, want)
+		}
+		if got := stat.Closed(); got != closed {
+			t.Errorf("Status closed: got %v, want %v", got, closed)
+		}
+		if got := stat.Stopped(); got != stopped {
+			t.Errorf("Status stopped: got %v, want %v", got, stopped)
+		}
+		if stat.Err != wantErr {
+			t.Errorf("Status error: got %v, want %v", stat.Err, wantErr)
+		}
+	}
+	t.Run("ChannelClosed", func(t *testing.T) {
+		loc := server.NewLocal(handler.Map{"OK": testOK}, nil)
+		loc.Client.Close()
+		check(t, loc.Server.WaitStatus(), true, false, nil)
+	})
+
+	t.Run("ServerStopped", func(t *testing.T) {
+		loc := server.NewLocal(handler.Map{"OK": testOK}, nil)
+		loc.Server.Stop()
+		check(t, loc.Server.WaitStatus(), false, true, nil)
+	})
+
+	t.Run("ChannelFailed", func(t *testing.T) {
+		wantErr := errors.New("failed")
+		ch := buggyChannel{data: "bogus", err: wantErr}
+		srv := jrpc2.NewServer(handler.Map{"OK": testOK}, nil).Start(ch)
+		check(t, srv.WaitStatus(), false, false, wantErr)
+	})
+}
+
+type buggyChannel struct {
+	data string
+	err  error
+}
+
+func (buggyChannel) Send([]byte) error       { panic("should not be called") }
+func (b buggyChannel) Recv() ([]byte, error) { return []byte(b.data), b.err }
+func (buggyChannel) Close() error            { return nil }
