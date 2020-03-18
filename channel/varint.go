@@ -47,7 +47,7 @@ func (v *varint) Recv() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	out := make([]byte, int(ln))
+	out := make([]byte, ln)
 	nr, err := io.ReadFull(v.rd, out)
 	return out[:nr], err
 }
