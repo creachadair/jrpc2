@@ -31,12 +31,9 @@ func NewStatic(assigner jrpc2.Assigner) func() Service {
 }
 
 // Loop obtains connections from lst and starts a server for each with the
-// given assigner and options, running in a new goroutine. If accept reports an
-// error, the loop will terminate and the error will be reported once all the
-// servers currently active have returned.
-//
-// While running, Loop maintains a pool of *jrpc2.Server values to reduce setup
-// and memory overhead. However, it does not rate-limit connections.
+// given service constructor and options, running in a new goroutine. If accept
+// reports an error, the loop will terminate and the error will be reported
+// once all the servers currently active have returned.
 //
 // TODO: Add options to support sensible rate-limitation.
 func Loop(lst net.Listener, newService func() Service, opts *LoopOptions) error {
