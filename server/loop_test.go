@@ -27,7 +27,6 @@ type testSession struct {
 	t     *testing.T
 	init  bool
 	nCall int
-	stat  jrpc2.ServerStatus
 }
 
 func newTestSession(t *testing.T) func() Service {
