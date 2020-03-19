@@ -15,6 +15,12 @@ import (
 
 var newChan = channel.Varint
 
+var testService = NewStatic(handler.Map{
+	"Test": handler.New(func(context.Context) (string, error) {
+		return "OK", nil
+	}),
+})
+
 func mustListen(t *testing.T) net.Listener {
 	t.Helper()
 
@@ -35,7 +41,7 @@ func mustDial(t *testing.T, addr string) *jrpc2.Client {
 	return jrpc2.NewClient(newChan(conn, conn), nil)
 }
 
-func mustServe(t *testing.T, lst net.Listener) <-chan struct{} {
+func mustServe(t *testing.T, lst net.Listener, newService func() Service) <-chan struct{} {
 	t.Helper()
 
 	sc := make(chan struct{})
@@ -43,12 +49,7 @@ func mustServe(t *testing.T, lst net.Listener) <-chan struct{} {
 		defer close(sc)
 		// Start a server loop to accept connections from the clients. This should
 		// exit cleanly once all the clients have finished and the listener closes.
-		service := handler.Map{
-			"Test": handler.New(func(context.Context) (string, error) {
-				return "OK", nil
-			}),
-		}
-		if err := Loop(lst, NewStatic(service), &LoopOptions{
+		if err := Loop(lst, newService, &LoopOptions{
 			Framing: newChan,
 		}); err != nil {
 			t.Errorf("Loop: unexpected failure: %v", err)
@@ -61,7 +62,7 @@ func mustServe(t *testing.T, lst net.Listener) <-chan struct{} {
 func TestSeq(t *testing.T) {
 	lst := mustListen(t)
 	addr := lst.Addr().String()
-	sc := mustServe(t, lst)
+	sc := mustServe(t, lst, testService)
 
 	for i := 0; i < 5; i++ {
 		cli := mustDial(t, addr)
@@ -82,7 +83,7 @@ func TestLoop(t *testing.T) {
 	lst := mustListen(t)
 	defer lst.Close()
 	addr := lst.Addr().String()
-	sc := mustServe(t, lst)
+	sc := mustServe(t, lst, testService)
 
 	// Start a bunch of clients, each of which will dial the server and make
 	// some calls at random intervals to tickle the race detector.
