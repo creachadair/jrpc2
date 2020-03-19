@@ -99,9 +99,9 @@ func main() {
 	}
 	log.Printf("Listening for connections at %s...", lst.Addr())
 
-	server.Loop(lst, handler.Map{
+	server.Loop(lst, server.NewStatic(handler.Map{
 		"Run": handler.New(Run),
-	}, &server.LoopOptions{
+	}), &server.LoopOptions{
 		ServerOptions: &jrpc2.ServerOptions{
 			AllowV1:       true,
 			Logger:        lw,
