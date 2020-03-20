@@ -22,6 +22,7 @@ func NewSimple(svc Service, opts *jrpc2.ServerOptions) *Simple {
 
 // Run starts a server on the given channel, and blocks until it returns.  The
 // server exit status is reported to the service, and the error value returned.
+// Once Run returns, it can be run again with a new channel.
 //
 // If the caller does not need the error value and does not want to wait for
 // the server to complete, call Run in a goroutine.
@@ -48,7 +49,8 @@ func (s *Simple) wait() error {
 
 // Stop shuts down the server instance, waits for it to complete, and reports
 // the result from its Wait method. It is safe to call Stop even if the server
-// is not running; it will report nil.
+// is not running; it will report nil. Once Stop returns it is safe to run the
+// server again with a new channel.
 func (s *Simple) Stop() error {
 	if s.server == nil {
 		return nil
