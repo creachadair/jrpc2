@@ -22,6 +22,9 @@ func NewSimple(svc Service, opts *jrpc2.ServerOptions) *Simple {
 
 // Run starts a server on the given channel, and blocks until it returns.  The
 // server exit status is reported to the service, and the error value returned.
+//
+// If the caller does not need the error value and does not want to wait for
+// the server to complete, call Run in a goroutine.
 func (s *Simple) Run(ch channel.Channel) error {
 	if s.server != nil {
 		return errors.New("server is already running")
