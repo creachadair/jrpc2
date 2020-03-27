@@ -1,0 +1,16 @@
+name: Index LSIF
+on:
+  push:
+    branches:
+      - master
+jobs:
+  index:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: Generate LSIF data
+        uses: sourcegraph/lsif-go-action@master
+      - name: Upload LSIF data to sourcegraph.com
+        uses: sourcegraph/lsif-upload-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
