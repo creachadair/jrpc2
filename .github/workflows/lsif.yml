@@ -3,8 +3,6 @@ on:
   push:
     branches:
       - master
-  pull_request:  # TODO: remove before merge
-    types: [ opened, synchronize ]
 jobs:
   index:
     runs-on: ubuntu-latest
