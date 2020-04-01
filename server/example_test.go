@@ -29,7 +29,9 @@ func ExampleNewLocal() {
 }
 
 // Service is a trivial service for testing purposes.
-type Service struct{}
+type Service struct {
+	done chan struct{}
+}
 
 func (Service) Assigner() (jrpc2.Assigner, error) {
 	fmt.Println("SERVICE STARTED")
@@ -39,19 +41,22 @@ func (Service) Assigner() (jrpc2.Assigner, error) {
 	})}, nil
 }
 
-func (Service) Finish(stat jrpc2.ServerStatus) {
+func (s Service) Finish(stat jrpc2.ServerStatus) {
 	fmt.Printf("SERVICE FINISHED err=%v\n", stat.Err)
+	close(s.done)
 }
 
 func ExampleNewSimple() {
+	done := make(chan struct{})
 	cch, sch := channel.Direct()
-	go server.NewSimple(Service{}, nil).Run(sch)
+	go server.NewSimple(Service{done}, nil).Run(sch)
 
 	cli := jrpc2.NewClient(cch, nil)
 	if _, err := cli.Call(context.Background(), "Hello", nil); err != nil {
 		log.Fatalf("Call failed: %v", err)
 	}
 	cli.Close()
+	<-done
 	// Output:
 	// SERVICE STARTED
 	// Hello human
