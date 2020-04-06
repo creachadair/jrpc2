@@ -142,6 +142,6 @@ func UnmarshalMetadata(ctx context.Context, meta interface{}) error {
 	return ErrNoMetadata
 }
 
-// ErrNoMetadata is returned by the Metadata function if the context does not
-// contain a metadata value.
+// ErrNoMetadata is returned by the UnmarshalMetadata function if the context
+// does not contain a metadata value.
 var ErrNoMetadata = errors.New("context metadata not present")

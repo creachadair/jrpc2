@@ -20,6 +20,7 @@ import (
 
 	"github.com/creachadair/jrpc2"
 	"github.com/creachadair/jrpc2/channel"
+	"github.com/creachadair/jrpc2/handler"
 )
 
 var serverAddr = flag.String("server", "", "Server address")
@@ -40,7 +41,7 @@ func stat(ctx context.Context, cli *jrpc2.Client) (result string, err error) {
 }
 
 func alert(ctx context.Context, cli *jrpc2.Client, msg string) error {
-	return cli.Notify(ctx, "Post.Alert", map[string]string{"message": msg})
+	return cli.Notify(ctx, "Post.Alert", handler.Obj{"message": msg})
 }
 
 type binarg struct{ X, Y int }
@@ -113,7 +114,7 @@ func main() {
 			y := rand.Intn(100)
 			specs = append(specs, jrpc2.Spec{
 				Method: "Math.Mul",
-				Params: struct{ X, Y int }{x, y},
+				Params: binarg{x, y},
 			})
 		}
 	}
@@ -139,7 +140,7 @@ func main() {
 			go func() {
 				defer wg.Done()
 				var result int
-				if err := cli.CallResult(ctx, "Math.Sub", struct{ X, Y int }{x, y}, &result); err != nil {
+				if err := cli.CallResult(ctx, "Math.Sub", binarg{x, y}, &result); err != nil {
 					log.Printf("Req (%d-%d) failed: %v", x, y, err)
 					return
 				}
