@@ -240,13 +240,17 @@ type jmessage struct {
 	V  string          `json:"jsonrpc"`      // must be Version
 	ID json.RawMessage `json:"id,omitempty"` // may be nil
 
-	// Inbound fields
+	// Fields belonging to request or notification objects
 	M string          `json:"method,omitempty"`
 	P json.RawMessage `json:"params,omitempty"` // may be nil
 
-	// Outbound fields
+	// Fields belonging to response or error objects
 	E *Error          `json:"error,omitempty"`  // set on error
 	R json.RawMessage `json:"result,omitempty"` // set on success
+
+	// N.B.: In a valid protocol message, M and P are mutually exclusive with E
+	// and R. Specifically, if M != "" then E and R must both be unset. This is
+	// checked during parsing.
 
 	batch bool  // this message was part of a batch
 	err   error // if not nil, this message is invalid and err is why
