@@ -173,13 +173,13 @@ func (c *ClientOptions) encodeContext() encoder {
 	return c.EncodeContext
 }
 
-func (c *ClientOptions) handleNotification() func(*jresponse) bool {
+func (c *ClientOptions) handleNotification() func(*jmessage) bool {
 	if c == nil || c.OnNotify == nil {
-		return func(*jresponse) bool { return false }
+		return func(*jmessage) bool { return false }
 	}
 	h := c.OnNotify
-	return func(req *jresponse) bool {
-		if req.isServerRequest() {
+	return func(req *jmessage) bool {
+		if req.isRequestOrNotification() {
 			h(&Request{method: req.M, params: req.P})
 			return true
 		}
