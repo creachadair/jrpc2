@@ -20,7 +20,7 @@ type Client struct {
 
 	log    func(string, ...interface{}) // write debug logs here
 	enctx  encoder
-	snote  func(*jresponse) bool
+	snote  func(*jmessage) bool
 	allow1 bool // tolerate v1 replies with no version marker
 	allowC bool // send rpc.cancel when a request context ends
 
@@ -63,10 +63,10 @@ func NewClient(ch channel.Channel, opts *ClientOptions) *Client {
 }
 
 // accept receives the next batch of responses from the server.  This may
-// either be a list or a single object, the decoder for jresponses knows how to
+// either be a list or a single object, the decoder for jmessages knows how to
 // handle both. The caller must not hold c.mu.
 func (c *Client) accept(ch channel.Receiver) error {
-	var in jresponses
+	var in jmessages
 	bits, err := ch.Recv()
 	if err == nil {
 		err = in.parseJSON(bits)
@@ -94,7 +94,7 @@ func (c *Client) accept(ch channel.Receiver) error {
 // we are under the lock, we do not wait for the pending receiver to pick up
 // the response; we just drop it in their channel.  The channel is buffered so
 // we don't need to rendezvous.
-func (c *Client) deliver(rsp *jresponse) {
+func (c *Client) deliver(rsp *jmessage) {
 	if id := string(fixID(rsp.ID)); id == "" {
 		if !c.snote(rsp) {
 			c.log("Discarding response without ID: %v", rsp)
@@ -103,7 +103,7 @@ func (c *Client) deliver(rsp *jresponse) {
 		c.log("Discarding response for unknown ID %q", id)
 	} else if !c.versionOK(rsp.V) {
 		delete(c.pending, id)
-		p.ch <- &jresponse{
+		p.ch <- &jmessage{
 			ID: rsp.ID,
 			E: &Error{
 				code:    code.InvalidRequest,
@@ -122,7 +122,7 @@ func (c *Client) deliver(rsp *jresponse) {
 
 // req constructs a fresh request for the specified method and parameters.
 // This does not transmit the request to the server; use c.send to do so.
-func (c *Client) req(ctx context.Context, method string, params interface{}) (*jrequest, error) {
+func (c *Client) req(ctx context.Context, method string, params interface{}) (*jmessage, error) {
 	bits, err := c.marshalParams(ctx, method, params)
 	if err != nil {
 		return nil, err
@@ -132,7 +132,7 @@ func (c *Client) req(ctx context.Context, method string, params interface{}) (*j
 	defer c.mu.Unlock()
 	id := json.RawMessage(strconv.FormatInt(c.nextID, 10))
 	c.nextID++
-	return &jrequest{
+	return &jmessage{
 		V:  Version,
 		ID: id,
 		M:  method,
@@ -141,12 +141,12 @@ func (c *Client) req(ctx context.Context, method string, params interface{}) (*j
 }
 
 // note constructs a notification request for the specified method and parameters.
-func (c *Client) note(ctx context.Context, method string, params interface{}) (*jrequest, error) {
+func (c *Client) note(ctx context.Context, method string, params interface{}) (*jmessage, error) {
 	bits, err := c.marshalParams(ctx, method, params)
 	if err != nil {
 		return nil, err
 	}
-	return &jrequest{V: Version, M: method, P: bits}, nil
+	return &jmessage{V: Version, M: method, P: bits}, nil
 }
 
 // send transmits the specified requests to the server and returns a slice of
@@ -157,7 +157,7 @@ func (c *Client) note(ctx context.Context, method string, params interface{}) (*
 // the requests are notifications, the slice will be empty.
 //
 // This method blocks until the entire batch of requests has been transmitted.
-func (c *Client) send(ctx context.Context, reqs jrequests) ([]*Response, error) {
+func (c *Client) send(ctx context.Context, reqs jmessages) ([]*Response, error) {
 	if len(reqs) == 0 {
 		return nil, errors.New("empty request batch")
 	}
@@ -228,7 +228,7 @@ func (c *Client) waitComplete(pctx context.Context, id string, p *Response) {
 		jerr = &Error{code: code.FromError(err), message: err.Error()}
 	}
 
-	p.ch <- &jresponse{
+	p.ch <- &jmessage{
 		ID: json.RawMessage(id),
 		E:  jerr,
 	}
@@ -260,7 +260,7 @@ func (c *Client) Call(ctx context.Context, method string, params interface{}) (*
 	if err != nil {
 		return nil, err
 	}
-	rsp, err := c.send(ctx, jrequests{req})
+	rsp, err := c.send(ctx, jmessages{req})
 	if err != nil {
 		return nil, err
 	}
@@ -296,7 +296,7 @@ func (c *Client) CallResult(ctx context.Context, method string, params, result i
 // Any error returned is from sending the batch; the caller must check each
 // response for errors from the server.
 func (c *Client) Batch(ctx context.Context, specs []Spec) ([]*Response, error) {
-	reqs := make(jrequests, len(specs))
+	reqs := make(jmessages, len(specs))
 	for i, spec := range specs {
 		if spec.Notify {
 			req, err := c.note(ctx, spec.Method, spec.Params)
@@ -335,7 +335,7 @@ func (c *Client) Notify(ctx context.Context, method string, params interface{}) 
 	if err != nil {
 		return err
 	}
-	_, err = c.send(ctx, jrequests{req})
+	_, err = c.send(ctx, jmessages{req})
 	return err
 }
 
@@ -407,7 +407,7 @@ func newPending(ctx context.Context, id string) (context.Context, *Response) {
 	// with the recipient.
 	pctx, cancel := context.WithCancel(ctx)
 	return pctx, &Response{
-		ch:     make(chan *jresponse, 1),
+		ch:     make(chan *jmessage, 1),
 		id:     id,
 		cancel: cancel,
 	}

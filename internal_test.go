@@ -182,7 +182,7 @@ func TestClientCancellation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("c.req(Hang) failed: %v", err)
 	}
-	rsps, err := c.send(ctx, jrequests{req})
+	rsps, err := c.send(ctx, jmessages{req})
 	if err != nil {
 		t.Fatalf("c.send(Hang) failed: %v", err)
 	}
