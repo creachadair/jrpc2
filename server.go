@@ -175,22 +175,31 @@ func (s *Server) dispatch(next jmessages, ch channel.Sender) func() error {
 	// Resolve all the task handlers or record errors.
 	start := time.Now()
 	tasks := s.checkAndAssign(next)
+
+	n := len(tasks)
+	last := tasks[n-1]
+
+	// If there are multiple tasks, start goroutines to handle all but the
+	// last. The last is handled directly, to avoid spinning up a separate
+	// goroutine for a single task.
 	var wg sync.WaitGroup
-	for _, t := range tasks {
+	for _, t := range tasks[:n-1] {
 		if t.err != nil {
 			continue // nothing to do here; this task has already failed
 		}
-		t := t
 		wg.Add(1)
-		go func() {
+		go func(t *task) {
 			defer wg.Done()
 			t.val, t.err = s.invoke(t.ctx, t.m, t.hreq)
-		}()
+		}(t)
 	}
 
 	// Wait for all the handlers to return, then deliver any responses.
 	return func() error {
 		wg.Wait()
+		if last.err == nil {
+			last.val, last.err = s.invoke(last.ctx, last.m, last.hreq)
+		}
 		return s.deliver(tasks.responses(s.rpcLog), ch, time.Since(start))
 	}
 }
