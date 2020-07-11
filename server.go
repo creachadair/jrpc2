@@ -37,6 +37,7 @@ type Server struct {
 
 	mu *sync.Mutex // protects the fields below
 
+	nbar sync.WaitGroup  // notification barrier (see the dispatch method)
 	err  error           // error from a previous operation
 	work *sync.Cond      // for signaling message availability
 	inq  *list.List      // inbound requests awaiting processing
@@ -171,35 +172,50 @@ func (s *Server) nextRequest() (func() error, error) {
 // dispatch constructs a function that invokes each of the specified tasks.
 // The caller must hold s.mu when calling dispatch, but the returned function
 // should be executed outside the lock to wait for the handlers to return.
+//
+// dispatch blocks until any notification received prior to this batch has
+// completed, to ensure that notifications are processed in a partial order
+// that respects order of receipt. Notifications within a batch are handled
+// concurrently.
 func (s *Server) dispatch(next jmessages, ch channel.Sender) func() error {
 	// Resolve all the task handlers or record errors.
 	start := time.Now()
 	tasks := s.checkAndAssign(next)
+	last := len(tasks) - 1
 
-	n := len(tasks)
-	last := tasks[n-1]
+	// s.nbar counts the number of notifications that have been issued and are
+	// not yet complete. Before issuing any tasks in this batch, wait for all
+	// such notifications to complete, and update the barrier with the number in
+	// this batch. This update must happen under s.mu, so that multiple batches
+	// do not race on Wait/Add.
+	s.nbar.Wait()
+	s.nbar.Add(tasks.numValidNotifications())
 
-	// If there are multiple tasks, start goroutines to handle all but the
-	// last. The last is handled directly, to avoid spinning up a separate
-	// goroutine for a single task.
-	var wg sync.WaitGroup
-	for _, t := range tasks[:n-1] {
-		if t.err != nil {
-			continue // nothing to do here; this task has already failed
-		}
-		wg.Add(1)
-		go func(t *task) {
-			defer wg.Done()
-			t.val, t.err = s.invoke(t.ctx, t.m, t.hreq)
-		}(t)
-	}
-
-	// Wait for all the handlers to return, then deliver any responses.
 	return func() error {
-		wg.Wait()
-		if last.err == nil {
-			last.val, last.err = s.invoke(last.ctx, last.m, last.hreq)
+		var wg sync.WaitGroup
+		for i, t := range tasks {
+			if t.err != nil {
+				continue // nothing to do here; this task has already failed
+			}
+			t := t
+
+			wg.Add(1)
+			run := func() {
+				defer wg.Done()
+				if t.hreq.IsNotification() {
+					defer s.nbar.Done()
+				}
+				t.val, t.err = s.invoke(t.ctx, t.m, t.hreq)
+			}
+			if i < last {
+				go run()
+			} else {
+				run()
+			}
 		}
+
+		// Wait for all the handlers to return, then deliver any responses.
+		wg.Wait()
 		return s.deliver(tasks.responses(s.rpcLog), ch, time.Since(start))
 	}
 }
@@ -421,7 +437,7 @@ func (s *Server) stop(err error) {
 	var keep jmessages
 	for cur := s.inq.Front(); cur != nil; cur = s.inq.Front() {
 		for _, req := range cur.Value.(jmessages) {
-			if req.ID == nil {
+			if req.isNotification() {
 				keep = append(keep, req)
 				s.log("Retaining notification %p", req)
 			} else {
@@ -612,4 +628,15 @@ func (ts tasks) responses(rpcLog RPCLogger) jmessages {
 		rsps = append(rsps, rsp)
 	}
 	return rsps
+}
+
+// numValidNotifications reports the number of elements in ts that are
+// syntactically valid notifications.
+func (ts tasks) numValidNotifications() (n int) {
+	for _, t := range ts {
+		if t.err == nil && t.hreq.IsNotification() {
+			n++
+		}
+	}
+	return
 }
