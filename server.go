@@ -433,7 +433,7 @@ func (s *Server) stop(err error) {
 	// Remove any pending requests from the queue, but retain notifications.
 	// The server will process pending notifications before giving up.
 	//
-	// TODO(@creachdair): We need better tests for this behaviour.
+	// TODO(@creachadair): We need better tests for this behaviour.
 	var keep jmessages
 	for cur := s.inq.Front(); cur != nil; cur = s.inq.Front() {
 		for _, req := range cur.Value.(jmessages) {
