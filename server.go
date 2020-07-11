@@ -24,7 +24,6 @@ type Server struct {
 	wg      sync.WaitGroup      // ready when workers are done at shutdown time
 	mux     Assigner            // associates method names with handlers
 	sem     *semaphore.Weighted // bounds concurrent execution (default 1)
-	nbar    sync.WaitGroup      // notification barrier (see the dispatch method)
 	allow1  bool                // allow v1 requests with no version marker
 	allowP  bool                // allow server notifications to the client
 	log     logger              // write debug logs here
@@ -38,6 +37,7 @@ type Server struct {
 
 	mu *sync.Mutex // protects the fields below
 
+	nbar sync.WaitGroup  // notification barrier (see the dispatch method)
 	err  error           // error from a previous operation
 	work *sync.Cond      // for signaling message availability
 	inq  *list.List      // inbound requests awaiting processing
