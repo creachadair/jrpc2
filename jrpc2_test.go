@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -217,6 +218,36 @@ func TestBatch(t *testing.T) {
 		if got != callTests[i].want {
 			t.Errorf("Response %d (%q): got %v, want %v", i+1, rsp.ID(), got, callTests[i].want)
 		}
+	}
+}
+
+// Verify that notifications respect order of arrival.
+func TestNotificationOrder(t *testing.T) {
+	var last int32
+
+	loc := server.NewLocal(handler.Map{
+		"Test": handler.New(func(_ context.Context, req *jrpc2.Request) error {
+			var seq int32
+			if err := req.UnmarshalParams(&handler.Args{&seq}); err != nil {
+				t.Errorf("Invalid test parameters: %v", err)
+				return err
+			}
+			if old := atomic.SwapInt32(&last, seq); old != seq-1 {
+				t.Errorf("Request out of sequence at #%d: got %d, want %d", seq, old, seq-1)
+			}
+			return nil
+		}),
+	}, &server.LocalOptions{
+		Server: &jrpc2.ServerOptions{Concurrency: 16},
+	})
+
+	for i := 1; i < 10; i++ {
+		if err := loc.Client.Notify(context.Background(), "Test", []int{i}); err != nil {
+			t.Errorf("Test notification failed: %v", err)
+		}
+	}
+	if err := loc.Close(); err != nil {
+		t.Logf("Warning: error at server exit: %v", err)
 	}
 }
 
