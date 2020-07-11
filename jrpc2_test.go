@@ -71,6 +71,14 @@ func (dummy) Ctx(ctx context.Context, req *jrpc2.Request) (int, error) {
 	return 1, nil
 }
 
+// Ping responds only to notifications.
+func (dummy) Ping(ctx context.Context, req *jrpc2.Request) error {
+	if !req.IsNotification() {
+		return errors.New("called Ping expecting a response")
+	}
+	return nil
+}
+
 // Unrelated should not be picked up by the server.
 func (dummy) Unrelated() string { return "ceci n'est pas une méthode" }
 
@@ -97,7 +105,9 @@ func TestMethodNames(t *testing.T) {
 	s := loc.Server
 
 	// Verify that the assigner got the names it was supposed to.
-	got, want := s.ServerInfo().Methods, []string{"Test.Add", "Test.Ctx", "Test.Max", "Test.Mul", "Test.Nil"}
+	got, want := s.ServerInfo().Methods, []string{
+		"Test.Add", "Test.Ctx", "Test.Max", "Test.Mul", "Test.Nil", "Test.Ping",
+	}
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("Wrong method names: (-want, +got)\n%s", diff)
 	}
@@ -174,9 +184,14 @@ func TestBatch(t *testing.T) {
 	ctx := context.Background()
 
 	// Verify that a batch request works.
-	specs := make([]jrpc2.Spec, len(callTests))
+	specs := make([]jrpc2.Spec, len(callTests)+1)
+	specs[0] = jrpc2.Spec{
+		Method: "Test.Ping",
+		Params: []string{"hey"},
+		Notify: true,
+	}
 	for i, test := range callTests {
-		specs[i] = jrpc2.Spec{
+		specs[i+1] = jrpc2.Spec{
 			Method: test.method,
 			Params: test.params,
 			Notify: false,
@@ -185,6 +200,9 @@ func TestBatch(t *testing.T) {
 	batch, err := c.Batch(ctx, specs)
 	if err != nil {
 		t.Fatalf("Batch failed: %v", err)
+	}
+	if len(batch) != len(callTests) {
+		t.Errorf("Wrong number of responses: got %d, want %d", len(batch), len(callTests))
 	}
 	for i, rsp := range batch {
 		if err := rsp.Error(); err != nil {
