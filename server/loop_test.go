@@ -35,7 +35,7 @@ func newTestSession(t *testing.T) func() Service {
 
 func (t *testSession) Assigner() (jrpc2.Assigner, error) {
 	if t.init {
-		t.t.Error("Service has already been initalized")
+		t.t.Error("Service has already been initialized")
 	}
 	t.init = true
 	return handler.Map{
