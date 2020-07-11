@@ -432,8 +432,10 @@ func (s *Server) stop(err error) {
 
 	// Remove any pending requests from the queue, but retain notifications.
 	// The server will process pending notifications before giving up.
-	for cur := s.inq.Front(); cur != nil; cur = cur.Next() {
-		var keep jmessages
+	//
+	// TODO(@creachdair): We need better tests for this behaviour.
+	var keep jmessages
+	for cur := s.inq.Front(); cur != nil; cur = s.inq.Front() {
 		for _, req := range cur.Value.(jmessages) {
 			if req.isNotification() {
 				keep = append(keep, req)
@@ -442,10 +444,10 @@ func (s *Server) stop(err error) {
 				s.cancel(string(req.ID))
 			}
 		}
-		if len(keep) != 0 {
-			s.inq.PushBack(keep)
-		}
 		s.inq.Remove(cur)
+	}
+	for _, elt := range keep {
+		s.inq.PushBack(jmessages{elt})
 	}
 	s.work.Broadcast()
 
