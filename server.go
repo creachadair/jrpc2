@@ -202,10 +202,10 @@ func (s *Server) dispatch(next jmessages, ch channel.Sender) func() error {
 			wg.Add(1)
 			run := func() {
 				defer wg.Done()
-				t.val, t.err = s.invoke(t.ctx, t.m, t.hreq)
 				if t.hreq.IsNotification() {
-					s.nbar.Done()
+					defer s.nbar.Done()
 				}
+				t.val, t.err = s.invoke(t.ctx, t.m, t.hreq)
 			}
 			if i < last {
 				go run()
