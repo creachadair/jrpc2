@@ -520,13 +520,13 @@ func TestServerInfo(t *testing.T) {
 			return true, nil
 		}),
 	}, nil)
-	defer loc.Close()
 	s, c := loc.Server, loc.Client
 
 	ctx := context.Background()
 	if _, err := c.Call(ctx, "Metricize", nil); err != nil {
 		t.Fatalf("Call(Metricize) failed: %v", err)
 	}
+	loc.Close()
 
 	info := s.ServerInfo()
 	tests := []struct {
