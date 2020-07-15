@@ -322,6 +322,9 @@ func (j *jmessage) parseJSON(data []byte) error {
 // isRequestOrNotification reports whether j is a request or notification.
 func (j *jmessage) isRequestOrNotification() bool { return j.E == nil && j.R == nil && j.M != "" }
 
+// isNotification reports whether j is a notification
+func (j *jmessage) isNotification() bool { return j.isRequestOrNotification() && fixID(j.ID) == nil }
+
 type jerror struct {
 	C int32           `json:"code"`
 	M string          `json:"message,omitempty"`

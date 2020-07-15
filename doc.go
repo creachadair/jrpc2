@@ -185,6 +185,21 @@ name on the first period ("."), and you may nest ServiceMaps more deeply if you
 require a more complex hierarchy.
 
 
+Concurrency
+
+A Server processes requests concurrently, up to the Concurrency limit given in
+its ServerOptions. Two requests (calls or notifications) are concurrent if they
+arrive as part of the same batch. In addition, two calls are concurrent if the
+time intervals between the arrival of the request objects and delivery of the
+response objects overlap.
+
+The server may issue concurrent requests to their handlers in any order.
+Otherwise, requests are processed in order of arrival. Notifications, in
+particular, can only be concurrent with other notifications in the same batch.
+This ensures a client that sends a notification can be sure its notification
+was fully processed before any subsequent calls are issued.
+
+
 Non-Standard Extension Methods
 
 By default a jrpc2.Server exports the following built-in non-standard extension
