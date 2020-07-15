@@ -38,7 +38,8 @@ type ServerOptions struct {
 	DisableBuiltin bool
 
 	// Allows up to the specified number of goroutines to execute concurrently
-	// in request handlers. A value less than 1 uses runtime.NumCPU().
+	// in request handlers. A value less than 1 uses runtime.NumCPU().  Note
+	// that this setting does not constrain order of issue.
 	Concurrency int
 
 	// If set, this function is called with the method name and encoded request
