@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -46,6 +47,11 @@ type Server struct {
 	// For each request ID currently in-flight, this map carries a cancel
 	// function attached to the context that was sent to the handler.
 	used map[string]context.CancelFunc
+
+	// For each push-call ID currently in flight, this map carries the response
+	// waiting for its reply.
+	call   map[string]*Response
+	callID int64
 }
 
 // NewServer returns a new unstarted server that will dispatch incoming
@@ -76,6 +82,8 @@ func NewServer(mux Assigner, opts *ServerOptions) *Server {
 		builtin: opts.allowBuiltin(),
 		inq:     list.New(),
 		used:    make(map[string]context.CancelFunc),
+		call:    make(map[string]*Response),
+		callID:  1,
 	}
 	s.work = sync.NewCond(s.mu)
 	return s
@@ -257,6 +265,12 @@ func (s *Server) checkAndAssign(next jmessages) tasks {
 			t.err = Errorf(code.InvalidRequest, "duplicate request id %q", id)
 		} else if !s.versionOK(req.V) {
 			t.err = ErrInvalidVersion
+		} else if !req.isRequestOrNotification() && s.call[id] != nil {
+			// This is a result or error for a pending push-call.
+			rsp := s.call[id]
+			delete(s.call, id)
+			rsp.ch <- req
+			continue // don't send a reply for this
 		} else if req.M == "" {
 			t.err = Errorf(code.InvalidRequest, "empty method name")
 		} else if s.setContext(t, id) {
@@ -349,30 +363,72 @@ func (s *Server) ServerInfo() *ServerInfo {
 // called after the client connection is closed, it returns ErrConnClosed.
 func (s *Server) Push(ctx context.Context, method string, params interface{}) error {
 	if !s.allowP {
-		return ErrNotifyUnsupported
+		return ErrPushUnsupported
 	}
+	_, err := s.pushReq(ctx, false /* no ID */, method, params)
+	return err
+}
+
+// Callback posts a server-side call to the client. This is a non-standard
+// extension of JSON-RPC, and may not be supported by all clients. Unless s was
+// constructed with the AllowPush option set true, this method will always
+// report an error (ErrPushUnsupported) without sending anything. If Callback
+// is called after the client connection is closed, it returns ErrConnClosed;
+// otherwise it blocks until a reply is received.
+func (s *Server) Callback(ctx context.Context, method string, params interface{}) (*Response, error) {
+	if !s.allowP {
+		return nil, ErrPushUnsupported
+	}
+	rsp, err := s.pushReq(ctx, true /* set ID */, method, params)
+	rsp.wait()
+	if err != nil {
+		return nil, err
+	} else if err := rsp.Error(); err != nil {
+		return nil, err
+	}
+	return rsp, nil
+}
+
+func (s *Server) pushReq(ctx context.Context, wantID bool, method string, params interface{}) (rsp *Response, _ error) {
 	var bits []byte
 	if params != nil {
 		v, err := json.Marshal(params)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		bits = v
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.ch == nil {
-		return ErrConnClosed
+		return nil, ErrConnClosed
 	}
-	s.log("Posting server notification %q %s", method, string(bits))
+
+	kind := "notification"
+	var jid json.RawMessage
+	if wantID {
+		kind = "call"
+		id := strconv.FormatInt(s.callID, 10)
+		s.callID++
+		jid = json.RawMessage(id)
+		rsp = &Response{
+			ch:     make(chan *jmessage, 1),
+			id:     id,
+			cancel: func() {},
+		}
+		s.call[id] = rsp
+	}
+
+	s.log("Posting server %s %q %s", kind, method, string(bits))
 	nw, err := encode(s.ch, jmessages{{
-		V: Version,
-		M: method,
-		P: bits,
+		V:  Version,
+		ID: jid,
+		M:  method,
+		P:  bits,
 	}})
 	s.metrics.CountAndSetMax("rpc.bytesWritten", int64(nw))
-	s.metrics.Count("rpc.notifications", 1)
-	return err
+	s.metrics.Count("rpc."+kind+"s", 1)
+	return rsp, err
 }
 
 // Stop shuts down the server. It is safe to call this method multiple times or
