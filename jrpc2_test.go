@@ -712,6 +712,51 @@ func TestServerNotify(t *testing.T) {
 	}
 }
 
+// Verify that server-side callbacks work.
+func TestServerCallback(t *testing.T) {
+	loc := server.NewLocal(handler.Map{
+		"CallMeMaybe": handler.New(func(ctx context.Context) error {
+			if rsp, err := jrpc2.ServerCallback(ctx, "succeed", nil); err != nil {
+				t.Errorf("Callback failed: %v", err)
+			} else {
+				t.Logf("Callback succeeded: %v", rsp.ResultString())
+			}
+
+			if rsp, err := jrpc2.ServerCallback(ctx, "fail", nil); err == nil {
+				t.Errorf("Callback did not fail: got %v, want error", rsp)
+			}
+			return nil
+		}),
+	}, &server.LocalOptions{
+		Server: &jrpc2.ServerOptions{AllowPush: true},
+		Client: &jrpc2.ClientOptions{
+			OnCallback: func(ctx context.Context, req *jrpc2.Request) (interface{}, error) {
+				t.Logf("OnCallback invoked for method %q", req.Method())
+				switch req.Method() {
+				case "succeed":
+					return true, nil
+				case "fail":
+					return false, errors.New("here is your requested error")
+				}
+				panic("broken test: you should not see this")
+			},
+		},
+	})
+	defer loc.Close()
+	s, c := loc.Server, loc.Client
+	ctx := context.Background()
+
+	// Post an explicit callback.
+	if _, err := s.Callback(ctx, "succeed", nil); err != nil {
+		t.Errorf("Callback explicit: unexpected error: %v", err)
+	}
+
+	// Call the method that posts a callback.
+	if _, err := c.Call(ctx, "CallMeMaybe", nil); err != nil {
+		t.Errorf("Call CallMeMaybe: unexpected error: %v", err)
+	}
+}
+
 // Verify that a server push after the client closes does not trigger a panic.
 func TestDeadServerPush(t *testing.T) {
 	loc := server.NewLocal(make(handler.Map), &server.LocalOptions{
