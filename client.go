@@ -18,9 +18,11 @@ import (
 type Client struct {
 	done chan struct{} // closed when the reader is done at shutdown time
 
-	log    func(string, ...interface{}) // write debug logs here
-	enctx  encoder
-	snote  func(*jmessage) bool
+	log   func(string, ...interface{}) // write debug logs here
+	enctx encoder
+	snote func(*jmessage) bool
+	scall func(*jmessage) ([]byte, error)
+
 	allow1 bool // tolerate v1 replies with no version marker
 	allowC bool // send rpc.cancel when a request context ends
 
@@ -40,6 +42,7 @@ func NewClient(ch channel.Channel, opts *ClientOptions) *Client {
 		allowC: opts.allowCancel(),
 		enctx:  opts.encodeContext(),
 		snote:  opts.handleNotification(),
+		scall:  opts.handleCallback(),
 
 		// Lock-protected fields
 		ch:      ch,
@@ -89,17 +92,35 @@ func (c *Client) accept(ch channel.Receiver) error {
 	return nil
 }
 
+// handleRequest handles a callback or notification from the server.  The
+// caller must hold c.mu, and this blocks until the handler completes.
+func (c *Client) handleRequest(rsp *jmessage) {
+	if rsp.isNotification() {
+		if !c.snote(rsp) {
+			c.log("Discarding notification: %v", rsp)
+		}
+	} else if c.scall == nil {
+		c.log("Discarding callback request: %v", rsp)
+	} else if bits, err := c.scall(rsp); err != nil {
+		c.log("Callback for %v failed: %v", rsp, err)
+	} else if err := c.ch.Send(bits); err != nil {
+		c.log("Sending reply for callback %v failed: %v", rsp, err)
+	}
+}
+
 // For each response, find the request pending on its ID and deliver it.  The
 // caller must hold c.mu.  Unknown response IDs are logged and discarded.  As
 // we are under the lock, we do not wait for the pending receiver to pick up
 // the response; we just drop it in their channel.  The channel is buffered so
 // we don't need to rendezvous.
 func (c *Client) deliver(rsp *jmessage) {
-	if id := string(fixID(rsp.ID)); id == "" {
-		if !c.snote(rsp) {
-			c.log("Discarding response without ID: %v", rsp)
-		}
-	} else if p := c.pending[id]; p == nil {
+	if rsp.isRequestOrNotification() {
+		c.handleRequest(rsp)
+		return
+	}
+
+	id := string(fixID(rsp.ID))
+	if p := c.pending[id]; p == nil {
 		c.log("Discarding response for unknown ID %q", id)
 	} else if !c.versionOK(rsp.V) {
 		delete(c.pending, id)

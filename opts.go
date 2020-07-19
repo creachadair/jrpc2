@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/creachadair/jrpc2/code"
 	"github.com/creachadair/jrpc2/metrics"
 )
 
@@ -150,6 +151,12 @@ type ClientOptions struct {
 	// most one invocation of the callback will be active at a time.
 	// Server notifications are a non-standard extension of JSON-RPC.
 	OnNotify func(*Request)
+
+	// If set, this function is called if a request is received from the server.
+	// If unset, server requests are logged and discarded. At most one
+	// invocation of this callback will be active at a time.
+	// Server callbacks are a non-standard extension of JSON-RPC.
+	OnCallback func(context.Context, *Request) (interface{}, error)
 }
 
 func (c *ClientOptions) logger() logger {
@@ -185,6 +192,36 @@ func (c *ClientOptions) handleNotification() func(*jmessage) bool {
 			return true
 		}
 		return false
+	}
+}
+
+func (c *ClientOptions) handleCallback() func(*jmessage) ([]byte, error) {
+	if c == nil || c.OnCallback == nil {
+		return nil
+	}
+	cb := c.OnCallback
+	return func(req *jmessage) ([]byte, error) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		rsp := &jmessage{V: Version, ID: req.ID}
+		v, err := cb(ctx, &Request{
+			id:     req.ID,
+			method: req.M,
+			params: req.P,
+		})
+		if err == nil {
+			rsp.R, err = json.Marshal(v)
+		}
+		if err != nil {
+			rsp.R = nil
+			if e, ok := err.(*Error); ok {
+				rsp.E = e
+			} else {
+				rsp.E = &Error{code: code.FromError(err), message: err.Error()}
+			}
+		}
+		return json.Marshal(rsp)
 	}
 }
 
