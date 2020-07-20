@@ -45,7 +45,7 @@ func PushNotify(ctx context.Context, method string, params interface{}) error {
 }
 
 // PushCall posts a server call to the client. If ctx does not contain a server
-// caller, this reports ErrPushUnsupported. The context passed to the ahndler
+// caller, this reports ErrPushUnsupported. The context passed to the handler
 // by *jrpc2.Server will support callbacks if the server was constructed with
 // the AllowPush option set true.
 //
