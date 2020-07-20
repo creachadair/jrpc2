@@ -361,7 +361,7 @@ func (s *Server) ServerInfo() *ServerInfo {
 // This is a non-standard extension of JSON-RPC, and may not be supported by
 // all clients.  Unless s was constructed with the AllowPush option set true,
 // this method will always report an error (ErrPushUnsupported) without sending
-// anything.  If Push is called after the client connection is closed, it
+// anything.  If Notify is called after the client connection is closed, it
 // returns ErrConnClosed.
 func (s *Server) Notify(ctx context.Context, method string, params interface{}) error {
 	if !s.allowP {
