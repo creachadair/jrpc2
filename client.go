@@ -94,6 +94,7 @@ func (c *Client) accept(ch channel.Receiver) error {
 
 // handleRequest handles a callback or notification from the server.  The
 // caller must hold c.mu, and this blocks until the handler completes.
+// Precondition: rsp is a request or notification, not a response or error.
 func (c *Client) handleRequest(rsp *jmessage) {
 	if rsp.isNotification() {
 		if c.snote == nil {

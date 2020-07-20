@@ -356,11 +356,13 @@ func (s *Server) ServerInfo() *ServerInfo {
 	return info
 }
 
-// Push posts a server-side notification to the client.  This is a non-standard
-// extension of JSON-RPC, and may not be supported by all clients.  Unless s
-// was constructed with the AllowPush option set true, this method will always
-// report an error (ErrNotifyUnsupported) without sending anything.  If Push is
-// called after the client connection is closed, it returns ErrConnClosed.
+// Push posts a single server-side notification to the client.
+//
+// This is a non-standard extension of JSON-RPC, and may not be supported by
+// all clients.  Unless s was constructed with the AllowPush option set true,
+// this method will always report an error (ErrNotifyUnsupported) without
+// sending anything.  If Push is called after the client connection is closed,
+// it returns ErrConnClosed.
 func (s *Server) Push(ctx context.Context, method string, params interface{}) error {
 	if !s.allowP {
 		return ErrPushUnsupported
@@ -369,12 +371,14 @@ func (s *Server) Push(ctx context.Context, method string, params interface{}) er
 	return err
 }
 
-// Callback posts a server-side call to the client. This is a non-standard
-// extension of JSON-RPC, and may not be supported by all clients. Unless s was
-// constructed with the AllowPush option set true, this method will always
-// report an error (ErrPushUnsupported) without sending anything. If Callback
-// is called after the client connection is closed, it returns ErrConnClosed;
-// otherwise it blocks until a reply is received.
+// Callback posts a single server-side call to the client. It blocks until a
+// reply is received or the client connection terminates.
+//
+// This is a non-standard extension of JSON-RPC, and may not be supported by
+// all clients. Unless s was constructed with the AllowPush option set true,
+// this method will always report an error (ErrPushUnsupported) without sending
+// anything. If Callback is called after the client connection is closed, it
+// returns ErrConnClosed; otherwise it blocks until a reply is received.
 func (s *Server) Callback(ctx context.Context, method string, params interface{}) (*Response, error) {
 	if !s.allowP {
 		return nil, ErrPushUnsupported
