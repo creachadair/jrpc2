@@ -428,7 +428,7 @@ func TestErrors(t *testing.T) {
 			return 17, jrpc2.DataErrorf(errCode, json.RawMessage(errData), errMessage)
 		}),
 		"Push": handler.New(func(ctx context.Context) (bool, error) {
-			return false, jrpc2.ServerNotify(ctx, "PushBack", nil)
+			return false, jrpc2.PushNotify(ctx, "PushBack", nil)
 		}),
 		"Code": handler.New(func(ctx context.Context) error {
 			return code.Code(12345).Err()
@@ -664,7 +664,7 @@ func TestOtherClient(t *testing.T) {
 }
 
 // Verify that server-side push notifications work.
-func TestServerNotify(t *testing.T) {
+func TestPushNotify(t *testing.T) {
 	// Set up a server and client with server-side notification support.  Here
 	// we're just capturing the name of the notification method, as a sign we
 	// got the right thing.
@@ -673,8 +673,8 @@ func TestServerNotify(t *testing.T) {
 		"NoteMe": handler.New(func(ctx context.Context) (bool, error) {
 			// When this method is called, it posts a notification back to the
 			// client before returning.
-			if err := jrpc2.ServerNotify(ctx, "method", nil); err != nil {
-				t.Errorf("ServerNotify unexpectedly failed: %v", err)
+			if err := jrpc2.PushNotify(ctx, "method", nil); err != nil {
+				t.Errorf("PushNotify unexpectedly failed: %v", err)
 				return false, err
 			}
 			return true, nil
@@ -713,16 +713,16 @@ func TestServerNotify(t *testing.T) {
 }
 
 // Verify that server-side callbacks work.
-func TestServerCallback(t *testing.T) {
+func TestPushCall(t *testing.T) {
 	loc := server.NewLocal(handler.Map{
 		"CallMeMaybe": handler.New(func(ctx context.Context) error {
-			if rsp, err := jrpc2.ServerCallback(ctx, "succeed", nil); err != nil {
+			if rsp, err := jrpc2.PushCall(ctx, "succeed", nil); err != nil {
 				t.Errorf("Callback failed: %v", err)
 			} else {
 				t.Logf("Callback succeeded: %v", rsp.ResultString())
 			}
 
-			if rsp, err := jrpc2.ServerCallback(ctx, "fail", nil); err == nil {
+			if rsp, err := jrpc2.PushCall(ctx, "fail", nil); err == nil {
 				t.Errorf("Callback did not fail: got %v, want error", rsp)
 			}
 			return nil

@@ -32,11 +32,11 @@ func InboundRequest(ctx context.Context) *Request {
 
 type inboundRequestKey struct{}
 
-// ServerNotify posts a server notification to the client. If ctx does not
+// PushNotify posts a server notification to the client. If ctx does not
 // contain a server notifier, this reports ErrPushUnsupported. The context
 // passed to the handler by *jrpc2.Server will support notifications if the
 // server was constructed with the AllowPush option set true.
-func ServerNotify(ctx context.Context, method string, params interface{}) error {
+func PushNotify(ctx context.Context, method string, params interface{}) error {
 	s := ctx.Value(serverKey{}).(*Server)
 	if !s.allowP {
 		return ErrPushUnsupported
@@ -44,14 +44,14 @@ func ServerNotify(ctx context.Context, method string, params interface{}) error 
 	return s.Notify(ctx, method, params)
 }
 
-// ServerCallback posts a server call to the client. If ctx does not contain a
-// server caller, this reports ErrPushUnsupported. The context passed to the
-// ahndler by *jrpc2.Server will support callbacks if the server was
-// constructed with the AllowPush option set true.
+// PushCall posts a server call to the client. If ctx does not contain a server
+// caller, this reports ErrPushUnsupported. The context passed to the ahndler
+// by *jrpc2.Server will support callbacks if the server was constructed with
+// the AllowPush option set true.
 //
 // A successful callback reports a nil error and a non-nil response. Errors
 // returned by the client have concrete type *jrpc2.Error.
-func ServerCallback(ctx context.Context, method string, params interface{}) (*Response, error) {
+func PushCall(ctx context.Context, method string, params interface{}) (*Response, error) {
 	s := ctx.Value(serverKey{}).(*Server)
 	if !s.allowP {
 		return nil, ErrPushUnsupported
@@ -69,6 +69,6 @@ func CancelRequest(ctx context.Context, id string) {
 
 type serverKey struct{}
 
-// ErrPushUnsupported is returned by ServerPush and ServerCall if server pushes
+// ErrPushUnsupported is returned by PushNotify and PushCall if server pushes
 // are not enabled in the specified context.
 var ErrPushUnsupported = errors.New("server push is not enabled")
