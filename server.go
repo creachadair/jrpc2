@@ -384,10 +384,11 @@ func (s *Server) Callback(ctx context.Context, method string, params interface{}
 		return nil, ErrPushUnsupported
 	}
 	rsp, err := s.pushReq(ctx, true /* set ID */, method, params)
-	rsp.wait()
 	if err != nil {
 		return nil, err
-	} else if err := rsp.Error(); err != nil {
+	}
+	rsp.wait()
+	if err := rsp.Error(); err != nil {
 		return nil, filterError(err)
 	}
 	return rsp, nil
