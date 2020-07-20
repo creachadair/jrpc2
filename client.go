@@ -94,20 +94,20 @@ func (c *Client) accept(ch channel.Receiver) error {
 
 // handleRequest handles a callback or notification from the server.  The
 // caller must hold c.mu, and this blocks until the handler completes.
-// Precondition: rsp is a request or notification, not a response or error.
-func (c *Client) handleRequest(rsp *jmessage) {
-	if rsp.isNotification() {
+// Precondition: msg is a request or notification, not a response or error.
+func (c *Client) handleRequest(msg *jmessage) {
+	if msg.isNotification() {
 		if c.snote == nil {
-			c.log("Discarding notification: %v", rsp)
+			c.log("Discarding notification: %v", msg)
 		} else {
-			c.snote(rsp)
+			c.snote(msg)
 		}
 	} else if c.scall == nil {
-		c.log("Discarding callback request: %v", rsp)
-	} else if bits, err := c.scall(rsp); err != nil {
-		c.log("Callback for %v failed: %v", rsp, err)
+		c.log("Discarding callback request: %v", msg)
+	} else if bits, err := c.scall(msg); err != nil {
+		c.log("Callback for %v failed: %v", msg, err)
 	} else if err := c.ch.Send(bits); err != nil {
-		c.log("Sending reply for callback %v failed: %v", rsp, err)
+		c.log("Sending reply for callback %v failed: %v", msg, err)
 	}
 }
 
