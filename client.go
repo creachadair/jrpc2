@@ -20,7 +20,7 @@ type Client struct {
 
 	log   func(string, ...interface{}) // write debug logs here
 	enctx encoder
-	snote func(*jmessage) bool
+	snote func(*jmessage)
 	scall func(*jmessage) ([]byte, error)
 
 	allow1 bool // tolerate v1 replies with no version marker
@@ -96,8 +96,10 @@ func (c *Client) accept(ch channel.Receiver) error {
 // caller must hold c.mu, and this blocks until the handler completes.
 func (c *Client) handleRequest(rsp *jmessage) {
 	if rsp.isNotification() {
-		if !c.snote(rsp) {
+		if c.snote == nil {
 			c.log("Discarding notification: %v", rsp)
+		} else {
+			c.snote(rsp)
 		}
 	} else if c.scall == nil {
 		c.log("Discarding callback request: %v", rsp)

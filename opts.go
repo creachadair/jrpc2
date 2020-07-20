@@ -181,18 +181,12 @@ func (c *ClientOptions) encodeContext() encoder {
 	return c.EncodeContext
 }
 
-func (c *ClientOptions) handleNotification() func(*jmessage) bool {
+func (c *ClientOptions) handleNotification() func(*jmessage) {
 	if c == nil || c.OnNotify == nil {
-		return func(*jmessage) bool { return false }
+		return nil
 	}
 	h := c.OnNotify
-	return func(req *jmessage) bool {
-		if req.isRequestOrNotification() {
-			h(&Request{method: req.M, params: req.P})
-			return true
-		}
-		return false
-	}
+	return func(req *jmessage) { h(&Request{method: req.M, params: req.P}) }
 }
 
 func (c *ClientOptions) handleCallback() func(*jmessage) ([]byte, error) {
