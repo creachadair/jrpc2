@@ -388,7 +388,7 @@ func (s *Server) Callback(ctx context.Context, method string, params interface{}
 	if err != nil {
 		return nil, err
 	} else if err := rsp.Error(); err != nil {
-		return nil, err
+		return nil, filterError(err)
 	}
 	return rsp, nil
 }

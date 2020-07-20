@@ -391,3 +391,15 @@ func isServiceName(s string) bool {
 func isNull(msg json.RawMessage) bool {
 	return len(msg) == 4 && msg[0] == 'n' && msg[1] == 'u' && msg[2] == 'l' && msg[3] == 'l'
 }
+
+// filterError filters an *Error value to distinguish context errors from other
+// error types. If err is not a context error, it is returned unchanged.
+func filterError(e *Error) error {
+	switch e.code {
+	case code.Cancelled:
+		return context.Canceled
+	case code.DeadlineExceeded:
+		return context.DeadlineExceeded
+	}
+	return e
+}

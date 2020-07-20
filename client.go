@@ -290,14 +290,7 @@ func (c *Client) Call(ctx context.Context, method string, params interface{}) (*
 	}
 	rsp[0].wait()
 	if err := rsp[0].Error(); err != nil {
-		switch err.code {
-		case code.Cancelled:
-			return nil, context.Canceled
-		case code.DeadlineExceeded:
-			return nil, context.DeadlineExceeded
-		default:
-			return nil, err
-		}
+		return nil, filterError(err)
 	}
 	return rsp[0], nil
 }
