@@ -758,13 +758,17 @@ func TestServerCallback(t *testing.T) {
 }
 
 // Verify that a server push after the client closes does not trigger a panic.
-func TestDeadServerNotify(t *testing.T) {
+func TestDeadServerPush(t *testing.T) {
 	loc := server.NewLocal(make(handler.Map), &server.LocalOptions{
 		Server: &jrpc2.ServerOptions{AllowPush: true},
 	})
 	loc.Client.Close()
-	if err := loc.Server.Notify(context.Background(), "whatever", nil); err != jrpc2.ErrConnClosed {
+	ctx := context.Background()
+	if err := loc.Server.Notify(ctx, "whatever", nil); err != jrpc2.ErrConnClosed {
 		t.Errorf("Notify(whatever): got %v, want %v", err, jrpc2.ErrConnClosed)
+	}
+	if rsp, err := loc.Server.Callback(ctx, "whatever", nil); err != jrpc2.ErrConnClosed {
+		t.Errorf("Callback(whatever): got %v, %v; want %v", rsp, err, jrpc2.ErrConnClosed)
 	}
 }
 
