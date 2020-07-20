@@ -26,9 +26,9 @@ type ServerOptions struct {
 	// required "jsonrpc" version marker.
 	AllowV1 bool
 
-	// Instructs the server to allow server notifications, a non-standard
-	// extension to the JSON-RPC protocol. If AllowPush is false, the Push
-	// method of the server will report an error when called.
+	// Instructs the server to allow server callbacks and notifications, a
+	// non-standard extension to the JSON-RPC protocol. If AllowPush is false,
+	// the Push and Callback methods of the server will report errors if called.
 	AllowPush bool
 
 	// Instructs the server to disable the built-in rpc.* handler methods.
