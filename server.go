@@ -356,14 +356,14 @@ func (s *Server) ServerInfo() *ServerInfo {
 	return info
 }
 
-// Push posts a single server-side notification to the client.
+// Notify posts a single server-side notification to the client.
 //
 // This is a non-standard extension of JSON-RPC, and may not be supported by
 // all clients.  Unless s was constructed with the AllowPush option set true,
 // this method will always report an error (ErrPushUnsupported) without sending
 // anything.  If Push is called after the client connection is closed, it
 // returns ErrConnClosed.
-func (s *Server) Push(ctx context.Context, method string, params interface{}) error {
+func (s *Server) Notify(ctx context.Context, method string, params interface{}) error {
 	if !s.allowP {
 		return ErrPushUnsupported
 	}

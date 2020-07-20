@@ -32,16 +32,16 @@ func InboundRequest(ctx context.Context) *Request {
 
 type inboundRequestKey struct{}
 
-// ServerPush posts a server notification to the client. If ctx does not
+// ServerNotify posts a server notification to the client. If ctx does not
 // contain a server notifier, this reports ErrPushUnsupported. The context
 // passed to the handler by *jrpc2.Server will support notifications if the
 // server was constructed with the AllowPush option set true.
-func ServerPush(ctx context.Context, method string, params interface{}) error {
+func ServerNotify(ctx context.Context, method string, params interface{}) error {
 	s := ctx.Value(serverKey{}).(*Server)
 	if !s.allowP {
 		return ErrPushUnsupported
 	}
-	return s.Push(ctx, method, params)
+	return s.Notify(ctx, method, params)
 }
 
 // ServerCallback posts a server call to the client. If ctx does not contain a

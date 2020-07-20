@@ -428,7 +428,7 @@ func TestErrors(t *testing.T) {
 			return 17, jrpc2.DataErrorf(errCode, json.RawMessage(errData), errMessage)
 		}),
 		"Push": handler.New(func(ctx context.Context) (bool, error) {
-			return false, jrpc2.ServerPush(ctx, "PushBack", nil)
+			return false, jrpc2.ServerNotify(ctx, "PushBack", nil)
 		}),
 		"Code": handler.New(func(ctx context.Context) error {
 			return code.Code(12345).Err()
@@ -673,8 +673,8 @@ func TestServerNotify(t *testing.T) {
 		"NoteMe": handler.New(func(ctx context.Context) (bool, error) {
 			// When this method is called, it posts a notification back to the
 			// client before returning.
-			if err := jrpc2.ServerPush(ctx, "method", nil); err != nil {
-				t.Errorf("ServerPush unexpectedly failed: %v", err)
+			if err := jrpc2.ServerNotify(ctx, "method", nil); err != nil {
+				t.Errorf("ServerNotify unexpectedly failed: %v", err)
 				return false, err
 			}
 			return true, nil
@@ -694,7 +694,7 @@ func TestServerNotify(t *testing.T) {
 	ctx := context.Background()
 
 	// Post an explicit notification.
-	if err := s.Push(ctx, "explicit", nil); err != nil {
+	if err := s.Notify(ctx, "explicit", nil); err != nil {
 		t.Errorf("Notify explicit: unexpected error: %v", err)
 	}
 
@@ -758,13 +758,13 @@ func TestServerCallback(t *testing.T) {
 }
 
 // Verify that a server push after the client closes does not trigger a panic.
-func TestDeadServerPush(t *testing.T) {
+func TestDeadServerNotify(t *testing.T) {
 	loc := server.NewLocal(make(handler.Map), &server.LocalOptions{
 		Server: &jrpc2.ServerOptions{AllowPush: true},
 	})
 	loc.Client.Close()
-	if err := loc.Server.Push(context.Background(), "whatever", nil); err != jrpc2.ErrConnClosed {
-		t.Errorf("Push(whatever): got %v, want %v", err, jrpc2.ErrConnClosed)
+	if err := loc.Server.Notify(context.Background(), "whatever", nil); err != jrpc2.ErrConnClosed {
+		t.Errorf("Notify(whatever): got %v, want %v", err, jrpc2.ErrConnClosed)
 	}
 }
 
