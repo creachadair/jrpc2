@@ -63,7 +63,7 @@ func (math) Div(ctx context.Context, arg binop) (float64, error) {
 // Status simulates a health check, reporting "OK" to all callers.  It also
 // demonstrates the use of server-side push.
 func (math) Status(ctx context.Context) (string, error) {
-	if err := jrpc2.ServerPush(ctx, "pushback", []string{"hello, friend"}); err != nil {
+	if err := jrpc2.PushNotify(ctx, "pushback", []string{"hello, friend"}); err != nil {
 		return "BAD", err
 	}
 	return "OK", nil
