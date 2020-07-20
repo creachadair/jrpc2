@@ -92,7 +92,7 @@ func (c *Client) accept(ch channel.Receiver) error {
 	return nil
 }
 
-// handleRequest handles a callback or notification from the server.  The
+// handleRequest handles a callback or notification from the server. The
 // caller must hold c.mu, and this blocks until the handler completes.
 // Precondition: msg is a request or notification, not a response or error.
 func (c *Client) handleRequest(msg *jmessage) {
