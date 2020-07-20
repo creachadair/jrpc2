@@ -48,6 +48,9 @@ func ServerNotify(ctx context.Context, method string, params interface{}) error 
 // server caller, this reports ErrPushUnsupported. The context passed to the
 // ahndler by *jrpc2.Server will support callbacks if the server was
 // constructed with the AllowPush option set true.
+//
+// A successful callback reports a nil error and a non-nil response. Errors
+// returned by the client have concrete type *jrpc2.Error.
 func ServerCallback(ctx context.Context, method string, params interface{}) (*Response, error) {
 	s := ctx.Value(serverKey{}).(*Server)
 	if !s.allowP {

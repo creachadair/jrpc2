@@ -267,9 +267,9 @@ func (c *Client) waitComplete(pctx context.Context, id string, p *Response) {
 	}
 }
 
-// Call initiates a single request and blocks until the response returns.  If
-// err != nil then rsp == nil, which also means that if rsp != nil then the
-// request succeeded. Errors from the server have concrete type *jrpc2.Error.
+// Call initiates a single request and blocks until the response returns.
+// A successful call reports a nil error and a non-nil response. Errors from
+// the server have concrete type *jrpc2.Error.
 //
 //    rsp, err := c.Call(ctx, method, params)
 //    if e, ok := err.(*jrpc2.Error); ok {

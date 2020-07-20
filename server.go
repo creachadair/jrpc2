@@ -372,7 +372,9 @@ func (s *Server) Notify(ctx context.Context, method string, params interface{}) 
 }
 
 // Callback posts a single server-side call to the client. It blocks until a
-// reply is received or the client connection terminates.
+// reply is received or the client connection terminates.  A successful
+// callback reports a nil error and a non-nil response. Errors returned by the
+// client have concrete type *jrpc2.Error.
 //
 // This is a non-standard extension of JSON-RPC, and may not be supported by
 // all clients. Unless s was constructed with the AllowPush option set true,
