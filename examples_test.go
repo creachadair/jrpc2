@@ -31,6 +31,9 @@ func ExampleNewServer() {
 		"Hello": handler.New(func(ctx context.Context) string {
 			return "Hello, world!"
 		}),
+		"Echo": handler.New(func(_ context.Context, args []json.RawMessage) []json.RawMessage {
+			return args
+		}),
 		"Log": handler.New(func(ctx context.Context, msg Msg) (bool, error) {
 			fmt.Println("Log:", msg.Text)
 			return true, nil
@@ -43,6 +46,7 @@ func ExampleNewServer() {
 
 	fmt.Println(strings.Join(si.Methods, "\n"))
 	// Output:
+	// Echo
 	// Hello
 	// Log
 }
@@ -142,4 +146,21 @@ type lax struct{ A, B int }
 func (v *lax) UnmarshalJSON(bits []byte) error {
 	type T lax
 	return json.Unmarshal(bits, (*T)(v))
+}
+
+func ExampleResponse_UnmarshalResult() {
+	// var cli = jrpc2.NewClient(cch, nil)
+	rsp, err := cli.Call(ctx, "Echo", []string{"alpha", "oscar", "kilo"})
+	if err != nil {
+		log.Fatalf("Call: %v", err)
+	}
+	var r1, r3 string
+
+	// Note the nil, which tells the decoder to skip that argument.
+	if err := rsp.UnmarshalResult(&handler.Args{&r1, nil, &r3}); err != nil {
+		log.Fatalf("Decoding result: %v", err)
+	}
+	fmt.Println(r1, r3)
+	// Output:
+	// alpha kilo
 }
