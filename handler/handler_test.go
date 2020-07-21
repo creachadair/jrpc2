@@ -276,12 +276,12 @@ func TestObjUnmarshal(t *testing.T) {
 }
 
 func ExampleArgs_unmarshal() {
-	const input = `[25, "apple"]`
+	const input = `[25, false, "apple"]`
 
 	var count int
 	var item string
 
-	if err := json.Unmarshal([]byte(input), &Args{&count, &item}); err != nil {
+	if err := json.Unmarshal([]byte(input), &Args{&count, nil, &item}); err != nil {
 		log.Fatalf("Decoding failed: %v", err)
 	}
 	fmt.Printf("count=%d, item=%q\n", count, item)
