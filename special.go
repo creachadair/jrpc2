@@ -27,8 +27,6 @@ func (s *Server) handleRPCCancel(ctx context.Context, req *Request) (interface{}
 }
 
 func (s *Server) cancelRequests(ctx context.Context, ids []json.RawMessage) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
 	for _, raw := range ids {
 		id := string(raw)
 		if s.cancel(id) {
