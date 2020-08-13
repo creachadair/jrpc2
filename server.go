@@ -181,9 +181,9 @@ func (s *Server) nextRequest() (func() error, error) {
 // have completed, then adds n to the barrier.
 //
 // The caller must hold s.mu, but the lock is released during the wait to avert
-// a deadlock with handlers calling back into the server.  See the discussion
-// on #26.  s.nbar counts the number of notifications that have been issued and
-// are not yet complete.
+// a deadlock with handlers calling back into the server.  See #27.
+// s.nbar counts the number of notifications that have been issued and are not
+// yet complete.
 func (s *Server) waitForBarrier(n int) {
 	s.mu.Unlock()
 	defer s.mu.Lock()

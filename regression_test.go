@@ -11,7 +11,7 @@ import (
 )
 
 // Verify that a notification handler will not deadlock with the dispatcher on
-// holding the server lock. See: https://github.com/creachadair/jrpc2/pull/26
+// holding the server lock. See: https://github.com/creachadair/jrpc2/issues/27
 func TestLockRaceRegression(t *testing.T) {
 	hdone := make(chan struct{})
 	local := server.NewLocal(handler.Map{
