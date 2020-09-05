@@ -772,6 +772,59 @@ func TestDeadServerPush(t *testing.T) {
 	}
 }
 
+// Verify that an OnCancel hook is called when expected.
+func TestOnCancel(t *testing.T) {
+	// Set up a plumbing context so the test can unblock the server.
+	sctx, cancelServer := context.WithCancel(context.Background())
+	defer cancelServer()
+	loc := server.NewLocal(handler.Map{
+		// Block until explicitly cancelled, via sctx.
+		"Stall": handler.New(func(_ context.Context) error {
+			select {
+			case <-sctx.Done():
+				t.Logf("Server unblocked; returning err=%v", sctx.Err())
+				return sctx.Err()
+			case <-time.After(10 * time.Second): // shouldn't happen
+				t.Error("Timeout waiting for server cancellation")
+			}
+			return nil
+		}),
+
+		// Verify that setting the cancellation hook prevents the client from
+		// sending the default rpc.cancel notification.
+		"rpc.cancel": handler.New(func(ctx context.Context, ids json.RawMessage) error {
+			t.Errorf("Server-side rpc.cancel unexpectedly called: %s", string(ids))
+			return nil
+		}),
+	}, &server.LocalOptions{
+		// Disable handling of built-in methods on the server.
+		Server: &jrpc2.ServerOptions{DisableBuiltin: true},
+		Client: &jrpc2.ClientOptions{
+			OnCancel: func(cli *jrpc2.Client, rsp *jrpc2.Response) {
+				t.Logf("OnCancel hook called with id=%q, err=%v", rsp.ID(), rsp.Error())
+				cancelServer()
+			},
+		},
+	})
+
+	// Call a method on the server that will stall until cancelServer is called.
+	// On the client side, set a deadline to expire the caller's context.
+	// The cancellation hook will unblock the server.
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+
+	got, err := loc.Client.Call(ctx, "Stall", nil)
+	if err == nil {
+		t.Errorf("Stall: got %+v, wanted error", got)
+	} else if err != context.DeadlineExceeded {
+		t.Errorf("Stall: got error %v, want %v", err, context.Canceled)
+	}
+	loc.Client.Close()
+	if err := loc.Server.Wait(); err != nil {
+		t.Errorf("Server exit status: %v", err)
+	}
+}
+
 // Verify that the context encoding/decoding hooks work.
 func TestContextPlumbing(t *testing.T) {
 	want := time.Now().Add(10 * time.Second)

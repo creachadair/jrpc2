@@ -157,6 +157,15 @@ type ClientOptions struct {
 	// invocation of this callback will be active at a time.
 	// Server callbacks are a non-standard extension of JSON-RPC.
 	OnCallback func(context.Context, *Request) (interface{}, error)
+
+	// If set, this function is called when the context for a request terminates.
+	// The function receives the client and the response that was cancelled.
+	// The hook can obtain the ID and error value from rsp.
+	//
+	// Setting this option disables the default rpc.cancel handling (as DisableCancel).
+	// Note that the hook does not receive the client context, which has already
+	// ended by the time the hook is called.
+	OnCancel func(cli *Client, rsp *Response)
 }
 
 func (c *ClientOptions) logger() logger {
@@ -187,6 +196,13 @@ func (c *ClientOptions) handleNotification() func(*jmessage) {
 	}
 	h := c.OnNotify
 	return func(req *jmessage) { h(&Request{method: req.M, params: req.P}) }
+}
+
+func (c *ClientOptions) handleCancel() func(*Client, *Response) {
+	if c == nil {
+		return nil
+	}
+	return c.OnCancel
 }
 
 func (c *ClientOptions) handleCallback() func(*jmessage) ([]byte, error) {

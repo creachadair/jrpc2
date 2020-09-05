@@ -22,6 +22,7 @@ type Client struct {
 	enctx encoder
 	snote func(*jmessage)
 	scall func(*jmessage) ([]byte, error)
+	chook func(*Client, *Response)
 
 	allow1 bool // tolerate v1 replies with no version marker
 	allowC bool // send rpc.cancel when a request context ends
@@ -43,6 +44,7 @@ func NewClient(ch channel.Channel, opts *ClientOptions) *Client {
 		enctx:  opts.encodeContext(),
 		snote:  opts.handleNotification(),
 		scall:  opts.handleCallback(),
+		chook:  opts.handleCancel(),
 
 		// Lock-protected fields
 		ch:      ch,
@@ -215,7 +217,7 @@ func (c *Client) send(ctx context.Context, reqs jmessages) ([]*Response, error) 
 	}
 
 	// Now that we have sent them, record the requests for which we are awaiting
-	// replies. We do this after transsmission so that an error in sending does
+	// replies. We do this after transmission so that an error in sending does
 	// not leave us with zombies that will never be fulfilled.
 	for i, p := range pends {
 		c.pending[p.id] = p
@@ -259,7 +261,13 @@ func (c *Client) waitComplete(pctx context.Context, id string, p *Response) {
 
 	// Inform the server, best effort only. N.B. Use a background context here,
 	// as the original context has ended by the time we get here.
-	if c.allowC {
+	if c.chook != nil {
+		cleanup = func() {
+			p.wait() // ensure the response has settled
+			c.log("Calling OnCancel for id %q", id)
+			c.chook(c, p)
+		}
+	} else if c.allowC {
 		cleanup = func() {
 			c.log("Sending rpc.cancel for id %q to the server", id)
 			c.Notify(context.Background(), rpcCancel, []json.RawMessage{json.RawMessage(id)})
