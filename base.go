@@ -167,7 +167,7 @@ func (r *Response) MarshalJSON() ([]byte, error) {
 	})
 }
 
-// wait blocks until p is complete. It is safe to call this multiple times and
+// wait blocks until r is complete. It is safe to call this multiple times and
 // from concurrent goroutines.
 func (r *Response) wait() {
 	raw, ok := <-r.ch
