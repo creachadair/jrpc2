@@ -59,9 +59,9 @@ func PushCall(ctx context.Context, method string, params interface{}) (*Response
 	return s.Callback(ctx, method, params)
 }
 
-// CancelRequest requests the cancellation of the pending or in-flight request
-// with the specified ID.  If no request exists with that ID, this is a no-op
-// without error.
+// CancelRequest requests the server associated with ctx to cancel the pending
+// or in-flight request with the specified ID.  If no request exists with that
+// ID, this is a no-op without error.
 func CancelRequest(ctx context.Context, id string) {
 	s := ctx.Value(serverKey{}).(*Server)
 	s.cancelRequests(ctx, []json.RawMessage{json.RawMessage(id)})
