@@ -1,5 +1,7 @@
 # jrpc2
 
+A gratuitous change, do not merge.
+
 [![GoDoc](https://img.shields.io/static/v1?label=godoc&message=reference&color=blue)](https://pkg.go.dev/github.com/creachadair/jrpc2)
 [![Go Report Card](https://goreportcard.com/badge/github.com/creachadair/jrpc2)](https://goreportcard.com/report/github.com/creachadair/jrpc2)
 
