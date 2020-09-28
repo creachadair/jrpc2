@@ -403,3 +403,19 @@ func filterError(e *Error) error {
 	}
 	return e
 }
+
+// NonStrict wraps a value v so that it can be unmarshaled from JSON without
+// checking for unknown fields. The v provided must itself be a valud argument
+// to json.Unmarshal.
+//
+// This can be used to unmarshal request parameters with unknown fields, for
+// example:
+//
+//       var obj RequestType
+//       err := req.UnmarshalParams(jrpc2.NonStrict(&obj))
+//
+func NonStrict(v interface{}) json.Unmarshaler { return &nonStrict{v: v} }
+
+type nonStrict struct{ v interface{} }
+
+func (n nonStrict) UnmarshalJSON(data []byte) error { return json.Unmarshal(data, n.v) }
