@@ -120,32 +120,23 @@ func ExampleRequest_UnmarshalParams() {
 		log.Fatalf("Expected invalid parameters, got: %v", err)
 	}
 
-	// Solution 1: Decode explicitly.
-	var tmp json.RawMessage
-	if err := reqs[0].UnmarshalParams(&tmp); err != nil {
+	// Solution 1: Decode with jrpc2.NonStrict.
+	if err := reqs[0].UnmarshalParams(jrpc2.NonStrict(&t)); err != nil {
 		log.Fatalf("UnmarshalParams: %v", err)
-	}
-	if err := json.Unmarshal(tmp, &t); err != nil {
-		log.Fatalf("Unmarshal: %v", err)
 	}
 	fmt.Printf("t.A=%d, t.B=%d\n", t.A, t.B)
 
-	// Solution 2: Provide a type (here, "lax") that implements json.Unmarshaler.
-	if err := reqs[0].UnmarshalParams((*lax)(&u)); err != nil {
-		log.Fatalf("UnmarshalParams: %v", err)
+	// Solution 2: Unmarshal as json.RawMessage and decode separately.
+	var tmp json.RawMessage
+	reqs[0].UnmarshalParams(&tmp) // cannot fail
+	if err := json.Unmarshal(tmp, &u); err != nil {
+		log.Fatalf("Unmarhsal: %v", err)
 	}
 	fmt.Printf("u.A=%d, u.B=%d\n", u.A, u.B)
 
 	// Output:
 	// t.A=1, t.B=2
 	// u.A=1, u.B=2
-}
-
-type lax struct{ A, B int }
-
-func (v *lax) UnmarshalJSON(bits []byte) error {
-	type T lax
-	return json.Unmarshal(bits, (*T)(v))
 }
 
 func ExampleResponse_UnmarshalResult() {
