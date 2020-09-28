@@ -74,8 +74,13 @@ func (r *Request) HasParams() bool { return len(r.params) != 0 }
 // type. The caller may override this, either by implementing json.Unmarshaler
 // on the concrete type of v, or by unmarshaling into a json.RawMessage and
 // explicitly decoding the result. The examples demonstrate how to do this.
+//
+// If v has type *json.RawMessage, decoding cannot fail.
 func (r *Request) UnmarshalParams(v interface{}) error {
 	if len(r.params) == 0 {
+		return nil
+	} else if raw, ok := v.(*json.RawMessage); ok {
+		*raw = json.RawMessage(string(r.params)) // copy
 		return nil
 	}
 	dec := json.NewDecoder(bytes.NewReader(r.params))
