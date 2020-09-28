@@ -62,7 +62,10 @@ implementation of this example can found in cmd/examples/adder/adder.go:
 
     $ go run cmd/examples/adder/adder.go
 
-You can interact with this server by typing JSON-RPC requests on stdin.
+You can interact with this server by typing JSON-RPC requests on stdin, such as
+for example:
+
+   {"jsonrpc":"2.0", "id":1, "method":"Add", "params":[1, 3, 5, 7]}
 
 
 Clients
