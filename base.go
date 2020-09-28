@@ -71,9 +71,10 @@ func (r *Request) HasParams() bool { return len(r.params) != 0 }
 // an InvalidParams error.
 //
 // By default, unknown keys are disallowed when unmarshaling into a v of struct
-// type. The caller may override this, either by implementing json.Unmarshaler
-// on the concrete type of v, or by unmarshaling into a json.RawMessage and
-// explicitly decoding the result. The examples demonstrate how to do this.
+// type. The caller may override this using jrpc2.NonStrict, by implementing
+// json.Unmarshaler on the concrete type of v, or by unmarshaling into a
+// json.RawMessage and separately decoding the result. The examples demonstrate
+// how to do this.
 //
 // If v has type *json.RawMessage, decoding cannot fail.
 func (r *Request) UnmarshalParams(v interface{}) error {
