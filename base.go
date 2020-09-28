@@ -410,7 +410,7 @@ func filterError(e *Error) error {
 }
 
 // NonStrict wraps a value v so that it can be unmarshaled from JSON without
-// checking for unknown fields. The v provided must itself be a valud argument
+// checking for unknown fields. The v provided must itself be a valid argument
 // to json.Unmarshal.
 //
 // This can be used to unmarshal request parameters with unknown fields, for
