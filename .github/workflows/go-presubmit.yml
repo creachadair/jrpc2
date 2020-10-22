@@ -9,7 +9,7 @@ on:
 
 jobs:
   build:
-    name: Presubmit
+    name: Go presubmit
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -19,24 +19,5 @@ jobs:
       uses: actions/setup-go@v1
       with:
         go-version: ${{ matrix.go-version }}
-      id: go
-    - name: Install staticcheck
-      env:
-        GO111MODULE: on
-        GOPROXY: https://proxy.golang.org
-      run: |
-        go get honnef.co/go/tools/cmd/staticcheck@2020.1.6
-
     - uses: actions/checkout@v2
-
-    - name: Verify source format
-      run: |
-        /bin/sh -s -- gofmt -l -s ./...
-    - name: Fetch module dependencies
-      run: |
-        go mod download
-    - name: Run unit tests
-      run: go test -race -cpu=1,2 ./...
-    - name: Run staticcheck
-      run: |
-        ~/go/bin/staticcheck ./...
+    - uses: creachadair/go-presubmit-action@default
