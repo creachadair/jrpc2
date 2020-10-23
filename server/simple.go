@@ -27,7 +27,7 @@ func NewSimple(svc Service, opts *jrpc2.ServerOptions) *Simple {
 // If the caller does not need the error value and does not want to wait for
 // the server to complete, call Run in a goroutine.
 func (s *Simple) Run(ch channel.Channel) error {
-	if s.running { // sanity check
+	if s.running { // safety check
 		return errors.New("server is already running")
 	}
 	assigner, err := s.svc.Assigner()

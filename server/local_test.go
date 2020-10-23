@@ -26,7 +26,7 @@ func TestLocal(t *testing.T) {
 		t.Fatalf("rpc.serverInfo failed: %v", err)
 	}
 
-	// A couple sanity checks on the server info.
+	// A couple coherence checks on the server info.
 	if nr := si.Counter["rpc.requests"]; nr != 1 {
 		t.Errorf("rpc.serverInfo reports %d requests, wanted 1", nr)
 	}

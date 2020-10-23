@@ -476,7 +476,7 @@ func (s ServerStatus) Closed() bool { return s.Err == nil && !s.stopped }
 // safe to call s.Start again to restart the server with a fresh channel.
 func (s *Server) WaitStatus() ServerStatus {
 	s.wg.Wait()
-	// Sanity check.
+	// Postcondition check.
 	if s.inq.Len() != 0 {
 		panic("s.inq is not empty at shutdown")
 	}
@@ -529,7 +529,7 @@ func (s *Server) stop(err error) {
 		delete(s.used, id)
 	}
 
-	// Sanity check.
+	// Postcondition check.
 	if len(s.used) != 0 {
 		panic("s.used is not empty at shutdown")
 	}
