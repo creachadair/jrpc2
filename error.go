@@ -64,8 +64,8 @@ var errServerStopped = errors.New("the server has been stopped")
 // explicit call to its Close method.
 var errClientStopped = errors.New("the client has been stopped")
 
-// ErrConnClosed is returned by a server's Push method if it is called after
-// the client connection is closed.
+// ErrConnClosed is returned by a server's push-to-client methods if they are
+// called after the client connection is closed.
 var ErrConnClosed = errors.New("client connection is closed")
 
 // Errorf returns an error value of concrete type *Error having the specified
