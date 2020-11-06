@@ -76,21 +76,24 @@ func (c *Client) accept(ch channel.Receiver) error {
 	if err == nil {
 		err = in.parseJSON(bits)
 	}
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
 	if err != nil {
 		if !isUninteresting(err) {
 			c.log("Decoding error: %v", err)
 		}
+		c.mu.Lock()
 		c.stop(err)
+		c.mu.Unlock()
 		return err
 	}
 
 	c.log("Received %d responses", len(in))
-	for _, rsp := range in {
-		c.deliver(rsp)
-	}
+	go func() {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+		for _, rsp := range in {
+			c.deliver(rsp)
+		}
+	}()
 	return nil
 }
 
