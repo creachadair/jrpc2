@@ -38,8 +38,8 @@ func (m Map) Names() []string { return stringset.FromKeys(m).Elements() }
 //
 // Example:
 //    m := handler.ServiceMap{
-//      "Foo": jrpc2.NewService(fooService),  // methods Foo.A, Foo.B, etc.
-//      "Bar": jrpc2.NewService(barService),  // methods Bar.A, Bar.B, etc.
+//      "Foo": handler.NewService(fooService),  // methods Foo.A, Foo.B, etc.
+//      "Bar": handler.NewService(barService),  // methods Bar.A, Bar.B, etc.
 //    }
 //
 type ServiceMap map[string]jrpc2.Assigner
