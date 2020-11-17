@@ -120,7 +120,7 @@ func ExampleRequest_UnmarshalParams() {
 		log.Fatalf("Expected invalid parameters, got: %v", err)
 	}
 
-	// Solution 1: Decode with jrpc2.NonStrict.
+	// Solution 1: Implement jrpc2.UnknownFielder.
 	if err := reqs[0].UnmarshalParams(jrpc2.NonStrict(&t)); err != nil {
 		log.Fatalf("UnmarshalParams: %v", err)
 	}

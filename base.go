@@ -71,10 +71,8 @@ func (r *Request) HasParams() bool { return len(r.params) != 0 }
 // an InvalidParams error.
 //
 // By default, unknown keys are disallowed when unmarshaling into a v of struct
-// type. The caller may override this using jrpc2.NonStrict, by implementing
-// json.Unmarshaler on the concrete type of v, or by unmarshaling into a
-// json.RawMessage and separately decoding the result. The examples demonstrate
-// how to do this.
+// type. This can be overridden by implementing an UnknownFields method that
+// returns true, on the concrete type of v.
 //
 // If v has type *json.RawMessage, decoding cannot fail.
 func (r *Request) UnmarshalParams(v interface{}) error {
@@ -85,7 +83,9 @@ func (r *Request) UnmarshalParams(v interface{}) error {
 		return nil
 	}
 	dec := json.NewDecoder(bytes.NewReader(r.params))
-	dec.DisallowUnknownFields()
+	if uf, ok := v.(UnknownFielder); !ok || !uf.UnknownFields() {
+		dec.DisallowUnknownFields()
+	}
 	if err := dec.Decode(v); err != nil {
 		return Errorf(code.InvalidParams, "invalid parameters: %v", err.Error())
 	}
@@ -410,18 +410,27 @@ func filterError(e *Error) error {
 	return e
 }
 
-// NonStrict wraps a value v so that it can be unmarshaled from JSON without
-// checking for unknown fields. The v provided must itself be a valid argument
-// to json.Unmarshal.
+// UnknownFielder is an optional interface that can be implemented by a
+// parameter type to allow control over whether unknown fields should be
+// allowed when unmarshaling from JSON.
 //
-// This can be used to unmarshal request parameters with unknown fields, for
-// example:
+// If a type does not implement this interface, unknown fields are disallowed.
+type UnknownFielder interface {
+	// Report whether unknown fields should be permitted when unmarshaling into
+	// the receiver.
+	UnknownFields() bool
+}
+
+// NonStrict wraps a value v so that it can be unmarshaled as a parameter value
+// from JSON without checking for unknown fields.
+//
+// For example:
 //
 //       var obj RequestType
 //       err := req.UnmarshalParams(jrpc2.NonStrict(&obj))
 //
-func NonStrict(v interface{}) json.Unmarshaler { return &nonStrict{v: v} }
+func NonStrict(v interface{}) interface{} { return &nonStrict{v: v} }
 
 type nonStrict struct{ v interface{} }
 
-func (n nonStrict) UnmarshalJSON(data []byte) error { return json.Unmarshal(data, n.v) }
+func (nonStrict) UnknownFields() bool { return true }
