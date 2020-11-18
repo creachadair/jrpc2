@@ -154,9 +154,20 @@ func (r *Response) Error() *Error { return r.err }
 // UnmarshalResult decodes the result message into v. If the request failed,
 // UnmarshalResult returns the *Error value that would also be returned by
 // r.Error(), and v is unmodified.
+//
+// By default, unknown object keys are ignored when unmarshaling into a v of
+// struct type. This can be overridden either by giving the type of v a custom
+// implementation of json.Unmarshaler, or implementing a DisallowUnknownFields
+// method. The jrpc2.StrictFields helper function adapts existing values to
+// this interface.
 func (r *Response) UnmarshalResult(v interface{}) error {
 	if r.err != nil {
 		return r.err
+	}
+	if _, ok := v.(strictFielder); ok {
+		dec := json.NewDecoder(bytes.NewReader(r.result))
+		dec.DisallowUnknownFields()
+		return dec.Decode(v)
 	}
 	return json.Unmarshal(r.result, v)
 }
