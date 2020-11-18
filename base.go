@@ -80,16 +80,18 @@ func (r *Request) HasParams() bool { return len(r.params) != 0 }
 func (r *Request) UnmarshalParams(v interface{}) error {
 	if len(r.params) == 0 {
 		return nil
-	} else if raw, ok := v.(*json.RawMessage); ok {
-		*raw = json.RawMessage(string(r.params)) // copy
-		return nil
 	}
-	if _, ok := v.(strictFielder); ok {
+	switch t := v.(type) {
+	case *json.RawMessage:
+		*t = json.RawMessage(string(r.params)) // copy
+		return nil
+	case strictFielder:
 		dec := json.NewDecoder(bytes.NewReader(r.params))
 		dec.DisallowUnknownFields()
 		if err := dec.Decode(v); err != nil {
 			return Errorf(code.InvalidParams, "invalid parameters: %v", err.Error())
 		}
+		return nil
 	}
 	return json.Unmarshal(r.params, v)
 }
@@ -164,7 +166,11 @@ func (r *Response) UnmarshalResult(v interface{}) error {
 	if r.err != nil {
 		return r.err
 	}
-	if _, ok := v.(strictFielder); ok {
+	switch t := v.(type) {
+	case *json.RawMessage:
+		*t = json.RawMessage(string(r.result)) // copy
+		return nil
+	case strictFielder:
 		dec := json.NewDecoder(bytes.NewReader(r.result))
 		dec.DisallowUnknownFields()
 		return dec.Decode(v)
