@@ -72,9 +72,9 @@ func (r *Request) HasParams() bool { return len(r.params) != 0 }
 //
 // By default, unknown object keys are ignored when unmarshaling into a v of
 // struct type. This can be overridden either by giving the type of v a custom
-// implementation of json.Unmarshaler, or by implementing the StrictFielder
-// interface. The jrpc2.StrictFields helper function adapts existing values to
-// the StrictFielder interface.
+// implementation of json.Unmarshaler, or implementing a DisallowUnknownFields
+// method. The jrpc2.StrictFields helper function adapts existing values to
+// this interface.
 //
 // If v has type *json.RawMessage, decoding cannot fail.
 func (r *Request) UnmarshalParams(v interface{}) error {
@@ -85,7 +85,7 @@ func (r *Request) UnmarshalParams(v interface{}) error {
 		return nil
 	}
 	dec := json.NewDecoder(bytes.NewReader(r.params))
-	if _, ok := v.(StrictFielder); ok {
+	if _, ok := v.(strictFielder); ok {
 		dec.DisallowUnknownFields()
 	}
 	if err := dec.Decode(v); err != nil {
@@ -412,15 +412,15 @@ func filterError(e *Error) error {
 	return e
 }
 
-// StrictFielder is an optional interface that can be implemented by a type to
+// strictFielder is an optional interface that can be implemented by a type to
 // reject unknown fields when unmarshaling from JSON.  If a type does not
 // implement this interface, unknown fields are ignored.
-type StrictFielder interface {
-	StrictFields()
+type strictFielder interface {
+	DisallowUnknownFields()
 }
 
-// StrictFields wraps a value v so that it can be unmarshaled as a parameter
-// value from JSON without checking for unknown fields.
+// StrictFields wraps a value v to implement the DisallowUnknownFields method,
+// requiring unknown fields to be rejected when unmarshaling from JSON.
 //
 // For example:
 //
@@ -431,4 +431,4 @@ func StrictFields(v interface{}) interface{} { return &strict{v: v} }
 
 type strict struct{ v interface{} }
 
-func (strict) StrictFields() {}
+func (strict) DisallowUnknownFields() {}
