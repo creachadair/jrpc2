@@ -1074,8 +1074,11 @@ func TestStrictFields(t *testing.T) {
 		B int    `json:"bravo"`
 		other
 	}
+	type result struct {
+		X string `json:"xray"`
+	}
 	loc := server.NewLocal(handler.Map{
-		"Test": handler.New(func(ctx context.Context, req *jrpc2.Request) error {
+		"Test": handler.New(func(ctx context.Context, req *jrpc2.Request) (interface{}, error) {
 			var ps, qs params
 
 			if err := req.UnmarshalParams(jrpc2.StrictFields(&ps)); err == nil {
@@ -1088,16 +1091,43 @@ func TestStrictFields(t *testing.T) {
 				t.Logf("Parameters OK: %+v", qs)
 			}
 
-			return nil
+			return map[string]string{
+				"xray":  "ok",
+				"gamma": "not ok",
+			}, nil
 		}),
 	}, nil)
 	defer loc.Close()
 
 	ctx := context.Background()
-	loc.Client.Call(ctx, "Test", handler.Obj{
+	req := handler.Obj{
 		"alpha":   "foo",
 		"bravo":   25,
 		"charlie": true, // exercise embedding
 		"delta":   31.5, // unknown field
+	}
+	t.Run("NonStrictResult", func(t *testing.T) {
+		rsp, err := loc.Client.Call(ctx, "Test", req)
+		if err != nil {
+			t.Fatalf("Call failed: %v", err)
+		}
+		var res result
+		if err := rsp.UnmarshalResult(&res); err != nil {
+			t.Errorf("UnmarshalResult: %v", err)
+		}
+		t.Logf("Result: %+v", res)
+	})
+
+	t.Run("StrictResult", func(t *testing.T) {
+		rsp, err := loc.Client.Call(ctx, "Test", req)
+		if err != nil {
+			t.Fatalf("Call failed: %v", err)
+		}
+		var res result
+		if err := rsp.UnmarshalResult(jrpc2.StrictFields(&res)); err == nil {
+			t.Errorf("UnmarshalResult: got %+v, want error", res)
+		} else {
+			t.Logf("UnmarshalResult: got expected error: %v", err)
+		}
 	})
 }
