@@ -84,14 +84,14 @@ func (r *Request) UnmarshalParams(v interface{}) error {
 		*raw = json.RawMessage(string(r.params)) // copy
 		return nil
 	}
-	dec := json.NewDecoder(bytes.NewReader(r.params))
 	if _, ok := v.(strictFielder); ok {
+		dec := json.NewDecoder(bytes.NewReader(r.params))
 		dec.DisallowUnknownFields()
+		if err := dec.Decode(v); err != nil {
+			return Errorf(code.InvalidParams, "invalid parameters: %v", err.Error())
+		}
 	}
-	if err := dec.Decode(v); err != nil {
-		return Errorf(code.InvalidParams, "invalid parameters: %v", err.Error())
-	}
-	return nil
+	return json.Unmarshal(r.params, v)
 }
 
 // ParamString returns the encoded request parameters of r as a string.
@@ -425,7 +425,7 @@ type strictFielder interface {
 // For example:
 //
 //       var obj RequestType
-//       err := req.UnmarshalParams(jrpc2.StrictFields(&obj))
+//       err := req.UnmarshalParams(jrpc2.StrictFields(&obj))`
 //
 func StrictFields(v interface{}) interface{} { return &strict{v: v} }
 
