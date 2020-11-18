@@ -70,26 +70,30 @@ func (r *Request) HasParams() bool { return len(r.params) != 0 }
 // parameters, it returns nil without modifying v. If r is invalid it returns
 // an InvalidParams error.
 //
-// By default, unknown keys are disallowed when unmarshaling into a v of struct
-// type. The caller may override this using jrpc2.NonStrict, by implementing
-// json.Unmarshaler on the concrete type of v, or by unmarshaling into a
-// json.RawMessage and separately decoding the result. The examples demonstrate
-// how to do this.
+// By default, unknown object keys are ignored when unmarshaling into a v of
+// struct type. This can be overridden either by giving the type of v a custom
+// implementation of json.Unmarshaler, or implementing a DisallowUnknownFields
+// method. The jrpc2.StrictFields helper function adapts existing values to
+// this interface.
 //
 // If v has type *json.RawMessage, decoding cannot fail.
 func (r *Request) UnmarshalParams(v interface{}) error {
 	if len(r.params) == 0 {
 		return nil
-	} else if raw, ok := v.(*json.RawMessage); ok {
-		*raw = json.RawMessage(string(r.params)) // copy
+	}
+	switch t := v.(type) {
+	case *json.RawMessage:
+		*t = json.RawMessage(string(r.params)) // copy
+		return nil
+	case strictFielder:
+		dec := json.NewDecoder(bytes.NewReader(r.params))
+		dec.DisallowUnknownFields()
+		if err := dec.Decode(v); err != nil {
+			return Errorf(code.InvalidParams, "invalid parameters: %v", err.Error())
+		}
 		return nil
 	}
-	dec := json.NewDecoder(bytes.NewReader(r.params))
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(v); err != nil {
-		return Errorf(code.InvalidParams, "invalid parameters: %v", err.Error())
-	}
-	return nil
+	return json.Unmarshal(r.params, v)
 }
 
 // ParamString returns the encoded request parameters of r as a string.
@@ -152,9 +156,24 @@ func (r *Response) Error() *Error { return r.err }
 // UnmarshalResult decodes the result message into v. If the request failed,
 // UnmarshalResult returns the *Error value that would also be returned by
 // r.Error(), and v is unmodified.
+//
+// By default, unknown object keys are ignored when unmarshaling into a v of
+// struct type. This can be overridden either by giving the type of v a custom
+// implementation of json.Unmarshaler, or implementing a DisallowUnknownFields
+// method. The jrpc2.StrictFields helper function adapts existing values to
+// this interface.
 func (r *Response) UnmarshalResult(v interface{}) error {
 	if r.err != nil {
 		return r.err
+	}
+	switch t := v.(type) {
+	case *json.RawMessage:
+		*t = json.RawMessage(string(r.result)) // copy
+		return nil
+	case strictFielder:
+		dec := json.NewDecoder(bytes.NewReader(r.result))
+		dec.DisallowUnknownFields()
+		return dec.Decode(v)
 	}
 	return json.Unmarshal(r.result, v)
 }
@@ -410,18 +429,23 @@ func filterError(e *Error) error {
 	return e
 }
 
-// NonStrict wraps a value v so that it can be unmarshaled from JSON without
-// checking for unknown fields. The v provided must itself be a valid argument
-// to json.Unmarshal.
+// strictFielder is an optional interface that can be implemented by a type to
+// reject unknown fields when unmarshaling from JSON.  If a type does not
+// implement this interface, unknown fields are ignored.
+type strictFielder interface {
+	DisallowUnknownFields()
+}
+
+// StrictFields wraps a value v to implement the DisallowUnknownFields method,
+// requiring unknown fields to be rejected when unmarshaling from JSON.
 //
-// This can be used to unmarshal request parameters with unknown fields, for
-// example:
+// For example:
 //
 //       var obj RequestType
-//       err := req.UnmarshalParams(jrpc2.NonStrict(&obj))
+//       err := req.UnmarshalParams(jrpc2.StrictFields(&obj))`
 //
-func NonStrict(v interface{}) json.Unmarshaler { return &nonStrict{v: v} }
+func StrictFields(v interface{}) interface{} { return &strict{v: v} }
 
-type nonStrict struct{ v interface{} }
+type strict struct{ v interface{} }
 
-func (n nonStrict) UnmarshalJSON(data []byte) error { return json.Unmarshal(data, n.v) }
+func (strict) DisallowUnknownFields() {}
