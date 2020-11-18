@@ -107,7 +107,7 @@ func TestUnmarshalParams(t *testing.T) {
 		{`{"jsonrpc":"2.0", "id":5, "method":"Z", "params":{"x":23, "y":true}}`,
 			xy{X: 23, Y: true}, `{"x":23, "y":true}`, code.NoError},
 		{`{"jsonrpc":"2.0", "id":6, "method":"Z", "params":{"x":23, "z":"wat"}}`,
-			xy{}, `{"x":23, "z":"wat"}`, code.InvalidParams},
+			xy{X: 23}, `{"x":23, "z":"wat"}`, code.NoError},
 	}
 	for _, test := range tests {
 		req, err := ParseRequests([]byte(test.input))

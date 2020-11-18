@@ -70,11 +70,11 @@ func (r *Request) HasParams() bool { return len(r.params) != 0 }
 // parameters, it returns nil without modifying v. If r is invalid it returns
 // an InvalidParams error.
 //
-// By default, unknown keys are disallowed when unmarshaling into a v of struct
-// type. This can be overridden by providing a custom implementation of
-// json.Unmarshaler, or by implementing an UnknownFields method that returns
-// true, on the concrete type of v. The jrpc2.NonStrict helper function adapts
-// existing values to the UnknownFielder interface.
+// By default, unknown object keys are ignored when unmarshaling into a v of
+// struct type. This can be overridden either by giving the type of v a custom
+// implementation of json.Unmarshaler, or by implementing the StrictFielder
+// interface. The jrpc2.StrictFields helper function adapts existing values to
+// the StrictFielder interface.
 //
 // If v has type *json.RawMessage, decoding cannot fail.
 func (r *Request) UnmarshalParams(v interface{}) error {
@@ -85,7 +85,7 @@ func (r *Request) UnmarshalParams(v interface{}) error {
 		return nil
 	}
 	dec := json.NewDecoder(bytes.NewReader(r.params))
-	if uf, ok := v.(UnknownFielder); !ok || !uf.UnknownFields() {
+	if _, ok := v.(StrictFielder); ok {
 		dec.DisallowUnknownFields()
 	}
 	if err := dec.Decode(v); err != nil {
@@ -412,27 +412,23 @@ func filterError(e *Error) error {
 	return e
 }
 
-// UnknownFielder is an optional interface that can be implemented by a
-// parameter type to allow control over whether unknown fields should be
-// allowed when unmarshaling from JSON.
-//
-// If a type does not implement this interface, unknown fields are disallowed.
-type UnknownFielder interface {
-	// Report whether unknown fields should be permitted when unmarshaling into
-	// the receiver.
-	UnknownFields() bool
+// StrictFielder is an optional interface that can be implemented by a type to
+// reject unknown fields when unmarshaling from JSON.  If a type does not
+// implement this interface, unknown fields are ignored.
+type StrictFielder interface {
+	StrictFields()
 }
 
-// NonStrict wraps a value v so that it can be unmarshaled as a parameter value
-// from JSON without checking for unknown fields.
+// StrictFields wraps a value v so that it can be unmarshaled as a parameter
+// value from JSON without checking for unknown fields.
 //
 // For example:
 //
 //       var obj RequestType
-//       err := req.UnmarshalParams(jrpc2.NonStrict(&obj))
+//       err := req.UnmarshalParams(jrpc2.StrictFields(&obj))
 //
-func NonStrict(v interface{}) interface{} { return &nonStrict{v: v} }
+func StrictFields(v interface{}) interface{} { return &strict{v: v} }
 
-type nonStrict struct{ v interface{} }
+type strict struct{ v interface{} }
 
-func (nonStrict) UnknownFields() bool { return true }
+func (strict) StrictFields() {}

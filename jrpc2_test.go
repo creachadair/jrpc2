@@ -1065,7 +1065,7 @@ func (buggyChannel) Send([]byte) error       { panic("should not be called") }
 func (b buggyChannel) Recv() ([]byte, error) { return []byte(b.data), b.err }
 func (buggyChannel) Close() error            { return nil }
 
-func TestNonStrict(t *testing.T) {
+func TestStrictFields(t *testing.T) {
 	type other struct {
 		C bool `json:"charlie"`
 	}
@@ -1078,12 +1078,12 @@ func TestNonStrict(t *testing.T) {
 		"Test": handler.New(func(ctx context.Context, req *jrpc2.Request) error {
 			var ps, qs params
 
-			if err := req.UnmarshalParams(&ps); err == nil {
+			if err := req.UnmarshalParams(jrpc2.StrictFields(&ps)); err == nil {
 				t.Errorf("Unmarshal strict: got %+v, want error", ps)
 			}
 
-			if err := req.UnmarshalParams(jrpc2.NonStrict(&qs)); err != nil {
-				t.Errorf("Unmarshal non-strict: unexpected error: %v", err)
+			if err := req.UnmarshalParams(&qs); err != nil {
+				t.Errorf("Unmarshal non-strict (default): unexpected error: %v", err)
 			} else {
 				t.Logf("Parameters OK: %+v", qs)
 			}

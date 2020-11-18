@@ -114,15 +114,15 @@ func ExampleRequest_UnmarshalParams() {
 		B int `json:"b"`
 	}
 
-	// By default, unmarshaling prohibits unknown fields (here, "c").
-	err = reqs[0].UnmarshalParams(&t)
-	if code.FromError(err) != code.InvalidParams {
-		log.Fatalf("Expected invalid parameters, got: %v", err)
+	// By default, unmarshaling ignores unknown fields (here, "c").
+	if err := reqs[0].UnmarshalParams(&t); err != nil {
+		log.Fatalf("UnmarshalParams: %v", err)
 	}
 
-	// Solution 1: Implement jrpc2.UnknownFielder.
-	if err := reqs[0].UnmarshalParams(jrpc2.NonStrict(&t)); err != nil {
-		log.Fatalf("UnmarshalParams: %v", err)
+	// Solution 1: Use the jrpc2.StrictFields helper.
+	err = reqs[0].UnmarshalParams(jrpc2.StrictFields(&t))
+	if code.FromError(err) != code.InvalidParams {
+		log.Fatalf("UnmarshalParams strict: %v", err)
 	}
 	fmt.Printf("t.A=%d, t.B=%d\n", t.A, t.B)
 
