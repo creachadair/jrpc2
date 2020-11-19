@@ -1100,17 +1100,17 @@ func TestStrictFields(t *testing.T) {
 	defer loc.Close()
 
 	ctx := context.Background()
-	req := handler.Obj{
+	rsp, err := loc.Client.Call(ctx, "Test", handler.Obj{
 		"alpha":   "foo",
 		"bravo":   25,
 		"charlie": true, // exercise embedding
 		"delta":   31.5, // unknown field
+	})
+	if err != nil {
+		t.Fatalf("Call failed: %v", err)
 	}
+
 	t.Run("NonStrictResult", func(t *testing.T) {
-		rsp, err := loc.Client.Call(ctx, "Test", req)
-		if err != nil {
-			t.Fatalf("Call failed: %v", err)
-		}
 		var res result
 		if err := rsp.UnmarshalResult(&res); err != nil {
 			t.Errorf("UnmarshalResult: %v", err)
@@ -1119,10 +1119,6 @@ func TestStrictFields(t *testing.T) {
 	})
 
 	t.Run("StrictResult", func(t *testing.T) {
-		rsp, err := loc.Client.Call(ctx, "Test", req)
-		if err != nil {
-			t.Fatalf("Call failed: %v", err)
-		}
 		var res result
 		if err := rsp.UnmarshalResult(jrpc2.StrictFields(&res)); err == nil {
 			t.Errorf("UnmarshalResult: got %+v, want error", res)
