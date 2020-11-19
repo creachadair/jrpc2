@@ -130,7 +130,7 @@ func ExampleRequest_UnmarshalParams() {
 	var tmp json.RawMessage
 	reqs[0].UnmarshalParams(&tmp) // cannot fail
 	if err := json.Unmarshal(tmp, &u); err != nil {
-		log.Fatalf("Unmarhsal: %v", err)
+		log.Fatalf("Unmarshal: %v", err)
 	}
 	fmt.Printf("u.A=%d, u.B=%d\n", u.A, u.B)
 
