@@ -43,10 +43,12 @@ Equipped with an Assigner we can now construct a Server:
 
    srv := jrpc2.NewServer(assigner, nil)  // nil for default options
 
-To serve requests, we need a channel.Channel. The channel package exports
-functions to adapt various input and output streams.  For this example, we'll
-use a channel that delimits messages by newlines, and communicates on os.Stdin
-and os.Stdout:
+To serve requests, we need a channel.Channel. Implementations of the Channel
+interface handle the framing, transmission, and receipt of JSON messages.  The
+channel package provides several common framing disciplines and functions to
+wrap them around various input and output streams.  For this example, we'll use
+a channel that delimits messages by newlines, and communicates on os.Stdin and
+os.Stdout:
 
    ch := channel.Line(os.Stdin, os.Stdout)
    srv.Start(ch)
