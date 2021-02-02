@@ -3,6 +3,7 @@
 package jhttp
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -25,6 +26,10 @@ import (
 // If the HTTP request method is not "POST", the bridge reports 405 (Method Not
 // Allowed). If the Content-Type is not application/json, the bridge reports
 // 415 (Unsupported Media Type).
+//
+// The bridge attaches the inbound HTTP request to the context passed to the
+// client, allowing an EncodeContext callback to retrieve state from the HTTP
+// headers. Use jhttp.HTTPRequest to retrieve the request from the context.
 type Bridge struct {
 	cli *jrpc2.Client
 }
@@ -82,7 +87,8 @@ func (b *Bridge) serveInternal(w http.ResponseWriter, req *http.Request) error {
 		}
 	}
 
-	rsps, err := b.cli.Batch(req.Context(), spec)
+	ctx := context.WithValue(req.Context(), httpReqKey{}, req)
+	rsps, err := b.cli.Batch(ctx, spec)
 	if err != nil {
 		return err
 	}
@@ -124,3 +130,15 @@ func (b *Bridge) Close() error { return b.cli.Close() }
 // safe for the caller to continue to use c concurrently with the bridge, as
 // long as it does not close the client.
 func NewBridge(c *jrpc2.Client) *Bridge { return &Bridge{cli: c} }
+
+type httpReqKey struct{}
+
+// HTTPRequest returns the HTTP request associated with ctx, or nil. The
+// context passed to the JSON-RPC client by the Bridge will contain this value.
+func HTTPRequest(ctx context.Context) *http.Request {
+	req, ok := ctx.Value(httpReqKey{}).(*http.Request)
+	if ok {
+		return req
+	}
+	return nil
+}

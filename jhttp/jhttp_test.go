@@ -3,6 +3,7 @@ package jhttp
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -21,7 +22,16 @@ func TestBridge(t *testing.T) {
 		"Test": handler.New(func(ctx context.Context, ss ...string) (string, error) {
 			return strings.Join(ss, " "), nil
 		}),
-	}, nil)
+	}, &server.LocalOptions{
+		Client: &jrpc2.ClientOptions{
+			EncodeContext: func(ctx context.Context, _ string, p json.RawMessage) (json.RawMessage, error) {
+				if HTTPRequest(ctx) == nil {
+					return nil, errors.New("no HTTP request in context")
+				}
+				return p, nil
+			},
+		},
+	})
 	defer loc.Close()
 
 	// Bridge HTTP to the JSON-RPC server.
