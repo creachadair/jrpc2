@@ -743,17 +743,16 @@ func TestPushCall(t *testing.T) {
 		},
 	})
 	defer loc.Close()
-	s, c := loc.Server, loc.Client
 	ctx := context.Background()
 
-	// Post an explicit callback.
-	if _, err := s.Callback(ctx, "succeed", nil); err != nil {
-		t.Errorf("Callback explicit: unexpected error: %v", err)
+	// Call the method that posts a callback.
+	if _, err := loc.Client.Call(ctx, "CallMeMaybe", nil); err != nil {
+		t.Fatalf("Call CallMeMaybe: unexpected error: %v", err)
 	}
 
-	// Call the method that posts a callback.
-	if _, err := c.Call(ctx, "CallMeMaybe", nil); err != nil {
-		t.Errorf("Call CallMeMaybe: unexpected error: %v", err)
+	// Post an explicit callback.
+	if _, err := loc.Server.Callback(ctx, "succeed", nil); err != nil {
+		t.Errorf("Callback explicit: unexpected error: %v", err)
 	}
 }
 
