@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
-	"os"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -730,12 +728,8 @@ func TestPushCall(t *testing.T) {
 			return nil
 		}),
 	}, &server.LocalOptions{
-		Server: &jrpc2.ServerOptions{
-			AllowPush: true,
-			Logger:    log.New(os.Stderr, "[server] ", log.LstdFlags),
-		},
+		Server: &jrpc2.ServerOptions{AllowPush: true},
 		Client: &jrpc2.ClientOptions{
-			Logger: log.New(os.Stderr, "[client] ", log.LstdFlags),
 			OnCallback: func(ctx context.Context, req *jrpc2.Request) (interface{}, error) {
 				t.Logf("OnCallback invoked for method %q", req.Method())
 				switch req.Method() {
