@@ -268,18 +268,22 @@ func (s *Server) checkAndAssign(next jmessages) tasks {
 			hreq:  &Request{id: fid, method: req.M, params: req.P},
 			batch: req.batch,
 		}
+		id := string(fid)
 		if req.err != nil {
 			t.err = req.err // deferred validation error
-		} else if id := string(fid); id != "" && s.used[id] != nil {
-			t.err = Errorf(code.InvalidRequest, "duplicate request id %q", id)
-		} else if !s.versionOK(req.V) {
-			t.err = ErrInvalidVersion
 		} else if !req.isRequestOrNotification() && s.call[id] != nil {
 			// This is a result or error for a pending push-call.
+			//
+			// N.B. It is important to check for this before checking for
+			// duplicate request IDs, since the ID spaces could overlap.
 			rsp := s.call[id]
 			delete(s.call, id)
 			rsp.ch <- req
 			continue // don't send a reply for this
+		} else if id != "" && s.used[id] != nil {
+			t.err = Errorf(code.InvalidRequest, "duplicate request id %q", id)
+		} else if !s.versionOK(req.V) {
+			t.err = ErrInvalidVersion
 		} else if req.M == "" {
 			t.err = Errorf(code.InvalidRequest, "empty method name")
 		} else if s.setContext(t, id) {
@@ -426,6 +430,7 @@ func (s *Server) pushReq(ctx context.Context, wantID bool, method string, params
 		kind = "call"
 		id := strconv.FormatInt(s.callID, 10)
 		s.callID++
+
 		jid = json.RawMessage(id)
 		rsp = &Response{
 			ch:     make(chan *jmessage, 1),
