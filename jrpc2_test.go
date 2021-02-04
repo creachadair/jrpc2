@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -704,7 +705,9 @@ func TestPushNotify(t *testing.T) {
 	}
 
 	// Shut everything down to be sure the callbacks have settled.
+	// Sort the results since the order of arrival may vary.
 	loc.Close()
+	sort.Strings(notes)
 
 	want := []string{"explicit", "method"}
 	if diff := cmp.Diff(want, notes); diff != "" {
