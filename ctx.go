@@ -59,6 +59,15 @@ func CancelRequest(ctx context.Context, id string) {
 	s.cancelRequests(ctx, []json.RawMessage{json.RawMessage(id)})
 }
 
+// ServerFromContext returns the server associated with the given context.
+// This will be populated on the context passed to request handlers.
+//
+// It is safe to retain the server and invoke its methods beyond the lifetime
+// of the context from which it was extracted; however, a handler must not
+// block on the Wait or WaitStatus methods of the server, as the server will
+// deadlock waiting for the handler to return.
+func ServerFromContext(ctx context.Context) *Server { return ctx.Value(serverKey{}).(*Server) }
+
 type serverKey struct{}
 
 // ErrPushUnsupported is returned by PushNotify and PushCall if server pushes
