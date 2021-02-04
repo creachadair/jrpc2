@@ -1135,10 +1135,11 @@ func TestServerFromContext(t *testing.T) {
 			return nil
 		}),
 	}, nil)
-	defer loc.Close()
-
 	if _, err := loc.Client.Call(context.Background(), "Test", nil); err != nil {
 		t.Fatalf("Call failed: %v", err)
+	}
+	if err := loc.Close(); err != nil {
+		t.Errorf("Close failed: %v", err)
 	}
 	if got != loc.Server {
 		t.Errorf("ServerFromContext: got %p, want %p", got, loc.Server)
