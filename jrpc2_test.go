@@ -1126,3 +1126,21 @@ func TestStrictFields(t *testing.T) {
 		}
 	})
 }
+
+func TestServerFromContext(t *testing.T) {
+	var got *jrpc2.Server
+	loc := server.NewLocal(handler.Map{
+		"Test": handler.New(func(ctx context.Context) error {
+			got = jrpc2.ServerFromContext(ctx)
+			return nil
+		}),
+	}, nil)
+	defer loc.Close()
+
+	if _, err := loc.Client.Call(context.Background(), "Test", nil); err != nil {
+		t.Fatalf("Call failed: %v", err)
+	}
+	if got != loc.Server {
+		t.Errorf("ServerFromContext: got %p, want %p", got, loc.Server)
+	}
+}
