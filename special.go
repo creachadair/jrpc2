@@ -22,11 +22,11 @@ func (s *Server) handleRPCCancel(ctx context.Context, req *Request) (interface{}
 	if err := req.UnmarshalParams(&ids); err != nil {
 		return nil, err
 	}
-	s.cancelRequests(ctx, ids)
+	s.cancelRequests(ids)
 	return nil, nil
 }
 
-func (s *Server) cancelRequests(ctx context.Context, ids []json.RawMessage) {
+func (s *Server) cancelRequests(ids []json.RawMessage) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for _, raw := range ids {
@@ -35,6 +35,12 @@ func (s *Server) cancelRequests(ctx context.Context, ids []json.RawMessage) {
 			s.log("Cancelled request %s by client order", id)
 		}
 	}
+}
+
+// CancelRequest instructs s to cancel the pending or in-flight request with
+// the specified ID. If no request exists with that ID, this is a no-op.
+func (s *Server) CancelRequest(id string) {
+	s.cancelRequests([]json.RawMessage{json.RawMessage(id)})
 }
 
 // methodFunc is a replication of handler.Func redeclared to avert a cycle.

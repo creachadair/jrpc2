@@ -2,7 +2,6 @@ package jrpc2
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 
 	"github.com/creachadair/jrpc2/metrics"
@@ -52,10 +51,7 @@ func PushCall(ctx context.Context, method string, params interface{}) (*Response
 // CancelRequest requests the server associated with ctx to cancel the pending
 // or in-flight request with the specified ID.  If no request exists with that
 // ID, this is a no-op without error.
-func CancelRequest(ctx context.Context, id string) {
-	s := ctx.Value(serverKey{}).(*Server)
-	s.cancelRequests(ctx, []json.RawMessage{json.RawMessage(id)})
-}
+func CancelRequest(ctx context.Context, id string) { ServerFromContext(ctx).CancelRequest(id) }
 
 // ServerFromContext returns the server associated with the given context.
 // This will be populated on the context passed to request handlers.
