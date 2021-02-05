@@ -7,9 +7,10 @@ import (
 	"github.com/creachadair/jrpc2/metrics"
 )
 
-// ServerMetrics returns the server metrics collector associated with the given
-// context, or nil if ctx does not have a collector attached.  The context
-// passed to a handler by *jrpc2.Server will include this value.
+// ServerMetrics returns the server metrics collector. If the server does not
+// have a metrics collector, it returns nil, which is ready for use but
+// discards all posted metrics.  This function is for use by handlers, and will
+// panic for a non-handler context.
 func ServerMetrics(ctx context.Context) *metrics.M { return ServerFromContext(ctx).metrics }
 
 // InboundRequest returns the inbound request associated with the given
