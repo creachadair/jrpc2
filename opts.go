@@ -156,6 +156,9 @@ type ClientOptions struct {
 	// If unset, server requests are logged and discarded. At most one
 	// invocation of this callback will be active at a time.
 	// Server callbacks are a non-standard extension of JSON-RPC.
+	//
+	// If a callback handler panics, the client will recover the panic and
+	// report a system error back to the server describing the error.
 	OnCallback func(context.Context, *Request) (interface{}, error)
 
 	// If set, this function is called when the context for a request terminates.
@@ -205,20 +208,31 @@ func (c *ClientOptions) handleCancel() func(*Client, *Response) {
 	return c.OnCancel
 }
 
-func (c *ClientOptions) handleCallback() func(*jmessage) ([]byte, error) {
+func (c *ClientOptions) handleCallback() func(*jmessage) []byte {
 	if c == nil || c.OnCallback == nil {
 		return nil
 	}
 	cb := c.OnCallback
-	return func(req *jmessage) ([]byte, error) {
+	return func(req *jmessage) []byte {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
+		// Recover panics from the callback handler to ensure the server gets a
+		// response even if the callback fails without a result.
+		//
+		// Otherwise, a client and a server (a) running in the same process, and
+		// (b) where panics are recovered at a higher level, and (c) without
+		// cleaning up the client, can cause the server to stall in a manner that
+		// is difficult to debug.
+		//
+		// See https://github.com/creachadair/jrpc2/issues/41.
 		rsp := &jmessage{V: Version, ID: req.ID}
-		v, err := cb(ctx, &Request{
-			id:     req.ID,
-			method: req.M,
-			params: req.P,
+		v, err := panicToError(func() (interface{}, error) {
+			return cb(ctx, &Request{
+				id:     req.ID,
+				method: req.M,
+				params: req.P,
+			})
 		})
 		if err == nil {
 			rsp.R, err = json.Marshal(v)
@@ -231,8 +245,18 @@ func (c *ClientOptions) handleCallback() func(*jmessage) ([]byte, error) {
 				rsp.E = &Error{code: code.FromError(err), message: err.Error()}
 			}
 		}
-		return json.Marshal(rsp)
+		bits, _ := json.Marshal(rsp)
+		return bits
 	}
+}
+
+func panicToError(f func() (interface{}, error)) (v interface{}, err error) {
+	defer func() {
+		if p := recover(); p != nil {
+			err = fmt.Errorf("panic in callback handler: %v", p)
+		}
+	}()
+	return f()
 }
 
 // An RPCLogger receives callbacks from a server to record the receipt of
