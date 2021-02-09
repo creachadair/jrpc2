@@ -528,7 +528,15 @@ func (s *Server) stop(err error) {
 	}
 	s.work.Broadcast()
 
-	// Cancel any in-flight requests that made it out of the queue.
+	// Cancel any in-flight requests that made it out of the queue, and
+	// terminate any pending callback invocations.
+	for id, rsp := range s.call {
+		rsp.ch <- &jmessage{
+			ID: json.RawMessage(id),
+			E:  &Error{message: "client channel terminated", code: code.Cancelled},
+		}
+		delete(s.call, id)
+	}
 	for id, cancel := range s.used {
 		cancel()
 		delete(s.used, id)

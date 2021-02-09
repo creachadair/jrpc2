@@ -21,7 +21,7 @@ type Client struct {
 	log   func(string, ...interface{}) // write debug logs here
 	enctx encoder
 	snote func(*jmessage)
-	scall func(*jmessage) ([]byte, error)
+	scall func(*jmessage) []byte
 	chook func(*Client, *Response)
 
 	allow1 bool // tolerate v1 replies with no version marker
@@ -109,10 +109,11 @@ func (c *Client) handleRequest(msg *jmessage) {
 		}
 	} else if c.scall == nil {
 		c.log("Discarding callback request: %v", msg)
-	} else if bits, err := c.scall(msg); err != nil {
-		c.log("Callback for %v failed: %v", msg, err)
-	} else if err := c.ch.Send(bits); err != nil {
-		c.log("Sending reply for callback %v failed: %v", msg, err)
+	} else {
+		bits := c.scall(msg)
+		if err := c.ch.Send(bits); err != nil {
+			c.log("Sending reply for callback %v failed: %v", msg, err)
+		}
 	}
 }
 

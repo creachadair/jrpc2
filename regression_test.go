@@ -2,6 +2,7 @@ package jrpc2_test
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -46,5 +47,40 @@ func TestLockRaceRegression(t *testing.T) {
 		t.Fatal("Notification handler is probably deadlocked")
 	case <-hdone:
 		t.Log("Notification handler completed successfully")
+	}
+}
+
+// Verify that if a callback handler panics, the client will report an error
+// back to the server. See https://github.com/creachadair/jrpc2/issues/41.
+func TestOnCallbackPanicRegression(t *testing.T) {
+	const panicString = "the devil you say"
+
+	loc := server.NewLocal(handler.Map{
+		"Test": handler.New(func(ctx context.Context) error {
+			rsp, err := jrpc2.PushCall(ctx, "Poke", nil)
+			if err == nil {
+				t.Errorf("Callback unexpectedly succeeded: %#q", rsp.ResultString())
+			} else if !strings.HasSuffix(err.Error(), panicString) {
+				t.Errorf("Callback reported unexpected error: %v", err)
+			} else {
+				t.Logf("Callback reported expected error: %v", err)
+			}
+			return nil
+		}),
+	}, &server.LocalOptions{
+		Server: &jrpc2.ServerOptions{
+			AllowPush: true,
+		},
+		Client: &jrpc2.ClientOptions{
+			OnCallback: func(ctx context.Context, req *jrpc2.Request) (interface{}, error) {
+				t.Log("Entering callback handler; about to panic")
+				panic(panicString)
+			},
+		},
+	})
+	defer loc.Close()
+
+	if _, err := loc.Client.Call(context.Background(), "Test", nil); err != nil {
+		t.Errorf("Call unexpectedly failed: %v", err)
 	}
 }
