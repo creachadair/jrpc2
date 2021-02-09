@@ -156,6 +156,9 @@ type ClientOptions struct {
 	// If unset, server requests are logged and discarded. At most one
 	// invocation of this callback will be active at a time.
 	// Server callbacks are a non-standard extension of JSON-RPC.
+	//
+	// If a callback handler panics, the client will recover the panic and
+	// report a system error back to the server describing the error.
 	OnCallback func(context.Context, *Request) (interface{}, error)
 
 	// If set, this function is called when the context for a request terminates.
