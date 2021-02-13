@@ -8,9 +8,9 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"sort"
 	"strings"
 
-	"bitbucket.org/creachadair/stringset"
 	"github.com/creachadair/jrpc2"
 	"github.com/creachadair/jrpc2/code"
 )
@@ -31,7 +31,14 @@ type Map map[string]jrpc2.Handler
 func (m Map) Assign(_ context.Context, method string) jrpc2.Handler { return m[method] }
 
 // Names implements part of the jrpc2.Assigner interface.
-func (m Map) Names() []string { return stringset.FromKeys(m).Elements() }
+func (m Map) Names() []string {
+	var names []string
+	for name := range m {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
 
 // A ServiceMap combines multiple assigners into one, permitting a server to
 // export multiple services under different names.
@@ -61,13 +68,14 @@ func (m ServiceMap) Assign(ctx context.Context, method string) jrpc2.Handler {
 // Names reports the composed names of all the methods in the service, each
 // having the form Service.Method.
 func (m ServiceMap) Names() []string {
-	var all stringset.Set
+	var all []string
 	for svc, assigner := range m {
 		for _, name := range assigner.Names() {
-			all.Add(svc + "." + name)
+			all = append(all, svc+"."+name)
 		}
 	}
-	return all.Elements()
+	sort.Strings(all)
+	return all
 }
 
 // New adapts a function to a jrpc2.Handler. The concrete value of fn must be a
