@@ -191,17 +191,21 @@ require a more complex hierarchy.
 
 Concurrency
 
-A Server processes requests concurrently, up to the Concurrency limit given in
-its ServerOptions. Two requests (either calls or notifications) are concurrent
-if they arrive as part of the same batch. In addition, two calls are concurrent
-if the time intervals between the arrival of the request objects and delivery
-of the response objects overlap.
+A Server issues requests to handlers concurrently, up to the Concurrency limit
+given in its ServerOptions. Two requests (either calls or notifications) are
+concurrent if they arrive as part of the same batch. In addition, two calls are
+concurrent if the time intervals between the arrival of the request objects and
+delivery of the response objects overlap.
 
 The server may issue concurrent requests to their handlers in any order.
 Otherwise, requests are processed in order of arrival. Notifications, in
 particular, can only be concurrent with other notifications in the same batch.
 This ensures a client that sends a notification can be sure its notification
 was fully processed before any subsequent calls are issued.
+
+These rules imply that the client cannot rely on the order of evaluation for
+calls that overlap: If the caller needs to ensure that call A completes before
+call B starts, it must wait for A to return before invoking B.
 
 
 Non-Standard Extension Methods
