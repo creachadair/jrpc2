@@ -15,7 +15,7 @@ import (
 // request with the message as its body.
 type Channel struct {
 	url string
-	cli *http.Client
+	cli Client
 	wg  *sync.WaitGroup
 	rsp chan response
 }
@@ -25,11 +25,32 @@ type response struct {
 	err error
 }
 
+// Client defines the interface to an HTTP client. It is compatible with the
+// net/http.Client type.
+type Client interface {
+	Do(*http.Request) (*http.Response, error)
+}
+
+// ChannelOptions gives optional parameters for constructing an HTTP channel.
+// A nil *ChannelOptions is ready for use, and provides default options as
+// described.
+type ChannelOptions struct {
+	// The HTTP client to use to send requests. If nil, uses http.DefaultClient.
+	Client Client
+}
+
+func (o *ChannelOptions) httpClient() Client {
+	if o == nil || o.Client == nil {
+		return http.DefaultClient
+	}
+	return o.Client
+}
+
 // NewChannel constructs a new channel that posts to the specified URL.
-func NewChannel(url string) *Channel {
+func NewChannel(url string, opts *ChannelOptions) *Channel {
 	return &Channel{
 		url: url,
-		cli: http.DefaultClient,
+		cli: opts.httpClient(),
 		wg:  new(sync.WaitGroup),
 		rsp: make(chan response),
 	}

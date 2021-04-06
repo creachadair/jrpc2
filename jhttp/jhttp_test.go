@@ -172,7 +172,7 @@ func TestChannel(t *testing.T) {
 	defer hsrv.Close()
 
 	ctx := context.Background()
-	ch := NewChannel(hsrv.URL)
+	ch := NewChannel(hsrv.URL, nil)
 	cli := jrpc2.NewClient(ch, nil)
 
 	tests := []struct {
