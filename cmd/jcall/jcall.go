@@ -112,7 +112,7 @@ func main() {
 	start := time.Now()
 	var cc channel.Channel
 	if *doHTTP || isHTTP(flag.Arg(0)) {
-		cc = jhttp.NewChannel(flag.Arg(0))
+		cc = jhttp.NewChannel(flag.Arg(0), nil)
 	} else if nc := chanutil.Framing(*chanFraming); nc == nil {
 		log.Fatalf("Unknown channel framing %q", *chanFraming)
 	} else {
