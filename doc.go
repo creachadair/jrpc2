@@ -60,7 +60,7 @@ the server to finish, call:
    err := srv.Wait()
 
 This will report the error that led to the server exiting.  The code for this
-example is availabe from cmd/examples/adder/adder.go:
+example is available from cmd/examples/adder/adder.go:
 
     $ go run cmd/examples/adder/adder.go
 
