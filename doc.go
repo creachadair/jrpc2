@@ -199,7 +199,7 @@ delivery of the response objects overlap.
 
 The server may issue concurrent requests to their handlers in any order.
 Otherwise, requests are processed in order of arrival. Notifications, in
-particular, can only be concurrent with other notifications in the same batch.
+particular, can only be concurrent with other requests in the same batch.
 This ensures a client that sends a notification can be sure its notification
 was fully processed before any subsequent calls are issued.
 
