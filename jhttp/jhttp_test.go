@@ -171,34 +171,56 @@ func TestChannel(t *testing.T) {
 	hsrv := httptest.NewServer(b)
 	defer hsrv.Close()
 
-	ctx := context.Background()
-	ch := NewChannel(hsrv.URL, nil)
-	cli := jrpc2.NewClient(ch, nil)
-
 	tests := []struct {
 		params interface{}
 		want   int
 	}{
 		{nil, 0},
-		{[]string{"foo"}, 7},
-		{map[string]int{"hi": 3}, 8},
+		{[]string{"foo"}, 7},         // ["foo"]
+		{map[string]int{"hi": 3}, 8}, // {"hi":3}
 	}
-	for _, test := range tests {
-		var got int
-		if err := cli.CallResult(ctx, "Test", test.params, &got); err != nil {
-			t.Errorf("Call Test(%v): unexpected error: %v", test.params, err)
-		} else if got != test.want {
-			t.Errorf("Call Test(%v): got %d, want %d", test.params, got, test.want)
+
+	var callCount int
+	ctx := context.Background()
+	for _, opts := range []*ChannelOptions{nil, {
+		Client: counter{&callCount, http.DefaultClient},
+	}} {
+		ch := NewChannel(hsrv.URL, opts)
+		cli := jrpc2.NewClient(ch, nil)
+
+		for _, test := range tests {
+			var got int
+			if err := cli.CallResult(ctx, "Test", test.params, &got); err != nil {
+				t.Errorf("Call Test(%v): unexpected error: %v", test.params, err)
+			} else if got != test.want {
+				t.Errorf("Call Test(%v): got %d, want %d", test.params, got, test.want)
+			}
+		}
+
+		cli.Close() // also closes the channel
+
+		// Verify that a closed channel reports errors for Send and Recv.
+		if err := ch.Send([]byte("whatever")); err == nil {
+			t.Error("Send on a closed channel unexpectedly worked")
+		}
+		if got, err := ch.Recv(); err != io.EOF {
+			t.Errorf("Recv = (%#q, %v), want (nil, %v", string(got), err, io.EOF)
 		}
 	}
 
-	cli.Close() // also closes the channel
+	if callCount != len(tests) {
+		t.Errorf("Channel client call count: got %d, want %d", callCount, len(tests))
+	}
+}
 
-	// Verify that a closed channel reports errors for Send and Recv.
-	if err := ch.Send([]byte("whatever")); err == nil {
-		t.Error("Send on a closed channel unexpectedly worked")
-	}
-	if got, err := ch.Recv(); err != io.EOF {
-		t.Errorf("Recv = (%#q, %v), want (nil, %v", string(got), err, io.EOF)
-	}
+// counter implements the Doer interface by delegating to a real HTTP client.
+// As a side effect it counts the number of invocations of its signature method.
+type counter struct {
+	z *int
+	c *http.Client
+}
+
+func (c counter) Do(req *http.Request) (*http.Response, error) {
+	defer func() { *c.z++ }()
+	return c.c.Do(req)
 }
