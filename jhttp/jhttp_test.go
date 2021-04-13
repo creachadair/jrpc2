@@ -1,4 +1,4 @@
-package jhttp
+package jhttp_test
 
 import (
 	"context"
@@ -13,6 +13,7 @@ import (
 
 	"github.com/creachadair/jrpc2"
 	"github.com/creachadair/jrpc2/handler"
+	"github.com/creachadair/jrpc2/jhttp"
 	"github.com/creachadair/jrpc2/server"
 )
 
@@ -25,7 +26,7 @@ func TestBridge(t *testing.T) {
 	}, &server.LocalOptions{
 		Client: &jrpc2.ClientOptions{
 			EncodeContext: func(ctx context.Context, _ string, p json.RawMessage) (json.RawMessage, error) {
-				if HTTPRequest(ctx) == nil {
+				if jhttp.HTTPRequest(ctx) == nil {
 					return nil, errors.New("no HTTP request in context")
 				}
 				return p, nil
@@ -35,7 +36,7 @@ func TestBridge(t *testing.T) {
 	defer loc.Close()
 
 	// Bridge HTTP to the JSON-RPC server.
-	b := NewBridge(loc.Client)
+	b := jhttp.NewBridge(loc.Client)
 	defer b.Close()
 
 	// Create an HTTP test server to call into the bridge.
@@ -166,7 +167,7 @@ func TestChannel(t *testing.T) {
 	}, nil)
 	defer loc.Close()
 
-	b := NewBridge(loc.Client)
+	b := jhttp.NewBridge(loc.Client)
 	defer b.Close()
 	hsrv := httptest.NewServer(b)
 	defer hsrv.Close()
@@ -182,10 +183,10 @@ func TestChannel(t *testing.T) {
 
 	var callCount int
 	ctx := context.Background()
-	for _, opts := range []*ChannelOptions{nil, {
+	for _, opts := range []*jhttp.ChannelOptions{nil, {
 		Client: counter{&callCount, http.DefaultClient},
 	}} {
-		ch := NewChannel(hsrv.URL, opts)
+		ch := jhttp.NewChannel(hsrv.URL, opts)
 		cli := jrpc2.NewClient(ch, nil)
 
 		for _, test := range tests {
