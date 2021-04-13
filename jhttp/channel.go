@@ -15,7 +15,7 @@ import (
 // request with the message as its body.
 type Channel struct {
 	url string
-	cli Client
+	cli Doer
 	wg  *sync.WaitGroup
 	rsp chan response
 }
@@ -25,9 +25,9 @@ type response struct {
 	err error
 }
 
-// Client defines the interface to an HTTP client. It is compatible with the
-// net/http.Client type.
-type Client interface {
+// Doer is the interface to an HTTP client used by a Channel. It is compatible
+// with the standard library http.Client type.
+type Doer interface {
 	Do(*http.Request) (*http.Response, error)
 }
 
@@ -36,10 +36,10 @@ type Client interface {
 // described.
 type ChannelOptions struct {
 	// The HTTP client to use to send requests. If nil, uses http.DefaultClient.
-	Client Client
+	Client Doer
 }
 
-func (o *ChannelOptions) httpClient() Client {
+func (o *ChannelOptions) httpClient() Doer {
 	if o == nil || o.Client == nil {
 		return http.DefaultClient
 	}
