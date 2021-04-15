@@ -214,8 +214,8 @@ func TestChannel(t *testing.T) {
 	}
 }
 
-// counter implements the Doer interface by delegating to a real HTTP client.
-// As a side effect it counts the number of invocations of its signature method.
+// counter implements the HTTPClient interface via a real HTTP client.  As a
+// side effect it counts the number of invocations of its signature method.
 type counter struct {
 	z *int
 	c *http.Client
