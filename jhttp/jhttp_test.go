@@ -1,4 +1,4 @@
-package jhttp
+package jhttp_test
 
 import (
 	"context"
@@ -13,6 +13,7 @@ import (
 
 	"github.com/creachadair/jrpc2"
 	"github.com/creachadair/jrpc2/handler"
+	"github.com/creachadair/jrpc2/jhttp"
 	"github.com/creachadair/jrpc2/server"
 )
 
@@ -25,7 +26,7 @@ func TestBridge(t *testing.T) {
 	}, &server.LocalOptions{
 		Client: &jrpc2.ClientOptions{
 			EncodeContext: func(ctx context.Context, _ string, p json.RawMessage) (json.RawMessage, error) {
-				if HTTPRequest(ctx) == nil {
+				if jhttp.HTTPRequest(ctx) == nil {
 					return nil, errors.New("no HTTP request in context")
 				}
 				return p, nil
@@ -35,7 +36,7 @@ func TestBridge(t *testing.T) {
 	defer loc.Close()
 
 	// Bridge HTTP to the JSON-RPC server.
-	b := NewBridge(loc.Client)
+	b := jhttp.NewBridge(loc.Client)
 	defer b.Close()
 
 	// Create an HTTP test server to call into the bridge.
@@ -166,39 +167,61 @@ func TestChannel(t *testing.T) {
 	}, nil)
 	defer loc.Close()
 
-	b := NewBridge(loc.Client)
+	b := jhttp.NewBridge(loc.Client)
 	defer b.Close()
 	hsrv := httptest.NewServer(b)
 	defer hsrv.Close()
-
-	ctx := context.Background()
-	ch := NewChannel(hsrv.URL)
-	cli := jrpc2.NewClient(ch, nil)
 
 	tests := []struct {
 		params interface{}
 		want   int
 	}{
 		{nil, 0},
-		{[]string{"foo"}, 7},
-		{map[string]int{"hi": 3}, 8},
+		{[]string{"foo"}, 7},         // ["foo"]
+		{map[string]int{"hi": 3}, 8}, // {"hi":3}
 	}
-	for _, test := range tests {
-		var got int
-		if err := cli.CallResult(ctx, "Test", test.params, &got); err != nil {
-			t.Errorf("Call Test(%v): unexpected error: %v", test.params, err)
-		} else if got != test.want {
-			t.Errorf("Call Test(%v): got %d, want %d", test.params, got, test.want)
+
+	var callCount int
+	ctx := context.Background()
+	for _, opts := range []*jhttp.ChannelOptions{nil, {
+		Client: counter{&callCount, http.DefaultClient},
+	}} {
+		ch := jhttp.NewChannel(hsrv.URL, opts)
+		cli := jrpc2.NewClient(ch, nil)
+
+		for _, test := range tests {
+			var got int
+			if err := cli.CallResult(ctx, "Test", test.params, &got); err != nil {
+				t.Errorf("Call Test(%v): unexpected error: %v", test.params, err)
+			} else if got != test.want {
+				t.Errorf("Call Test(%v): got %d, want %d", test.params, got, test.want)
+			}
+		}
+
+		cli.Close() // also closes the channel
+
+		// Verify that a closed channel reports errors for Send and Recv.
+		if err := ch.Send([]byte("whatever")); err == nil {
+			t.Error("Send on a closed channel unexpectedly worked")
+		}
+		if got, err := ch.Recv(); err != io.EOF {
+			t.Errorf("Recv = (%#q, %v), want (nil, %v", string(got), err, io.EOF)
 		}
 	}
 
-	cli.Close() // also closes the channel
+	if callCount != len(tests) {
+		t.Errorf("Channel client call count: got %d, want %d", callCount, len(tests))
+	}
+}
 
-	// Verify that a closed channel reports errors for Send and Recv.
-	if err := ch.Send([]byte("whatever")); err == nil {
-		t.Error("Send on a closed channel unexpectedly worked")
-	}
-	if got, err := ch.Recv(); err != io.EOF {
-		t.Errorf("Recv = (%#q, %v), want (nil, %v", string(got), err, io.EOF)
-	}
+// counter implements the HTTPClient interface via a real HTTP client.  As a
+// side effect it counts the number of invocations of its signature method.
+type counter struct {
+	z *int
+	c *http.Client
+}
+
+func (c counter) Do(req *http.Request) (*http.Response, error) {
+	defer func() { *c.z++ }()
+	return c.c.Do(req)
 }
