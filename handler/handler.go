@@ -95,8 +95,8 @@ func (m ServiceMap) Names() []string {
 // not have one of these forms.  The resulting method will handle encoding and
 // decoding of JSON and report appropriate errors.
 //
-// Functions adapted by in this way can obtain the *jrpc2.Request value using
-// the jrpc2.InboundRequest helper on the context value supplied by the server.
+// Functions adapted in this way can obtain the *jrpc2.Request value using the
+// jrpc2.InboundRequest helper on the context value supplied by the server.
 func New(fn interface{}) Func {
 	m, err := newHandler(fn)
 	if err != nil {
