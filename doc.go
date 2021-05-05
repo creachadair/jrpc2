@@ -155,37 +155,29 @@ sends an "rpc.cancel" notification to the server for that request's ID.  The
 Services with Multiple Methods
 
 The example above shows a server with one method using handler.New.  To
-simplify exporting multiple methods, the handler.NewService function applies
-handler.New to all the relevant exported methods of a concrete value, returning
-a handler.Map for those methods:
+simplify exporting multiple methods, the handler.Map type collects named
+methods:
 
-   type math struct{}
+   mathService := handler.Map{
+      "Add": handler.New(Add),
+      "Mul": handler.New(Mul),
+   }
 
-   func (math) Add(ctx context.Context, vals ...int) int { ... }
-   func (math) Mul(ctx context.Context, vals []int) int { ... }
-
-   assigner := handler.NewService(math{})
-
-This assigner maps the name "Add" to the Add method, and the name "Mul" to the
-Mul method, of the math value.
-
-This may be further combined with the handler.ServiceMap type to allow
+Maps may be further combined with the handler.ServiceMap type to allow
 different services to work together:
 
-   type status struct{}
-
-   func (status) Get(context.Context) (string, error) {
+   func GetStatus(context.Context) (string, error) {
       return "all is well", nil
    }
 
    assigner := handler.ServiceMap{
-      "Math":   handler.NewService(math{}),
-      "Status": handler.NewService(status{}),
+      "Math":   mathService,
+      "Status": handler.Map{"Get": handler.New(Status)},
    }
 
-This assigner dispatches "Math.Add" and "Math.Mul" to the math value's methods,
-and "Status.Get" to the status value's method. A ServiceMap splits the method
-name on the first period ("."), and you may nest ServiceMaps more deeply if you
+This assigner dispatches "Math.Add" and "Math.Mul" to the arithmetic functions,
+and "Status.Get" to the GetStatus function. A ServiceMap splits the method name
+on the first period ("."), and you may nest ServiceMaps more deeply if you
 require a more complex hierarchy.
 
 

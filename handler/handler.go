@@ -42,13 +42,6 @@ func (m Map) Names() []string {
 
 // A ServiceMap combines multiple assigners into one, permitting a server to
 // export multiple services under different names.
-//
-// Example:
-//    m := handler.ServiceMap{
-//      "Foo": handler.NewService(fooService),  // methods Foo.A, Foo.B, etc.
-//      "Bar": handler.NewService(barService),  // methods Bar.A, Bar.B, etc.
-//    }
-//
 type ServiceMap map[string]jrpc2.Assigner
 
 // Assign splits the inbound method name as Service.Method, and passes the
@@ -103,27 +96,6 @@ func New(fn interface{}) Func {
 		panic(err)
 	}
 	return m
-}
-
-// NewService adapts the methods of a value to a map from method names to
-// Handler implementations as constructed by New. It will panic if obj has no
-// exported methods with a suitable signature.
-func NewService(obj interface{}) Map {
-	out := make(Map)
-	val := reflect.ValueOf(obj)
-	typ := val.Type()
-
-	// This considers only exported methods, as desired.
-	for i, n := 0, val.NumMethod(); i < n; i++ {
-		mi := val.Method(i)
-		if v, err := newHandler(mi.Interface()); err == nil {
-			out[typ.Method(i).Name] = v
-		}
-	}
-	if len(out) == 0 {
-		panic("no matching exported methods")
-	}
-	return out
 }
 
 var (

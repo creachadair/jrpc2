@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"strings"
 	"testing"
 
 	"github.com/creachadair/jrpc2"
@@ -56,47 +55,11 @@ func TestNew(t *testing.T) {
 	}
 }
 
-type dummy struct{}
+func y1(context.Context) (int, error) { return 0, nil }
 
-func (dummy) Y1(context.Context) (int, error) { return 0, nil }
+func y2(_ context.Context, vs ...int) (int, error) { return len(vs), nil }
 
-func (dummy) N1(string) {}
-
-func (dummy) Y2(_ context.Context, vs ...int) (int, error) { return len(vs), nil }
-
-func (dummy) N2() bool { return false }
-
-func (dummy) Y3(context.Context) error { return errors.New("blah") }
-
-//lint:ignore U1000 verify unexported methods are not assigned
-func (dummy) n3(context.Context, []string) error { return nil }
-
-// Verify that the NewService function obtains the correct functions.
-func TestNewService(t *testing.T) {
-	var stub dummy
-	ctx := context.Background()
-	m := NewService(stub)
-	for _, test := range []string{"Y1", "Y2", "Y3", "N1", "N2", "n3", "foo"} {
-		got := m.Assign(ctx, test) != nil
-		want := strings.HasPrefix(test, "Y")
-		if got != want {
-			t.Errorf("Assign %q: got %v, want %v", test, got, want)
-		}
-	}
-}
-
-// Verify that a stub with no usable methods panics.
-func TestEmptyService(t *testing.T) {
-	type empty struct{}
-
-	defer func() {
-		if x := recover(); x != nil {
-			t.Logf("Received expected panic: %v", x)
-		}
-	}()
-	m := NewService(empty{})
-	t.Fatalf("NewService(empty): got %v, want panic", m)
-}
+func y3(context.Context) error { return errors.New("blah") }
 
 // Verify that a ServiceMap assigns names correctly.
 func TestServiceMap(t *testing.T) {
@@ -115,7 +78,11 @@ func TestServiceMap(t *testing.T) {
 		{"Test.N2", false},
 	}
 	ctx := context.Background()
-	m := ServiceMap{"Test": NewService(dummy{})}
+	m := ServiceMap{"Test": Map{
+		"Y1": New(y1),
+		"Y2": New(y2),
+		"Y3": New(y3),
+	}}
 	for _, test := range tests {
 		got := m.Assign(ctx, test.name) != nil
 		if got != test.want {

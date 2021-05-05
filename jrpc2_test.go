@@ -25,6 +25,18 @@ var testOK = handler.New(func(ctx context.Context) (string, error) {
 	return "OK", nil
 })
 
+var testService = handler.Map{
+	// Verify that we can bind methods of a value.
+	"Add": handler.New((dummy{}).Add),
+	"Mul": handler.New((dummy{}).Mul),
+	"Max": handler.New((dummy{}).Max),
+
+	// Verify that we can bind free functions.
+	"Nil":  handler.New(methodNil),
+	"Ctx":  handler.New(methodCtx),
+	"Ping": handler.New(methodPing),
+}
+
 type dummy struct{}
 
 // Add is a request-based method.
@@ -62,27 +74,24 @@ func (dummy) Max(_ context.Context, vs ...int) (int, error) {
 	return max, nil
 }
 
-// Nil does not require any parameters.
-func (dummy) Nil(_ context.Context) (int, error) { return 42, nil }
+// methodNil does not require any parameters.
+func methodNil(_ context.Context) (int, error) { return 42, nil }
 
-// Ctx validates that its context includes the request.
-func (dummy) Ctx(ctx context.Context, req *jrpc2.Request) (int, error) {
+// methodCtx validates that its context includes the request.
+func methodCtx(ctx context.Context, req *jrpc2.Request) (int, error) {
 	if creq := jrpc2.InboundRequest(ctx); creq != req {
 		return 0, fmt.Errorf("wrong req in context %p ≠ %p", creq, req)
 	}
 	return 1, nil
 }
 
-// Ping responds only to notifications.
-func (dummy) Ping(ctx context.Context, req *jrpc2.Request) error {
+// methodPing responds only to notifications.
+func methodPing(ctx context.Context, req *jrpc2.Request) error {
 	if !req.IsNotification() {
 		return errors.New("called Ping expecting a response")
 	}
 	return nil
 }
-
-// Unrelated should not be picked up by the server.
-func (dummy) Unrelated() string { return "ceci n'est pas une méthode" }
 
 var callTests = []struct {
 	method string
@@ -101,7 +110,7 @@ var callTests = []struct {
 
 func TestMethodNames(t *testing.T) {
 	loc := server.NewLocal(handler.ServiceMap{
-		"Test": handler.NewService(dummy{}),
+		"Test": testService,
 	}, nil)
 	defer loc.Close()
 	s := loc.Server
@@ -117,7 +126,7 @@ func TestMethodNames(t *testing.T) {
 
 func TestCall(t *testing.T) {
 	loc := server.NewLocal(handler.ServiceMap{
-		"Test": handler.NewService(dummy{}),
+		"Test": testService,
 	}, &server.LocalOptions{
 		Server: &jrpc2.ServerOptions{
 			AllowV1:     true,
@@ -151,7 +160,7 @@ func TestCall(t *testing.T) {
 
 func TestCallResult(t *testing.T) {
 	loc := server.NewLocal(handler.ServiceMap{
-		"Test": handler.NewService(dummy{}),
+		"Test": testService,
 	}, &server.LocalOptions{
 		Server: &jrpc2.ServerOptions{Concurrency: 16},
 	})
@@ -174,7 +183,7 @@ func TestCallResult(t *testing.T) {
 
 func TestBatch(t *testing.T) {
 	loc := server.NewLocal(handler.ServiceMap{
-		"Test": handler.NewService(dummy{}),
+		"Test": testService,
 	}, &server.LocalOptions{
 		Server: &jrpc2.ServerOptions{
 			AllowV1:     true,
