@@ -196,7 +196,7 @@ func TestClientCancellation(t *testing.T) {
 	rsp := rsps[0]
 	rsp.wait()
 	if err := rsp.Error(); err != nil {
-		if err.code != code.Cancelled {
+		if err.Code != code.Cancelled {
 			t.Errorf("Response error for %q: got %v, want %v", rsp.ID(), err, code.Cancelled)
 		}
 	} else {

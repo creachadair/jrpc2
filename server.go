@@ -543,7 +543,7 @@ func (s *Server) stop(err error) {
 	for id, rsp := range s.call {
 		rsp.ch <- &jmessage{
 			ID: json.RawMessage(id),
-			E:  &Error{message: "client channel terminated", code: code.Cancelled},
+			E:  &Error{Message: "client channel terminated", Code: code.Cancelled},
 		}
 		delete(s.call, id)
 	}
@@ -638,7 +638,7 @@ func (s *Server) pushError(err error) {
 	if e, ok := err.(*Error); ok {
 		jerr = e
 	} else {
-		jerr = &Error{code: code.FromError(err), message: err.Error()}
+		jerr = &Error{Code: code.FromError(err), Message: err.Error()}
 	}
 
 	nw, err := encode(s.ch, jmessages{{
@@ -711,9 +711,9 @@ func (ts tasks) responses(rpcLog RPCLogger) jmessages {
 		} else if e, ok := task.err.(*Error); ok {
 			rsp.E = e
 		} else if c := code.FromError(task.err); c != code.NoError {
-			rsp.E = &Error{code: c, message: task.err.Error()}
+			rsp.E = &Error{Code: c, Message: task.err.Error()}
 		} else {
-			rsp.E = &Error{code: code.InternalError, message: task.err.Error()}
+			rsp.E = &Error{Code: code.InternalError, Message: task.err.Error()}
 		}
 		rpcLog.LogResponse(task.ctx, &Response{
 			id:     string(rsp.ID),

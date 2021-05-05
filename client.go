@@ -138,8 +138,8 @@ func (c *Client) deliver(rsp *jmessage) {
 		p.ch <- &jmessage{
 			ID: rsp.ID,
 			E: &Error{
-				code:    code.InvalidRequest,
-				message: fmt.Sprintf("incorrect version marker %q", rsp.V),
+				Code:    code.InvalidRequest,
+				Message: fmt.Sprintf("incorrect version marker %q", rsp.V),
 			},
 		}
 		c.log("Invalid response for ID %q", id)
@@ -255,9 +255,9 @@ func (c *Client) waitComplete(pctx context.Context, id string, p *Response) {
 
 	var jerr *Error
 	if c.err != nil && !isUninteresting(c.err) {
-		jerr = &Error{code: code.InternalError, message: c.err.Error()}
+		jerr = &Error{Code: code.InternalError, Message: c.err.Error()}
 	} else if err != nil {
-		jerr = &Error{code: code.FromError(err), message: err.Error()}
+		jerr = &Error{Code: code.FromError(err), Message: err.Error()}
 	}
 
 	p.ch <- &jmessage{

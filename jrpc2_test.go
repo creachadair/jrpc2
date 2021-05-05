@@ -19,6 +19,11 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
+// Static type assertions.
+var (
+	_ code.ErrCoder = (*jrpc2.Error)(nil)
+)
+
 var notAuthorized = code.Register(-32095, "request not authorized")
 
 var testOK = handler.New(func(ctx context.Context) (string, error) {
@@ -284,8 +289,8 @@ func TestErrorOnly(t *testing.T) {
 			t.Errorf("ErrorOnly: got %+v, want error", rsp)
 		} else if e, ok := err.(*jrpc2.Error); !ok {
 			t.Errorf("ErrorOnly: got %v, want *Error", err)
-		} else if e.Code() != 1 || e.Message() != errMessage {
-			t.Errorf("ErrorOnly: got (%s, %s), want (1, %s)", e.Code(), e.Message(), errMessage)
+		} else if e.Code != 1 || e.Message != errMessage {
+			t.Errorf("ErrorOnly: got (%s, %s), want (1, %s)", e.Code, e.Message, errMessage)
 		} else {
 			var data json.RawMessage
 			if err, want := e.UnmarshalData(&data), jrpc2.ErrNoData; err != want {
@@ -456,11 +461,11 @@ func TestErrors(t *testing.T) {
 	if got, err := c.Call(context.Background(), "Err", nil); err == nil {
 		t.Errorf("Call(Push): got %#v, wanted error", got)
 	} else if e, ok := err.(*jrpc2.Error); ok {
-		if e.Code() != errCode {
-			t.Errorf("Error code: got %d, want %d", e.Code(), errCode)
+		if e.Code != errCode {
+			t.Errorf("Error code: got %d, want %d", e.Code, errCode)
 		}
-		if e.Message() != errMessage {
-			t.Errorf("Error message: got %q, want %q", e.Message(), errMessage)
+		if e.Message != errMessage {
+			t.Errorf("Error message: got %q, want %q", e.Message, errMessage)
 		}
 		var data json.RawMessage
 		if err := e.UnmarshalData(&data); err != nil {

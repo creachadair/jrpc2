@@ -425,7 +425,7 @@ func isNull(msg json.RawMessage) bool {
 // filterError filters an *Error value to distinguish context errors from other
 // error types. If err is not a context error, it is returned unchanged.
 func filterError(e *Error) error {
-	switch e.code {
+	switch e.Code {
 	case code.Cancelled:
 		return context.Canceled
 	case code.DeadlineExceeded:

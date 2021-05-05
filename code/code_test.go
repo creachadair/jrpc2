@@ -31,8 +31,8 @@ func TestRegistrationError(t *testing.T) {
 
 type testCoder Code
 
-func (t testCoder) Code() Code  { return Code(t) }
-func (testCoder) Error() string { return "bogus" }
+func (t testCoder) ErrCode() Code { return Code(t) }
+func (testCoder) Error() string   { return "bogus" }
 
 func TestFromError(t *testing.T) {
 	tests := []struct {

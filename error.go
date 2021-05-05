@@ -10,35 +10,32 @@ import (
 
 // Error is the concrete type of errors returned from RPC calls.
 type Error struct {
-	message string
-	code    code.Code
-	data    json.RawMessage
+	Message string          // the human-readable error message
+	Code    code.Code       // the machine-readable error code
+	Data    json.RawMessage // optional ancillary error data
 }
 
 // Error renders e to a human-readable string for the error interface.
-func (e Error) Error() string { return fmt.Sprintf("[%d] %s", e.code, e.message) }
-
-// Code returns the error code value associated with e.
-func (e Error) Code() code.Code { return e.code }
-
-// Message returns the message string associated with e.
-func (e Error) Message() string { return e.message }
+func (e Error) Error() string { return fmt.Sprintf("[%d] %s", e.Code, e.Message) }
 
 // HasData reports whether e has error data to unmarshal.
-func (e Error) HasData() bool { return len(e.data) != 0 }
+func (e Error) HasData() bool { return len(e.Data) != 0 }
 
-// UnmarshalData decodes the error data associated with e into v.  It returns
+// ErrCode trivially satisfies the code.ErrCoder interface for an *Error.
+func (e *Error) ErrCode() code.Code { return e.Code }
+
+// UnmarshalData decodes the error data associated with e into v.  It reports
 // ErrNoData without modifying v if there was no data message attached to e.
 func (e Error) UnmarshalData(v interface{}) error {
 	if !e.HasData() {
 		return ErrNoData
 	}
-	return json.Unmarshal([]byte(e.data), v)
+	return json.Unmarshal(e.Data, v)
 }
 
 // MarshalJSON implements the json.Marshaler interface for Error values.
 func (e Error) MarshalJSON() ([]byte, error) {
-	return json.Marshal(jerror{C: int32(e.code), M: e.message, D: e.data})
+	return json.Marshal(jerror{C: int32(e.Code), M: e.Message, D: e.Data})
 }
 
 // UnmarshalJSON implements the json.Unmarshaler interface for Error values.
@@ -47,9 +44,9 @@ func (e *Error) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &v); err != nil {
 		return err
 	}
-	e.code = code.Code(v.C)
-	e.message = v.M
-	e.data = v.D
+	e.Code = code.Code(v.C)
+	e.Message = v.M
+	e.Data = v.D
 	return nil
 }
 
@@ -79,10 +76,10 @@ func Errorf(code code.Code, msg string, args ...interface{}) error {
 // specified code, error data, and formatted message string.
 // If v == nil this behaves identically to Errorf(code, msg, args...).
 func DataErrorf(code code.Code, v interface{}, msg string, args ...interface{}) error {
-	e := &Error{code: code, message: fmt.Sprintf(msg, args...)}
+	e := &Error{Code: code, Message: fmt.Sprintf(msg, args...)}
 	if v != nil {
 		if data, err := json.Marshal(v); err == nil {
-			e.data = data
+			e.Data = data
 		}
 	}
 	return e
