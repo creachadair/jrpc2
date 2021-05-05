@@ -84,7 +84,6 @@ var tests = []struct {
 	{"RS", Split('\x1e')},
 	{"RawJSON", RawJSON},
 	{"StrictHeader", StrictHeader("text/plain")},
-	{"Varint", Varint},
 }
 
 // N.B. the messages in this list must be valid JSON, since the RawJSON framing

@@ -16,7 +16,6 @@ import (
 //    line     -- corresponds to channel.Line
 //    lsp      -- corresponds to channel.LSP
 //    raw      -- corresponds to channel.RawJSON
-//    varint   -- corresponds to channel.Varint
 //
 func Framing(name string) channel.Framing {
 	if t := strings.TrimPrefix(name, "header:"); t != name {
@@ -29,8 +28,7 @@ func Framing(name string) channel.Framing {
 }
 
 var framings = map[string]channel.Framing{
-	"line":   channel.Line,
-	"lsp":    channel.LSP,
-	"raw":    channel.RawJSON,
-	"varint": channel.Varint,
+	"line": channel.Line,
+	"lsp":  channel.LSP,
+	"raw":  channel.RawJSON,
 }

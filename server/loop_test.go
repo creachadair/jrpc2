@@ -13,7 +13,7 @@ import (
 	"github.com/creachadair/jrpc2/handler"
 )
 
-var newChan = channel.Varint
+var newChan = channel.Line
 
 // A static test service that returns the same thing each time.
 var testService = Static(handler.Map{
