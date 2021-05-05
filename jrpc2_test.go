@@ -377,7 +377,7 @@ func TestServerStopCancellation(t *testing.T) {
 	}
 }
 
-// Test that a handler can cancel an in-flight request with jrpc2.CancelRequest.
+// Test that a handler can cancel an in-flight request.
 func TestHandlerCancel(t *testing.T) {
 	ready := make(chan struct{})
 	loc := server.NewLocal(handler.Map{
@@ -393,7 +393,7 @@ func TestHandlerCancel(t *testing.T) {
 				return err
 			}
 			t.Logf("Test handler: cancelling %q...", id)
-			jrpc2.CancelRequest(ctx, id)
+			jrpc2.ServerFromContext(ctx).CancelRequest(id)
 			return nil
 		}),
 	}, nil)
@@ -438,7 +438,7 @@ func TestErrors(t *testing.T) {
 			return 17, jrpc2.DataErrorf(errCode, json.RawMessage(errData), errMessage)
 		}),
 		"Push": handler.New(func(ctx context.Context) (bool, error) {
-			return false, jrpc2.PushNotify(ctx, "PushBack", nil)
+			return false, jrpc2.ServerFromContext(ctx).Notify(ctx, "PushBack", nil)
 		}),
 		"Code": handler.New(func(ctx context.Context) error {
 			return code.Code(12345).Err()
@@ -508,7 +508,7 @@ func TestBadCallParams(t *testing.T) {
 func TestServerInfo(t *testing.T) {
 	loc := server.NewLocal(handler.Map{
 		"Metricize": handler.New(func(ctx context.Context) (bool, error) {
-			m := jrpc2.ServerMetrics(ctx)
+			m := jrpc2.ServerFromContext(ctx).Metrics()
 			if m == nil {
 				t.Error("Request context does not contain a metrics writer")
 				return false, nil
@@ -683,8 +683,8 @@ func TestPushNotify(t *testing.T) {
 		"NoteMe": handler.New(func(ctx context.Context) (bool, error) {
 			// When this method is called, it posts a notification back to the
 			// client before returning.
-			if err := jrpc2.PushNotify(ctx, "method", nil); err != nil {
-				t.Errorf("PushNotify unexpectedly failed: %v", err)
+			if err := jrpc2.ServerFromContext(ctx).Notify(ctx, "method", nil); err != nil {
+				t.Errorf("Push Notify unexpectedly failed: %v", err)
 				return false, err
 			}
 			return true, nil
@@ -728,13 +728,13 @@ func TestPushNotify(t *testing.T) {
 func TestPushCall(t *testing.T) {
 	loc := server.NewLocal(handler.Map{
 		"CallMeMaybe": handler.New(func(ctx context.Context) error {
-			if rsp, err := jrpc2.PushCall(ctx, "succeed", nil); err != nil {
+			if rsp, err := jrpc2.ServerFromContext(ctx).Callback(ctx, "succeed", nil); err != nil {
 				t.Errorf("Callback failed: %v", err)
 			} else {
 				t.Logf("Callback succeeded: %v", rsp.ResultString())
 			}
 
-			if rsp, err := jrpc2.PushCall(ctx, "fail", nil); err == nil {
+			if rsp, err := jrpc2.ServerFromContext(ctx).Callback(ctx, "fail", nil); err == nil {
 				t.Errorf("Callback did not fail: got %v, want error", rsp)
 			}
 			return nil

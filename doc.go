@@ -233,8 +233,8 @@ client. Otherwise, those methods will report an error:
     // server push is not enabled
   }
 
-A method handler may use jrpc2.PushNotify and jrpc2.PushCall functions to
-access these methods from its context.
+A method handler may use jrpc2.ServerFromContext to access the server from its
+context, and then invoke these methods on it.
 
 On the client side, the OnNotify and OnCallback options in jrpc2.ClientOptions
 provide hooks to which any server requests are delivered, if they are set.

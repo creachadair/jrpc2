@@ -25,7 +25,7 @@ func TestLockRaceRegression(t *testing.T) {
 			if err := req.UnmarshalParams(&handler.Args{&id}); err != nil {
 				return err
 			}
-			jrpc2.CancelRequest(ctx, id)
+			jrpc2.ServerFromContext(ctx).CancelRequest(id)
 			return nil
 		}),
 
@@ -57,7 +57,7 @@ func TestOnCallbackPanicRegression(t *testing.T) {
 
 	loc := server.NewLocal(handler.Map{
 		"Test": handler.New(func(ctx context.Context) error {
-			rsp, err := jrpc2.PushCall(ctx, "Poke", nil)
+			rsp, err := jrpc2.ServerFromContext(ctx).Callback(ctx, "Poke", nil)
 			if err == nil {
 				t.Errorf("Callback unexpectedly succeeded: %#q", rsp.ResultString())
 			} else if !strings.HasSuffix(err.Error(), panicString) {

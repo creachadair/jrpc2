@@ -4,6 +4,7 @@ import (
 	"container/list"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"strconv"
 	"strings"
@@ -369,6 +370,10 @@ func (s *Server) ServerInfo() *ServerInfo {
 	return info
 }
 
+// ErrPushUnsupported is returned by the Notify and Call methods if server
+// pushes are not enabled.
+var ErrPushUnsupported = errors.New("server push is not enabled")
+
 // Notify posts a single server-side notification to the client.
 //
 // This is a non-standard extension of JSON-RPC, and may not be supported by
@@ -451,6 +456,11 @@ func (s *Server) pushReq(ctx context.Context, wantID bool, method string, params
 	s.metrics.Count("rpc."+kind+"s", 1)
 	return rsp, err
 }
+
+// Metrics returns the server metrics collector for s.  If s does not define a
+// collector, this method returns nil, which is ready for use but discards all
+// metrics.
+func (s *Server) Metrics() *metrics.M { return s.metrics }
 
 // Stop shuts down the server. It is safe to call this method multiple times or
 // from concurrent goroutines; it will only take effect once.
