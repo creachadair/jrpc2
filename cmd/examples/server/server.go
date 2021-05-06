@@ -100,7 +100,7 @@ func main() {
 		log.Fatalln("Listen:", err)
 	}
 	log.Printf("Listening at %v...", lst.Addr())
-	server.Loop(lst, server.NewStatic(mux), &server.LoopOptions{
+	server.Loop(lst, server.Static(mux), &server.LoopOptions{
 		ServerOptions: &jrpc2.ServerOptions{
 			Logger:      log.New(os.Stderr, "[jrpc2.Server] ", log.LstdFlags|log.Lshortfile),
 			Concurrency: *maxTasks,

@@ -19,16 +19,14 @@ type Service interface {
 	Finish(jrpc2.ServerStatus)
 }
 
-type singleton struct{ assigner jrpc2.Assigner }
+// Static wraps a jrpc2.Assigner to trivially implement the Service interface.
+func Static(m jrpc2.Assigner) func() Service { return static{methods: m}.New }
 
-func (s singleton) Assigner() (jrpc2.Assigner, error) { return s.assigner, nil }
-func (singleton) Finish(jrpc2.ServerStatus)           {}
+type static struct{ methods jrpc2.Assigner }
 
-// NewStatic creates a static (singleton) service from the given assigner.
-func NewStatic(assigner jrpc2.Assigner) func() Service {
-	svc := singleton{assigner}
-	return func() Service { return svc }
-}
+func (s static) New() Service                      { return s }
+func (s static) Assigner() (jrpc2.Assigner, error) { return s.methods, nil }
+func (static) Finish(jrpc2.ServerStatus)           {}
 
 // Loop obtains connections from lst and starts a server for each with the
 // given service constructor and options, running in a new goroutine. If accept

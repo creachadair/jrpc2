@@ -16,7 +16,7 @@ import (
 var newChan = channel.Varint
 
 // A static test service that returns the same thing each time.
-var testService = NewStatic(handler.Map{
+var testService = Static(handler.Map{
 	"Test": handler.New(func(context.Context) (string, error) {
 		return "OK", nil
 	}),

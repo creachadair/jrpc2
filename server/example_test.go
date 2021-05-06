@@ -46,10 +46,10 @@ func (s Service) Finish(stat jrpc2.ServerStatus) {
 	close(s.done)
 }
 
-func ExampleNewSimple() {
+func ExampleRun() {
 	done := make(chan struct{})
 	cch, sch := channel.Direct()
-	go server.NewSimple(Service{done}, nil).Run(sch)
+	go server.Run(sch, Service{done}, nil)
 
 	cli := jrpc2.NewClient(cch, nil)
 	if _, err := cli.Call(context.Background(), "Hello", nil); err != nil {
