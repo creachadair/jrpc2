@@ -109,6 +109,8 @@ func (c *Client) handleRequest(msg *jmessage) {
 		}
 	} else if c.scall == nil {
 		c.log("Discarding callback request: %v", msg)
+	} else if c.ch == nil {
+		c.log("Client channel is closed; discarding callback: %v", msg)
 	} else {
 		bits := c.scall(msg)
 		if err := c.ch.Send(bits); err != nil {
