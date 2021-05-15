@@ -22,7 +22,7 @@ func (e Error) Error() string { return fmt.Sprintf("[%d] %s", e.Code, e.Message)
 func (e Error) HasData() bool { return len(e.Data) != 0 }
 
 // ErrCode trivially satisfies the code.ErrCoder interface for an *Error.
-func (e *Error) ErrCode() code.Code { return e.Code }
+func (e Error) ErrCode() code.Code { return e.Code }
 
 // UnmarshalData decodes the error data associated with e into v.  It reports
 // ErrNoData without modifying v if there was no data message attached to e.
