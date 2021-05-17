@@ -205,14 +205,13 @@ Non-Standard Extension Methods
 By default, a *jrpc2.Server exports the following built-in non-standard
 extension methods:
 
-  rpc.serverInfo(null) ⇒ jrpc2.ServerInfo
-  Returns a jrpc2.ServerInfo value giving server metrics.
+The "rpc.serverInfo" method takes no parameters and returns a jrpc2.ServerInfo
+value giving server metrics.
 
-  rpc.cancel([]int)  [notification]
-  Request cancellation of the specified in-flight request IDs.
-
-The rpc.cancel method works only as a notification, and will report an error if
-called as an ordinary method.
+The "rpc.cancel" mmethod takes an array of request IDs, and instructs the
+server to terminate the in-flight requests with those IDs. This method works
+only as a notification, and will report an error if invoked as a call.  Request
+IDs not recognized by the server are silently ignored.
 
 These extension methods are enabled by default, but may be disabled by setting
 the DisableBuiltin server option to true when constructing the server.
