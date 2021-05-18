@@ -21,7 +21,7 @@ func (t *testService) Assigner() (jrpc2.Assigner, error) {
 	return t.assigner, nil
 }
 
-func (t *testService) Finish(stat jrpc2.ServerStatus) {
+func (t *testService) Finish(_ jrpc2.Assigner, stat jrpc2.ServerStatus) {
 	t.finishCalled = true
 	t.stat = stat
 }

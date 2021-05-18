@@ -16,7 +16,9 @@ type Service interface {
 	Assigner() (jrpc2.Assigner, error)
 
 	// This method is called when the server for this service has exited.
-	Finish(jrpc2.ServerStatus)
+	// The arguments are the assigner returned by the Assigner method and the
+	// server exit status.
+	Finish(jrpc2.Assigner, jrpc2.ServerStatus)
 }
 
 // Static wraps a jrpc2.Assigner to trivially implement the Service interface.
@@ -24,9 +26,9 @@ func Static(m jrpc2.Assigner) func() Service { return static{methods: m}.New }
 
 type static struct{ methods jrpc2.Assigner }
 
-func (s static) New() Service                      { return s }
-func (s static) Assigner() (jrpc2.Assigner, error) { return s.methods, nil }
-func (static) Finish(jrpc2.ServerStatus)           {}
+func (s static) New() Service                            { return s }
+func (s static) Assigner() (jrpc2.Assigner, error)       { return s.methods, nil }
+func (static) Finish(jrpc2.Assigner, jrpc2.ServerStatus) {}
 
 // Loop obtains connections from lst and starts a server for each with the
 // given service constructor and options, running in a new goroutine. If accept
@@ -66,7 +68,7 @@ func Loop(lst net.Listener, newService func() Service, opts *LoopOptions) error 
 			}
 			srv := jrpc2.NewServer(assigner, serverOpts).Start(ch)
 			stat := srv.WaitStatus()
-			svc.Finish(stat)
+			svc.Finish(assigner, stat)
 			if stat.Err != nil {
 				log("Server exit: %v", stat.Err)
 			}

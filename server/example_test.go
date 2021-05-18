@@ -41,7 +41,7 @@ func (Service) Assigner() (jrpc2.Assigner, error) {
 	})}, nil
 }
 
-func (s Service) Finish(stat jrpc2.ServerStatus) {
+func (s Service) Finish(_ jrpc2.Assigner, stat jrpc2.ServerStatus) {
 	fmt.Printf("SERVICE FINISHED err=%v\n", stat.Err)
 	close(s.done)
 }

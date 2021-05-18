@@ -49,7 +49,10 @@ func (t *testSession) Assigner() (jrpc2.Assigner, error) {
 	}, nil
 }
 
-func (t *testSession) Finish(stat jrpc2.ServerStatus) {
+func (t *testSession) Finish(assigner jrpc2.Assigner, stat jrpc2.ServerStatus) {
+	if _, ok := assigner.(handler.Map); !ok {
+		t.t.Errorf("Finished assigner: got %+v, want handler.Map", assigner)
+	}
 	if !t.init {
 		t.t.Error("Service finished without being initialized")
 	}

@@ -18,6 +18,6 @@ func Run(ch channel.Channel, svc Service, opts *jrpc2.ServerOptions) error {
 	}
 	srv := jrpc2.NewServer(assigner, opts).Start(ch)
 	stat := srv.WaitStatus()
-	svc.Finish(stat)
+	svc.Finish(assigner, stat)
 	return stat.Err
 }
