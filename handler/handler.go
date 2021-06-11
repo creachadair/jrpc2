@@ -40,6 +40,13 @@ func (m Map) Names() []string {
 	return names
 }
 
+// Assigner returns m itself as an assigner for use in a Service.
+// It never reports an error.
+func (m Map) Assigner() (jrpc2.Assigner, error) { return m, nil }
+
+// Finish is a no-op implementation satisfying part of the Service interface.
+func (Map) Finish(jrpc2.Assigner, jrpc2.ServerStatus) {}
+
 // A ServiceMap combines multiple assigners into one, permitting a server to
 // export multiple services under different names.
 type ServiceMap map[string]jrpc2.Assigner
@@ -70,6 +77,13 @@ func (m ServiceMap) Names() []string {
 	sort.Strings(all)
 	return all
 }
+
+// Assigner returns m itself as an assigner for use in a Service.
+// It never reports an error.
+func (m ServiceMap) Assigner() (jrpc2.Assigner, error) { return m, nil }
+
+// Finish is a no-op implementation satisfying part of the Service interface.
+func (ServiceMap) Finish(jrpc2.Assigner, jrpc2.ServerStatus) {}
 
 // New adapts a function to a jrpc2.Handler. The concrete value of fn must be a
 // function with one of the following type signatures:
