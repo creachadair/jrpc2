@@ -212,7 +212,7 @@ func TestSpecialMethods(t *testing.T) {
 		}),
 	}, nil)
 	ctx := context.Background()
-	for _, name := range []string{rpcServerInfo, rpcCancel, "donkeybait"} {
+	for _, name := range []string{rpcServerInfo, "donkeybait"} {
 		if got := s.assign(ctx, name); got == nil {
 			t.Errorf("s.assign(%s): no method assigned", name)
 		}
@@ -233,7 +233,7 @@ func TestDisableBuiltin(t *testing.T) {
 	ctx := context.Background()
 
 	// With builtins disabled, the default rpc.* methods should not get assigned.
-	for _, name := range []string{rpcServerInfo, rpcCancel} {
+	for _, name := range []string{rpcServerInfo} {
 		if got := s.assign(ctx, name); got != nil {
 			t.Errorf("s.assign(%s): got %+v, wanted nil", name, got)
 		}

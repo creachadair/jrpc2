@@ -139,19 +139,6 @@ not want to do anything for a notification, it can query the request:
    }
 
 
-Cancellation
-
-The *jrpc2.Client and *jrpc2.Server types support a non-standard cancellation
-protocol, consisting of a notification method "rpc.cancel" taking an array of
-request IDs to be cancelled. The server cancels the context of each method
-handler whose ID is named.
-
-When the context associated with a client request is cancelled, the client
-sends an "rpc.cancel" notification to the server for that request's ID.  The
-"rpc.cancel" method is automatically handled (unless disabled) by the
-*jrpc2.Server implementation from this package.
-
-
 Services with Multiple Methods
 
 The example above shows a server with one method using handler.New.  To
@@ -200,21 +187,17 @@ calls that overlap: If the caller needs to ensure that call A completes before
 call B starts, it must wait for A to return before invoking B.
 
 
-Non-Standard Extension Methods
+Built-in Methods
 
-By default, a *jrpc2.Server exports the following built-in non-standard
-extension methods:
+Per the JSON-RPC 2.0 spec, method names beginning with "rpc." are reserved by
+the implementation. By default, a server does not dispatch these methods to its
+assigner. In this configuration, the server exports a "rpc.serverInfo" method
+taking no parameters and returning a jrpc2.ServerInfo value.
 
-The "rpc.serverInfo" method takes no parameters and returns a jrpc2.ServerInfo
-value giving server metrics.
-
-The "rpc.cancel" mmethod takes an array of request IDs, and instructs the
-server to terminate the in-flight requests with those IDs. This method works
-only as a notification, and will report an error if invoked as a call.  Request
-IDs not recognized by the server are silently ignored.
-
-These extension methods are enabled by default, but may be disabled by setting
-the DisableBuiltin server option to true when constructing the server.
+Setting the DisableBuiltin option to true in the ServerOptions removes special
+treatment of "rpc." method names, and disables the rpc.serverInfo handler.
+When this option is true, method names beginning with "rpc." will be dispatched
+to the assigner like any other method.
 
 
 Server Push
