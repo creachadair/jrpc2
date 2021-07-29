@@ -151,20 +151,17 @@ func (h hmap) Names() []string                                 { return nil }
 // will terminate and report failure.
 func TestClientCancellation(t *testing.T) {
 	started := make(chan struct{})
-	stopped := make(chan bool, 1)
+	stopped := make(chan struct{})
 	cpipe, spipe := channel.Direct()
 	srv := NewServer(hmap{
 		"Hang": methodFunc(func(ctx context.Context, _ *Request) (interface{}, error) {
 			close(started) // signal that the method handler is running
-			defer close(stopped)
-
-			t.Log("Waiting for context completion...")
 			select {
-			case <-ctx.Done():
-				t.Logf("Server context cancelled: err=%v", ctx.Err())
-				stopped <- true
-				return true, ctx.Err()
+			case <-stopped:
+				t.Log("Server unblocked by client completing")
+				return true, nil
 			case <-time.After(10 * time.Second):
+				t.Error("Server timed out before completion")
 				return false, nil
 			}
 		}),
@@ -195,17 +192,13 @@ func TestClientCancellation(t *testing.T) {
 	// The call should fail client side, in the usual way for a cancellation.
 	rsp := rsps[0]
 	rsp.wait()
+	close(stopped)
 	if err := rsp.Error(); err != nil {
 		if err.Code != code.Cancelled {
 			t.Errorf("Response error for %q: got %v, want %v", rsp.ID(), err, code.Cancelled)
 		}
 	} else {
 		t.Errorf("Response for %q: unexpectedly succeeded", rsp.ID())
-	}
-
-	// The server handler should have reported a cancellation.
-	if ok := <-stopped; !ok {
-		t.Error("Server context was not cancelled")
 	}
 }
 

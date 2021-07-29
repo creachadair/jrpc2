@@ -805,13 +805,6 @@ func TestOnCancel(t *testing.T) {
 			}
 			return nil
 		}),
-
-		// Verify that setting the cancellation hook prevents the client from
-		// sending the default rpc.cancel notification.
-		"rpc.cancel": handler.New(func(ctx context.Context, ids json.RawMessage) error {
-			t.Errorf("Server-side rpc.cancel unexpectedly called: %s", string(ids))
-			return nil
-		}),
 	}, &server.LocalOptions{
 		// Disable handling of built-in methods on the server.
 		Server: &jrpc2.ServerOptions{DisableBuiltin: true},
