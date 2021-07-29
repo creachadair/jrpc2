@@ -25,7 +25,6 @@ type Client struct {
 	chook func(*Client, *Response)
 
 	allow1 bool // tolerate v1 replies with no version marker
-	allowC bool // send rpc.cancel when a request context ends
 
 	mu      sync.Mutex           // protects the fields below
 	ch      channel.Channel      // channel to the server
@@ -40,7 +39,6 @@ func NewClient(ch channel.Channel, opts *ClientOptions) *Client {
 		done:   make(chan struct{}),
 		log:    opts.logger(),
 		allow1: opts.allowV1(),
-		allowC: opts.allowCancel(),
 		enctx:  opts.encodeContext(),
 		snote:  opts.handleNotification(),
 		scall:  opts.handleCallback(),
@@ -265,18 +263,12 @@ func (c *Client) waitComplete(pctx context.Context, id string, p *Response) {
 		E:  jerr,
 	}
 
-	// Inform the server, best effort only. N.B. Use a background context here,
-	// as the original context has ended by the time we get here.
+	// If there is a cancellation hook, give it a chance to run.
 	if c.chook != nil {
 		cleanup = func() {
 			p.wait() // ensure the response has settled
 			c.log("Calling OnCancel for id %q", id)
 			c.chook(c, p)
-		}
-	} else if c.allowC {
-		cleanup = func() {
-			c.log("Sending rpc.cancel for id %q to the server", id)
-			c.Notify(context.Background(), rpcCancel, []json.RawMessage{json.RawMessage(id)})
 		}
 	}
 }

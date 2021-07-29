@@ -322,7 +322,7 @@ func (s *Server) setContext(t *task, id string) bool {
 	t.ctx = context.WithValue(base, inboundRequestKey{}, t.hreq)
 
 	// Store the cancellation for a request that needs a reply, so that we can
-	// respond to rpc.cancel requests.
+	// respond to cancellation requests.
 	if id != "" {
 		ctx, cancel := context.WithCancel(t.ctx)
 		s.used[id] = cancel
@@ -620,8 +620,6 @@ func (s *Server) assign(ctx context.Context, name string) Handler {
 		switch name {
 		case rpcServerInfo:
 			return methodFunc(s.handleRPCServerInfo)
-		case rpcCancel:
-			return methodFunc(s.handleRPCCancel)
 		default:
 			return nil // reserved
 		}

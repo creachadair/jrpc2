@@ -135,10 +135,6 @@ type ClientOptions struct {
 	// required "jsonrpc" version marker.
 	AllowV1 bool
 
-	// Instructs the client not to send rpc.cancel notifications to the server
-	// when the context for an in-flight request terminates.
-	DisableCancel bool
-
 	// If set, this function is called with the context, method name, and
 	// encoded request parameters before the request is sent to the server.
 	// Its return value replaces the request parameters. This allows the client
@@ -165,7 +161,6 @@ type ClientOptions struct {
 	// The function receives the client and the response that was cancelled.
 	// The hook can obtain the ID and error value from rsp.
 	//
-	// Setting this option disables the default rpc.cancel handling (as DisableCancel).
 	// Note that the hook does not receive the client context, which has already
 	// ended by the time the hook is called.
 	OnCancel func(cli *Client, rsp *Response)
@@ -179,8 +174,7 @@ func (c *ClientOptions) logger() logger {
 	return func(msg string, args ...interface{}) { logger.Output(2, fmt.Sprintf(msg, args...)) }
 }
 
-func (c *ClientOptions) allowV1() bool     { return c != nil && c.AllowV1 }
-func (c *ClientOptions) allowCancel() bool { return c == nil || !c.DisableCancel }
+func (c *ClientOptions) allowV1() bool { return c != nil && c.AllowV1 }
 
 type encoder = func(context.Context, string, json.RawMessage) (json.RawMessage, error)
 
