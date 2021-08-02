@@ -286,6 +286,20 @@ type jmessage struct {
 	err   error // if not nil, this message is invalid and err is why
 }
 
+// isValidID reports whether v is a valid JSON encoding of a request ID.
+// Precondition: v is a valid JSON value, or empty.
+func isValidID(v json.RawMessage) bool {
+	if len(v) == 0 || isNull(v) {
+		return true // nil or empty is OK, as is "null"
+	} else if v[0] == '"' || v[0] == '-' || (v[0] >= '0' && v[0] <= '9') {
+		return true // strings and numbers are OK
+
+		// N.B. This definition does not reject fractional numbers, although the
+		// spec says numeric IDs should not have fractional parts.
+	}
+	return false // anything else is garbage
+}
+
 func (j *jmessage) fail(code code.Code, msg string) error {
 	j.err = Errorf(code, msg)
 	return j.err
@@ -312,7 +326,11 @@ func (j *jmessage) parseJSON(data []byte) error {
 				j.fail(code.ParseError, "invalid version key")
 			}
 		case "id":
-			j.ID = val
+			if isValidID(val) {
+				j.ID = val
+			} else {
+				j.fail(code.InvalidRequest, "invalid request ID")
+			}
 		case "method":
 			if json.Unmarshal(val, &j.M) != nil {
 				j.fail(code.ParseError, "invalid method name")

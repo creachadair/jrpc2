@@ -588,6 +588,7 @@ func TestOtherClient(t *testing.T) {
 		}
 	}()
 
+	const invalidIDMessage = `{"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"invalid request ID"}}`
 	tests := []struct {
 		input, want string
 	}{
@@ -663,6 +664,13 @@ func TestOtherClient(t *testing.T) {
 		// A broken single request should report a top-level error.
 		{`{"bogus"][++`,
 			`{"jsonrpc":"2.0","id":null,"error":{"code":-32700,"message":"invalid request message"}}`},
+
+		// Various invalid ID checks.
+		{`{"jsonrpc":"2.0", "id":[], "method":"X"}`, invalidIDMessage},    // invalid ID: array
+		{`{"jsonrpc":"2.0", "id":["q"], "method":"X"}`, invalidIDMessage}, // "
+		{`{"jsonrpc":"2.0", "id":{}, "method":"X"}`, invalidIDMessage},    // invalid ID: object
+		{`{"jsonrpc":"2.0", "id":true, "method":"X"}`, invalidIDMessage},  // invalid ID: Boolean
+		{`{"jsonrpc":"2.0", "id":false, "method":"X"}`, invalidIDMessage}, // "
 	}
 	for _, test := range tests {
 		if err := cli.Send([]byte(test.input)); err != nil {
