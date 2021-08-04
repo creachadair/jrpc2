@@ -177,14 +177,14 @@ concurrent if the time intervals between the arrival of the request objects and
 delivery of the response objects overlap.
 
 The server may issue concurrent requests to their handlers in any order.
-Otherwise, requests are processed in order of arrival. Notifications, in
-particular, can only be concurrent with other requests in the same batch.
-This ensures a client that sends a notification can be sure its notification
-was fully processed before any subsequent calls are issued.
+Non-concurrent requests are processed in order of arrival. Notifications, in
+particular, can only be concurrent with other requests in the same batch.  This
+ensures a client that sends a notification can be sure its notification will be
+fully processed before any subsequent calls are issued to their handlers.
 
 These rules imply that the client cannot rely on the order of evaluation for
-calls that overlap: If the caller needs to ensure that call A completes before
-call B starts, it must wait for A to return before invoking B.
+calls that overlap in time: If the caller needs to ensure that call A completes
+before call B starts, it must wait for A to return before invoking B.
 
 
 Built-in Methods
