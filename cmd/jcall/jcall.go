@@ -115,7 +115,7 @@ func main() {
 	} else if nc := chanutil.Framing(*chanFraming); nc == nil {
 		log.Fatalf("Unknown channel framing %q", *chanFraming)
 	} else {
-		ntype := jrpc2.Network(flag.Arg(0))
+		ntype, _ := jrpc2.Network(flag.Arg(0))
 		conn, err := net.DialTimeout(ntype, flag.Arg(0), *dialTimeout)
 		if err != nil {
 			log.Fatalf("Dial %q: %v", flag.Arg(0), err)

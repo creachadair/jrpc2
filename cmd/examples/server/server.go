@@ -95,7 +95,7 @@ func main() {
 		},
 	}
 
-	lst, err := net.Listen(jrpc2.Network(*address), *address)
+	lst, err := net.Listen(jrpc2.Network(*address))
 	if err != nil {
 		log.Fatalln("Listen:", err)
 	}

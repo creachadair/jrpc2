@@ -1012,9 +1012,12 @@ func TestNetwork(t *testing.T) {
 		{"localhost:http", "tcp"}, // host and service name
 	}
 	for _, test := range tests {
-		got := jrpc2.Network(test.input)
+		got, addr := jrpc2.Network(test.input)
 		if got != test.want {
-			t.Errorf("Network(%q): got %q, want %q", test.input, got, test.want)
+			t.Errorf("Network(%q) type: got %q, want %q", test.input, got, test.want)
+		}
+		if addr != test.input {
+			t.Errorf("Network(%q) addr: got %q, want %q", test.input, addr, test.input)
 		}
 	}
 }

@@ -398,8 +398,10 @@ func encode(ch channel.Sender, rsps jmessages) (int, error) {
 	return len(bits), ch.Send(bits)
 }
 
-// Network guesses a network type for the specified address.  The assignment of
-// a network type uses the following heuristics:
+// Network guesses a network type for the specified address and returns a tuple
+// of that type and the address.
+//
+// The assignment of a network type uses the following heuristics:
 //
 // If s does not have the form [host]:port, the network is assigned as "unix".
 // The network "unix" is also assigned if port == "", port contains characters
@@ -407,18 +409,18 @@ func encode(ch channel.Sender, rsps jmessages) (int, error) {
 //
 // Otherwise, the network is assigned as "tcp". Note that this function does
 // not verify whether the address is lexically valid.
-func Network(s string) string {
+func Network(s string) (network, address string) {
 	i := strings.LastIndex(s, ":")
 	if i < 0 {
-		return "unix"
+		return "unix", s
 	}
 	host, port := s[:i], s[i+1:]
 	if port == "" || !isServiceName(port) {
-		return "unix"
+		return "unix", s
 	} else if strings.IndexByte(host, '/') >= 0 {
-		return "unix"
+		return "unix", s
 	}
-	return "tcp"
+	return "tcp", s
 }
 
 // isServiceName reports whether s looks like a legal service name from the
