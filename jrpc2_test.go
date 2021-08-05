@@ -1058,10 +1058,10 @@ func TestWaitStatus(t *testing.T) {
 		if got, want := stat.Success(), wantErr == nil; got != want {
 			t.Errorf("Status success: got %v, want %v", got, want)
 		}
-		if got := stat.Closed(); got != closed {
+		if got := stat.Closed; got != closed {
 			t.Errorf("Status closed: got %v, want %v", got, closed)
 		}
-		if got := stat.Stopped(); got != stopped {
+		if got := stat.Stopped; got != stopped {
 			t.Errorf("Status stopped: got %v, want %v", got, stopped)
 		}
 		if stat.Err != wantErr {

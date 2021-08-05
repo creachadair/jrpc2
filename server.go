@@ -474,17 +474,13 @@ func (s *Server) Stop() {
 type ServerStatus struct {
 	Err error // the error that caused the server to stop (nil on success)
 
-	stopped bool // whether Stop was called
+	// On success, these flags explain the reason why the server stopped.
+	Stopped bool // server exited because Stop was called
+	Closed  bool // server exited because the client channel closed
 }
 
 // Success reports whether the server exited without error.
 func (s ServerStatus) Success() bool { return s.Err == nil }
-
-// Stopped reports whether the server exited due to Stop being called.
-func (s ServerStatus) Stopped() bool { return s.Err == nil && s.stopped }
-
-// Closed reports whether the server exited due to a channel close.
-func (s ServerStatus) Closed() bool { return s.Err == nil && !s.stopped }
 
 // WaitStatus blocks until the server terminates, and returns the resulting
 // status. After WaitStatus returns, whether or not there was an error, it is
@@ -495,12 +491,15 @@ func (s *Server) WaitStatus() ServerStatus {
 	if s.inq.Len() != 0 {
 		panic("s.inq is not empty at shutdown")
 	}
-	exitErr := s.err
-	// Don't remark on a closed channel or EOF as a noteworthy failure.
-	if s.err == io.EOF || channel.IsErrClosing(s.err) || s.err == errServerStopped {
-		exitErr = nil
+	stat := ServerStatus{Err: s.err}
+	if s.err == io.EOF || channel.IsErrClosing(s.err) {
+		stat.Err = nil
+		stat.Closed = true
+	} else if s.err == errServerStopped {
+		stat.Err = nil
+		stat.Stopped = true
 	}
-	return ServerStatus{Err: exitErr, stopped: s.err == errServerStopped}
+	return stat
 }
 
 // Wait blocks until the server terminates and returns the resulting error.
