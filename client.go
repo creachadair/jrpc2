@@ -16,7 +16,7 @@ import (
 // A Client is a JSON-RPC 2.0 client. The client sends requests and receives
 // responses on a channel.Channel provided by the caller.
 type Client struct {
-	done chan struct{} // closed when the reader is done at shutdown time
+	done *sync.WaitGroup // done when the reader is finished at shutdown time
 
 	log   func(string, ...interface{}) // write debug logs here
 	enctx encoder
@@ -36,7 +36,7 @@ type Client struct {
 // NewClient returns a new client that communicates with the server via ch.
 func NewClient(ch channel.Channel, opts *ClientOptions) *Client {
 	c := &Client{
-		done:   make(chan struct{}),
+		done:   new(sync.WaitGroup),
 		log:    opts.logger(),
 		allow1: opts.allowV1(),
 		enctx:  opts.encodeContext(),
@@ -57,8 +57,9 @@ func NewClient(ch channel.Channel, opts *ClientOptions) *Client {
 	// back to pending requests by their ID. Outbound requests do not queue;
 	// they are sent synchronously in the Send method.
 
+	c.done.Add(1)
 	go func() {
-		defer close(c.done)
+		defer c.done.Done()
 		for c.accept(ch) == nil {
 		}
 	}()
@@ -85,7 +86,9 @@ func (c *Client) accept(ch channel.Receiver) error {
 	}
 
 	c.log("Received %d responses", len(in))
+	c.done.Add(1)
 	go func() {
+		defer c.done.Done()
 		c.mu.Lock()
 		defer c.mu.Unlock()
 		for _, rsp := range in {
@@ -367,7 +370,8 @@ func (c *Client) Close() error {
 	c.mu.Lock()
 	c.stop(errClientStopped)
 	c.mu.Unlock()
-	<-c.done
+	c.done.Wait()
+
 	// Don't remark on a closed channel or EOF as a noteworthy failure.
 	if isUninteresting(c.err) {
 		return nil
