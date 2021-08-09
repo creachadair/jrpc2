@@ -623,6 +623,7 @@ func TestOtherClient(t *testing.T) {
 		// A batch of correct requests.
 		{`[{"jsonrpc":"2.0", "id":"a1", "method":"X"}, {"jsonrpc":"2.0", "id":"a2", "method": "X"}]`,
 			`[{"jsonrpc":"2.0","id":"a1","result":"OK"},{"jsonrpc":"2.0","id":"a2","result":"OK"}]`},
+		{`{"jsonrpc":"2.0", "id":-25, "method":"X"}`, `{"jsonrpc":"2.0","id":-25,"result":"OK"}`},
 
 		// Extra fields on an otherwise-correct request.
 		{`{"jsonrpc":"2.0","id": 7, "method": "Z", "params":[], "bogus":true}`,
