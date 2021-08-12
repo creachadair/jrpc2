@@ -324,17 +324,17 @@ func (c *Client) CallResult(ctx context.Context, method string, params, result i
 func (c *Client) Batch(ctx context.Context, specs []Spec) ([]*Response, error) {
 	reqs := make(jmessages, len(specs))
 	for i, spec := range specs {
+		var req *jmessage
+		var err error
 		if spec.Notify {
-			req, err := c.note(ctx, spec.Method, spec.Params)
-			if err != nil {
-				return nil, err
-			}
-			reqs[i] = req
-		} else if req, err := c.req(ctx, spec.Method, spec.Params); err != nil {
-			return nil, err
+			req, err = c.note(ctx, spec.Method, spec.Params)
 		} else {
-			reqs[i] = req
+			req, err = c.req(ctx, spec.Method, spec.Params)
 		}
+		if err != nil {
+			return nil, err
+		}
+		reqs[i] = req
 	}
 	rsps, err := c.send(ctx, reqs)
 	if err != nil {
