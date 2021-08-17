@@ -143,7 +143,7 @@ func (s *Server) serve() {
 	for {
 		next, err := s.nextRequest()
 		if err != nil {
-			s.log("Reading next request: %v", err)
+			s.log("Error reading from client: %v", err)
 			return
 		}
 		s.wg.Add(1)
@@ -172,7 +172,7 @@ func (s *Server) nextRequest() (func() error, error) {
 	ch := s.ch // capture
 
 	next := s.inq.Remove(s.inq.Front()).(jmessages)
-	s.log("Processing %d requests", len(next))
+	s.log("Dequeued request batch of length %d", len(next))
 
 	// Construct a dispatcher to run the handlers outside the lock.
 	return s.dispatch(next, ch), nil
@@ -587,7 +587,7 @@ func (s *Server) read(ch channel.Receiver) {
 		} else if len(in) == 0 {
 			s.pushError(Errorf(code.InvalidRequest, "empty request batch"))
 		} else {
-			s.log("Received %d new requests", len(in))
+			s.log("Received request batch of size %d", len(in))
 			s.inq.PushBack(in)
 			s.work.Broadcast()
 		}
