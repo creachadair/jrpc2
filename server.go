@@ -172,7 +172,7 @@ func (s *Server) nextRequest() (func() error, error) {
 	ch := s.ch // capture
 
 	next := s.inq.Remove(s.inq.Front()).(jmessages)
-	s.log("Dequeued request batch of length %d", len(next))
+	s.log("Dequeued request batch of length %d (qlen=%d)", len(next), s.inq.Len())
 
 	// Construct a dispatcher to run the handlers outside the lock.
 	return s.dispatch(next, ch), nil
@@ -263,7 +263,6 @@ func (s *Server) deliver(rsps jmessages, ch channel.Sender, elapsed time.Duratio
 func (s *Server) checkAndAssign(next jmessages) tasks {
 	var ts tasks
 	for _, req := range next {
-		s.log("Checking request for %q: %s", req.M, string(req.P))
 		fid := fixID(req.ID)
 		t := &task{
 			hreq:  &Request{id: fid, method: req.M, params: req.P},
@@ -295,7 +294,7 @@ func (s *Server) checkAndAssign(next jmessages) tasks {
 		}
 
 		if t.err != nil {
-			s.log("Task error: %v", t.err)
+			s.log("Request check error for %q (params %q): %v", req.M, string(req.P), t.err)
 			s.metrics.Count("rpc.errors", 1)
 		}
 		ts = append(ts, t)
@@ -587,7 +586,7 @@ func (s *Server) read(ch channel.Receiver) {
 		} else if len(in) == 0 {
 			s.pushError(Errorf(code.InvalidRequest, "empty request batch"))
 		} else {
-			s.log("Received request batch of size %d", len(in))
+			s.log("Received request batch of size %d (qlen=%d)", len(in), s.inq.Len())
 			s.inq.PushBack(in)
 			s.work.Broadcast()
 		}
