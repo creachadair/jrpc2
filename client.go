@@ -319,8 +319,9 @@ func (c *Client) CallResult(ctx context.Context, method string, params, result i
 // responses return. The responses are returned in the same order as the
 // original specs, omitting notifications.
 //
-// Any error returned is from sending the batch; the caller must check each
-// response for errors from the server.
+// Any error reported by Batch represents an error in encoding or sending the
+// batch to the server. Errors reported by the server in response to requests
+// must be recovered from the responses.
 func (c *Client) Batch(ctx context.Context, specs []Spec) ([]*Response, error) {
 	reqs := make(jmessages, len(specs))
 	for i, spec := range specs {
