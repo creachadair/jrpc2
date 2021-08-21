@@ -205,7 +205,7 @@ func TestChannel(t *testing.T) {
 			t.Error("Send on a closed channel unexpectedly worked")
 		}
 		if got, err := ch.Recv(); err != io.EOF {
-			t.Errorf("Recv = (%#q, %v), want (nil, %v", string(got), err, io.EOF)
+			t.Errorf("Recv = (%#q, %v), want (nil, %v)", string(got), err, io.EOF)
 		}
 	}
 

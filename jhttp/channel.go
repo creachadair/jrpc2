@@ -10,7 +10,7 @@ import (
 	"sync"
 )
 
-// A Channel implements an channel.Channel that dispatches requests via HTTP to
+// A Channel implements a channel.Channel that dispatches requests via HTTP to
 // a user-provided URL. Each message sent to the channel is an HTTP POST
 // request with the message as its body.
 type Channel struct {
