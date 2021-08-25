@@ -50,9 +50,10 @@ type ServerOptions struct {
 	// If unset, ctx and params are used as given.
 	DecodeContext func(context.Context, string, json.RawMessage) (context.Context, json.RawMessage, error)
 
-	// If set, this function is called with the context and the client request
-	// to be delivered to the handler. If CheckRequest reports a non-nil error,
-	// the request fails with that error without invoking the handler.
+	// If set, this function is called with the context and client request
+	// (after decoding, if DecodeContext is set) that are to be delivered to the
+	// handler. If CheckRequest reports a non-nil error, the request fails with
+	// that error without invoking the handler.
 	CheckRequest func(ctx context.Context, req *Request) error
 
 	// If set, use this value to record server metrics. All servers created
