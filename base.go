@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/creachadair/jrpc2/channel"
 	"github.com/creachadair/jrpc2/code"
 )
 
@@ -389,8 +388,14 @@ func fixID(id json.RawMessage) json.RawMessage {
 	return nil
 }
 
+// sender is the subset of channel.Channel needed to send messages.
+type sender interface{ Send([]byte) error }
+
+// receiver is the subset of channel.Channel needed to receive messages.
+type receiver interface{ Recv() ([]byte, error) }
+
 // encode marshals rsps as JSON and forwards it to the channel.
-func encode(ch channel.Sender, rsps jmessages) (int, error) {
+func encode(ch sender, rsps jmessages) (int, error) {
 	bits, err := rsps.toJSON()
 	if err != nil {
 		return 0, err

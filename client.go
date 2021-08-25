@@ -69,7 +69,7 @@ func NewClient(ch channel.Channel, opts *ClientOptions) *Client {
 // accept receives the next batch of responses from the server.  This may
 // either be a list or a single object, the decoder for jmessages knows how to
 // handle both. The caller must not hold c.mu.
-func (c *Client) accept(ch channel.Receiver) error {
+func (c *Client) accept(ch receiver) error {
 	var in jmessages
 	bits, err := ch.Recv()
 	if err == nil {

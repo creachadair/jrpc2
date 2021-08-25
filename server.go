@@ -200,7 +200,7 @@ func (s *Server) waitForBarrier(n int) {
 // completed, to ensure that notifications are processed in a partial order
 // that respects order of receipt. Notifications within a batch are handled
 // concurrently.
-func (s *Server) dispatch(next jmessages, ch channel.Sender) func() error {
+func (s *Server) dispatch(next jmessages, ch sender) func() error {
 	// Resolve all the task handlers or record errors.
 	start := time.Now()
 	tasks := s.checkAndAssign(next)
@@ -240,7 +240,7 @@ func (s *Server) dispatch(next jmessages, ch channel.Sender) func() error {
 
 // deliver cleans up completed responses and arranges their replies (if any) to
 // be sent back to the client.
-func (s *Server) deliver(rsps jmessages, ch channel.Sender, elapsed time.Duration) error {
+func (s *Server) deliver(rsps jmessages, ch sender, elapsed time.Duration) error {
 	if len(rsps) == 0 {
 		return nil
 	}
@@ -563,7 +563,7 @@ func (s *Server) stop(err error) {
 // them to the queue. Decoding errors and message-format problems are handled
 // and reported back to the client directly, so that any message that survives
 // into the request queue is structurally valid.
-func (s *Server) read(ch channel.Receiver) {
+func (s *Server) read(ch receiver) {
 	for {
 		// If the message is not sensible, report an error; otherwise enqueue it
 		// for processing. Errors in individual requests are handled later.

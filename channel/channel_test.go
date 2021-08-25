@@ -20,7 +20,7 @@ func newPipe(framing Framing) (client, server Channel) {
 	return
 }
 
-func testSendRecv(t *testing.T, s Sender, r Receiver, msg string) {
+func testSendRecv(t *testing.T, s, r Channel, msg string) {
 	var wg sync.WaitGroup
 	var sendErr, recvErr error
 	var data []byte
