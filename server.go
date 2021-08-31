@@ -470,10 +470,16 @@ func (s *Server) Stop() {
 }
 
 // ServerStatus describes the status of a stopped server.
+//
+// A server is said to have succeeded if it stopped because the client channel
+// closed or because its Stop method was called. On success, Err == nil, and
+// the flag fields indicate the reason why the server exited.
+// Otherwise, Err != nil is the error value that caused the server to exit.
 type ServerStatus struct {
 	Err error // the error that caused the server to stop (nil on success)
 
 	// On success, these flags explain the reason why the server stopped.
+	// At most one of these fields will be true.
 	Stopped bool // server exited because Stop was called
 	Closed  bool // server exited because the client channel closed
 }
