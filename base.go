@@ -35,10 +35,6 @@ type Handler interface {
 	//
 	//    srv := jrpc2.ServerFromContext(ctx)
 	//
-	// To obtain a server metrics value (see metrics.M), write:
-	//
-	//    sm := jrpc2.ServerMetrics(ctx)
-	//
 	// To obtain the inbound request message, write:
 	//
 	//    req := jrpc2.InboundRequest(ctx)
