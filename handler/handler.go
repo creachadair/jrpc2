@@ -86,7 +86,7 @@ func (m ServiceMap) Assigner() (jrpc2.Assigner, error) { return m, nil }
 func (ServiceMap) Finish(jrpc2.Assigner, jrpc2.ServerStatus) {}
 
 // New adapts a function to a jrpc2.Handler. The concrete value of fn must be a
-// function with one of the following type signatures:
+// function with one of the following type signature schemes:
 //
 //    func(context.Context) error
 //    func(context.Context) Y
@@ -94,7 +94,11 @@ func (ServiceMap) Finish(jrpc2.Assigner, jrpc2.ServerStatus) {}
 //    func(context.Context, X) error
 //    func(context.Context, X) Y
 //    func(context.Context, X) (Y, error)
+//    func(context.Context, ...X) error
+//    func(context.Context, ...X) Y
 //    func(context.Context, ...X) (Y, error)
+//    func(context.Context, *jrpc2.Request) error
+//    func(context.Context, *jrpc2.Request) Y
 //    func(context.Context, *jrpc2.Request) (Y, error)
 //    func(context.Context, *jrpc2.Request) (interface{}, error)
 //
