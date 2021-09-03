@@ -9,7 +9,11 @@ import (
 	"github.com/creachadair/jrpc2/channel"
 )
 
-// Service is the interface used by the Loop function to start up a server.
+// Service is the interface used by the Loop and Run functions to start up a
+// server. The methods of this interface allow the instance to manage its
+// state: The Assigner method is called before the server is started, and can
+// be used to initialize the service. The Finish method is called after the
+// server exits, and can be used to clean up.
 type Service interface {
 	// This method is called to create an assigner and initialize the service
 	// for use.  If it reports an error, the server is not started.
