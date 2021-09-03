@@ -34,12 +34,13 @@ func (s static) New() Service                            { return s }
 func (s static) Assigner() (jrpc2.Assigner, error)       { return s.methods, nil }
 func (static) Finish(jrpc2.Assigner, jrpc2.ServerStatus) {}
 
-// Loop obtains connections from lst and starts a server for each with the
-// given service constructor and options, running in a new goroutine. If accept
-// reports an error, the loop will terminate and the error will be reported
-// once all the servers currently active have returned.
+// Loop obtains connections from lst and starts a server for each using a
+// service instance returned by newService and the given options. Each server
+// runs in a new goroutine.
 //
-// TODO: Add options to support sensible rate-limitation.
+// If the listener reports an error, the loop will terminate and that error
+// will be reported to the caller of Loop once any active servers have
+// returned.
 func Loop(lst net.Listener, newService func() Service, opts *LoopOptions) error {
 	newChannel := opts.framing()
 	serverOpts := opts.serverOpts()
