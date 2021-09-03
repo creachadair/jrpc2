@@ -91,7 +91,7 @@ func NewServer(mux Assigner, opts *ServerOptions) *Server {
 }
 
 // Start enables processing of requests from c. This function will panic if the
-// server is already running.
+// server is already running. It returns s to allow chaining with construction.
 func (s *Server) Start(c channel.Channel) *Server {
 	s.mu.Lock()
 	defer s.mu.Unlock()
