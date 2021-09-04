@@ -85,35 +85,20 @@ func (m ServiceMap) Assigner() (jrpc2.Assigner, error) { return m, nil }
 // Finish is a no-op implementation satisfying part of the Service interface.
 func (ServiceMap) Finish(jrpc2.Assigner, jrpc2.ServerStatus) {}
 
-// New adapts a function to a jrpc2.Handler. The concrete value of fn must be a
-// function with one of the following type signature schemes:
+// New adapts a function to a jrpc2.Handler. The concrete value of fn must be
+// function accepted by Check. The resulting Func will handle JSON encoding and
+// decoding, call fn, and report appropriate errors.
 //
-//    func(context.Context) error
-//    func(context.Context) Y
-//    func(context.Context) (Y, error)
-//    func(context.Context, X) error
-//    func(context.Context, X) Y
-//    func(context.Context, X) (Y, error)
-//    func(context.Context, ...X) error
-//    func(context.Context, ...X) Y
-//    func(context.Context, ...X) (Y, error)
-//    func(context.Context, *jrpc2.Request) error
-//    func(context.Context, *jrpc2.Request) Y
-//    func(context.Context, *jrpc2.Request) (Y, error)
-//    func(context.Context, *jrpc2.Request) (interface{}, error)
-//
-// for JSON-marshalable types X and Y. New will panic if the type of fn does
-// not have one of these forms.  The resulting method will handle encoding and
-// decoding of JSON and report appropriate errors.
-//
-// Functions adapted in this way can obtain the *jrpc2.Request value using the
-// jrpc2.InboundRequest helper on the context value supplied by the server.
+// New is intended for use during program initialization, and will panic if the
+// type of fn does not have one of the accepted forms. Programs that need to
+// check for possible errors should call handler.Check directly, and use the
+// Wrap method of the resulting FuncInfo to obtain the wrapper.
 func New(fn interface{}) Func {
-	m, err := newHandler(fn)
+	fi, err := Check(fn)
 	if err != nil {
 		panic(err)
 	}
-	return m
+	return fi.Wrap()
 }
 
 var (
@@ -122,28 +107,39 @@ var (
 	reqType = reflect.TypeOf((*jrpc2.Request)(nil))          // type *jrpc2.Request
 )
 
-func newHandler(fn interface{}) (Func, error) {
-	if fn == nil {
-		return nil, errors.New("nil method")
+// FuncInfo captures type signature information from a valid handler function.
+type FuncInfo struct {
+	Type         reflect.Type // the complete function type
+	Argument     reflect.Type // the non-context argument type, or nil
+	IsVariadic   bool         // true if the function is variadic on its argument
+	Result       reflect.Type // the non-error result type, or nil
+	ReportsError bool         // true if the function reports an error
+
+	fn interface{} // the original function value
+}
+
+// Wrap adapts the function represented by fi in a Func that satisfies the
+// jrpc2.Handler interface.  The wrappedfunction can obtain the *jrpc2.Request
+// value from its context argument using the jrpc2.InboundRequest helper.
+//
+// This method panics if fi == nil or if it does not represent a valid function
+// type. A FuncInfo returned by a successful call to Check is always valid.
+func (fi *FuncInfo) Wrap() Func {
+	if fi == nil || fi.fn == nil {
+		panic("handler: invalid FuncInfo value")
 	}
 
 	// Special case: If fn has the exact signature of the Handle method, don't do
 	// any (additional) reflection at all.
-	if f, ok := fn.(func(context.Context, *jrpc2.Request) (interface{}, error)); ok {
-		return Func(f), nil
-	}
-
-	// Check that fn is a function of one of the correct forms.
-	info, err := checkFunctionType(fn)
-	if err != nil {
-		return nil, err
+	if f, ok := fi.fn.(func(context.Context, *jrpc2.Request) (interface{}, error)); ok {
+		return Func(f)
 	}
 
 	// Construct a function to unpack the parameters from the request message,
 	// based on the signature of the user's callback.
 	var newinput func(req *jrpc2.Request) ([]reflect.Value, error)
 
-	if info.Argument == nil {
+	if fi.Argument == nil {
 		// Case 1: The function does not want any request parameters.
 		// Nothing needs to be decoded, but verify no parameters were passed.
 		newinput = func(req *jrpc2.Request) ([]reflect.Value, error) {
@@ -153,16 +149,16 @@ func newHandler(fn interface{}) (Func, error) {
 			return nil, nil
 		}
 
-	} else if info.Argument == reqType {
+	} else if fi.Argument == reqType {
 		// Case 2: The function wants the underlying *jrpc2.Request value.
 		newinput = func(req *jrpc2.Request) ([]reflect.Value, error) {
 			return []reflect.Value{reflect.ValueOf(req)}, nil
 		}
 
-	} else if info.Argument.Kind() == reflect.Ptr {
+	} else if fi.Argument.Kind() == reflect.Ptr {
 		// Case 3a: The function wants a pointer to its argument value.
 		newinput = func(req *jrpc2.Request) ([]reflect.Value, error) {
-			in := reflect.New(info.Argument)
+			in := reflect.New(fi.Argument)
 			if err := req.UnmarshalParams(in.Interface()); err != nil {
 				return nil, jrpc2.Errorf(code.InvalidParams, "invalid parameters: %v", err)
 			}
@@ -171,7 +167,7 @@ func newHandler(fn interface{}) (Func, error) {
 	} else {
 		// Case 3b: The function wants a bare argument value.
 		newinput = func(req *jrpc2.Request) ([]reflect.Value, error) {
-			in := reflect.New(info.Argument) // we still need a pointer to unmarshal
+			in := reflect.New(fi.Argument) // we still need a pointer to unmarshal
 			if err := req.UnmarshalParams(in.Interface()); err != nil {
 				return nil, jrpc2.Errorf(code.InvalidParams, "invalid parameters: %v", err)
 			}
@@ -183,7 +179,7 @@ func newHandler(fn interface{}) (Func, error) {
 	// Construct a function to decode the result values.
 	var decodeOut func([]reflect.Value) (interface{}, error)
 
-	if info.Result == nil {
+	if fi.Result == nil {
 		// The function returns only an error, the result is always nil.
 		decodeOut = func(vals []reflect.Value) (interface{}, error) {
 			oerr := vals[0].Interface()
@@ -192,7 +188,7 @@ func newHandler(fn interface{}) (Func, error) {
 			}
 			return nil, nil
 		}
-	} else if !info.ReportsError {
+	} else if !fi.ReportsError {
 		// The function returns only single non-error: err is always nil.
 		decodeOut = func(vals []reflect.Value) (interface{}, error) {
 			return vals[0].Interface(), nil
@@ -208,9 +204,9 @@ func newHandler(fn interface{}) (Func, error) {
 		}
 	}
 
-	f := reflect.ValueOf(fn)
+	f := reflect.ValueOf(fi.fn)
 	call := f.Call
-	if info.IsVariadic {
+	if fi.IsVariadic {
 		call = f.CallSlice
 	}
 
@@ -221,29 +217,47 @@ func newHandler(fn interface{}) (Func, error) {
 		}
 		args := append([]reflect.Value{reflect.ValueOf(ctx)}, rest...)
 		return decodeOut(call(args))
-	}), nil
+	})
 }
 
-// funcInfo captures type signature information from a valid handler function.
-type funcInfo struct {
-	Type         reflect.Type // the complete function type
-	Argument     reflect.Type // the non-context argument type, or nil
-	IsVariadic   bool         // true if the argument exists and is variadic
-	Result       reflect.Type // the non-error result type, or nil
-	ReportsError bool         // true if the function reports an error
-}
+// Check checks whether fn can serve a jrpc2.Handler.  The concrete value of fn
+// must be a function with one of the following type signature schemes for JSON
+// marshalable types X and Y.
+//
+//    func(context.Context) error
+//    func(context.Context) Y
+//    func(context.Context) (Y, error)
+//    func(context.Context, X) error
+//    func(context.Context, X) Y
+//    func(context.Context, X) (Y, error)
+//    func(context.Context, ...X) error
+//    func(context.Context, ...X) Y
+//    func(context.Context, ...X) (Y, error)
+//    func(context.Context, *jrpc2.Request) error
+//    func(context.Context, *jrpc2.Request) Y
+//    func(context.Context, *jrpc2.Request) (Y, error)
+//    func(context.Context, *jrpc2.Request) (interface{}, error)
+//
+// If fn does not have one of these forms, Check reports an error.
+func Check(fn interface{}) (*FuncInfo, error) {
+	if fn == nil {
+		return nil, errors.New("nil function")
+	}
 
-func checkFunctionType(fn interface{}) (*funcInfo, error) {
-	info := &funcInfo{Type: reflect.TypeOf(fn)}
+	info := &FuncInfo{Type: reflect.TypeOf(fn), fn: fn}
 	if info.Type.Kind() != reflect.Func {
 		return nil, errors.New("not a function")
 	}
+
+	// Check argument values.
 	if np := info.Type.NumIn(); np == 0 || np > 2 {
 		return nil, errors.New("wrong number of parameters")
 	} else if np == 2 {
 		info.Argument = info.Type.In(1)
 		info.IsVariadic = info.Type.IsVariadic()
 	}
+
+	// Check return values.
 	no := info.Type.NumOut()
 	if no < 1 || no > 2 {
 		return nil, errors.New("wrong number of results")
