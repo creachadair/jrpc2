@@ -134,7 +134,7 @@ func newHandler(fn interface{}) (Func, error) {
 	}
 
 	// Check that fn is a function of one of the correct forms.
-	typ, err := checkFunctionType(fn)
+	info, err := checkFunctionType(fn)
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +143,7 @@ func newHandler(fn interface{}) (Func, error) {
 	// based on the signature of the user's callback.
 	var newinput func(req *jrpc2.Request) ([]reflect.Value, error)
 
-	if typ.NumIn() == 1 {
+	if info.Argument == nil {
 		// Case 1: The function does not want any request parameters.
 		// Nothing needs to be decoded, but verify no parameters were passed.
 		newinput = func(req *jrpc2.Request) ([]reflect.Value, error) {
@@ -153,59 +153,52 @@ func newHandler(fn interface{}) (Func, error) {
 			return nil, nil
 		}
 
-	} else if a := typ.In(1); a == reqType {
+	} else if info.Argument == reqType {
 		// Case 2: The function wants the underlying *jrpc2.Request value.
 		newinput = func(req *jrpc2.Request) ([]reflect.Value, error) {
 			return []reflect.Value{reflect.ValueOf(req)}, nil
 		}
 
-	} else {
-		// Check whether the function wants a pointer to its argument.  We need
-		// to create one either way to support unmarshaling, but we need to
-		// indirect it back off if the callee didn't want it.
-
-		// Case 3a: The function wants a bare value, not a pointer.
-		argType := typ.In(1)
-		undo := reflect.Value.Elem
-
-		if argType.Kind() == reflect.Ptr {
-			// Case 3b: The function wants a pointer.
-			undo = func(v reflect.Value) reflect.Value { return v }
-			argType = argType.Elem()
-		}
-
+	} else if info.Argument.Kind() == reflect.Ptr {
+		// Case 3a: The function wants a pointer to its argument value.
 		newinput = func(req *jrpc2.Request) ([]reflect.Value, error) {
-			in := reflect.New(argType).Interface()
-			if err := req.UnmarshalParams(in); err != nil {
+			in := reflect.New(info.Argument)
+			if err := req.UnmarshalParams(in.Interface()); err != nil {
 				return nil, jrpc2.Errorf(code.InvalidParams, "invalid parameters: %v", err)
 			}
-			arg := reflect.ValueOf(in)
-			return []reflect.Value{undo(arg)}, nil
+			return []reflect.Value{in}, nil
+		}
+	} else {
+		// Case 3b: The function wants a bare argument value.
+		newinput = func(req *jrpc2.Request) ([]reflect.Value, error) {
+			in := reflect.New(info.Argument) // we still need a pointer to unmarshal
+			if err := req.UnmarshalParams(in.Interface()); err != nil {
+				return nil, jrpc2.Errorf(code.InvalidParams, "invalid parameters: %v", err)
+			}
+			// Indirect the pointer back off for the callee.
+			return []reflect.Value{in.Elem()}, nil
 		}
 	}
 
 	// Construct a function to decode the result values.
 	var decodeOut func([]reflect.Value) (interface{}, error)
 
-	switch typ.NumOut() {
-	case 1:
-		if typ.Out(0) == errType {
-			// A function that returns only error: Result is always nil.
-			decodeOut = func(vals []reflect.Value) (interface{}, error) {
-				oerr := vals[0].Interface()
-				if oerr != nil {
-					return nil, oerr.(error)
-				}
-				return nil, nil
+	if info.Result == nil {
+		// The function returns only an error, the result is always nil.
+		decodeOut = func(vals []reflect.Value) (interface{}, error) {
+			oerr := vals[0].Interface()
+			if oerr != nil {
+				return nil, oerr.(error)
 			}
-		} else {
-			// A function that returns a single non-error: err is always nil.
-			decodeOut = func(vals []reflect.Value) (interface{}, error) {
-				return vals[0].Interface(), nil
-			}
+			return nil, nil
 		}
-	default:
-		// A function that returns a value and an error.
+	} else if !info.ReportsError {
+		// The function returns only single non-error: err is always nil.
+		decodeOut = func(vals []reflect.Value) (interface{}, error) {
+			return vals[0].Interface(), nil
+		}
+	} else {
+		// The function returns both a value and an error.
 		decodeOut = func(vals []reflect.Value) (interface{}, error) {
 			out, oerr := vals[0].Interface(), vals[1].Interface()
 			if oerr != nil {
@@ -217,7 +210,7 @@ func newHandler(fn interface{}) (Func, error) {
 
 	f := reflect.ValueOf(fn)
 	call := f.Call
-	if typ.IsVariadic() {
+	if info.IsVariadic {
 		call = f.CallSlice
 	}
 
@@ -231,20 +224,39 @@ func newHandler(fn interface{}) (Func, error) {
 	}), nil
 }
 
-func checkFunctionType(fn interface{}) (reflect.Type, error) {
-	typ := reflect.TypeOf(fn)
-	if typ.Kind() != reflect.Func {
+// funcInfo captures type signature information from a valid handler function.
+type funcInfo struct {
+	Type         reflect.Type // the complete function type
+	Argument     reflect.Type // the non-context argument type, or nil
+	IsVariadic   bool         // true if the argument exists and is variadic
+	Result       reflect.Type // the non-error result type, or nil
+	ReportsError bool         // true if the function reports an error
+}
+
+func checkFunctionType(fn interface{}) (*funcInfo, error) {
+	info := &funcInfo{Type: reflect.TypeOf(fn)}
+	if info.Type.Kind() != reflect.Func {
 		return nil, errors.New("not a function")
-	} else if np := typ.NumIn(); np == 0 || np > 2 {
+	}
+	if np := info.Type.NumIn(); np == 0 || np > 2 {
 		return nil, errors.New("wrong number of parameters")
-	} else if no := typ.NumOut(); no < 1 || no > 2 {
+	} else if np == 2 {
+		info.Argument = info.Type.In(1)
+		info.IsVariadic = info.Type.IsVariadic()
+	}
+	no := info.Type.NumOut()
+	if no < 1 || no > 2 {
 		return nil, errors.New("wrong number of results")
-	} else if typ.In(0) != ctxType {
+	} else if info.Type.In(0) != ctxType {
 		return nil, errors.New("first parameter is not context.Context")
-	} else if no == 2 && typ.Out(1) != errType {
+	} else if no == 2 && info.Type.Out(1) != errType {
 		return nil, errors.New("result is not of type error")
 	}
-	return typ, nil
+	info.ReportsError = info.Type.Out(no-1) == errType
+	if no == 2 || !info.ReportsError {
+		info.Result = info.Type.Out(0)
+	}
+	return info, nil
 }
 
 // Args is a wrapper that decodes an array of positional parameters into
