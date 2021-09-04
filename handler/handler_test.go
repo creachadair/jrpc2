@@ -66,6 +66,22 @@ func TestNew(t *testing.T) {
 	}
 }
 
+func ExampleCheck() {
+	fi, err := handler.Check(func(_ context.Context, ss []string) int { return len(ss) })
+	if err != nil {
+		log.Fatalf("Check failed: %v", err)
+	}
+	fmt.Printf("Argument type: %v\n", fi.Argument)
+	fmt.Printf("Result type:   %v\n", fi.Result)
+	fmt.Printf("Reports error? %v\n", fi.ReportsError)
+	fmt.Printf("Wrapped type:  %T\n", fi.Wrap())
+	// Output:
+	// Argument type: []string
+	// Result type:   int
+	// Reports error? false
+	// Wrapped type:  handler.Func
+}
+
 // Verify that a ServiceMap assigns names correctly.
 func TestServiceMap(t *testing.T) {
 	tests := []struct {
