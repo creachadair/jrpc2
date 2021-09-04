@@ -220,9 +220,9 @@ func (fi *FuncInfo) Wrap() Func {
 	})
 }
 
-// Check checks whether fn can serve a jrpc2.Handler.  The concrete value of fn
-// must be a function with one of the following type signature schemes for JSON
-// marshalable types X and Y.
+// Check checks whether fn can serve as a jrpc2.Handler.  The concrete value of
+// fn must be a function with one of the following type signature schemes, for
+// JSON-marshalable types X and Y:
 //
 //    func(context.Context) error
 //    func(context.Context) Y
