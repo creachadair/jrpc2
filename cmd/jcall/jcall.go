@@ -20,7 +20,6 @@ import (
 
 	"github.com/creachadair/jrpc2"
 	"github.com/creachadair/jrpc2/channel"
-	"github.com/creachadair/jrpc2/channel/chanutil"
 	"github.com/creachadair/jrpc2/jctx"
 	"github.com/creachadair/jrpc2/jhttp"
 )
@@ -112,7 +111,7 @@ func main() {
 	var cc channel.Channel
 	if *doHTTP || isHTTP(flag.Arg(0)) {
 		cc = jhttp.NewChannel(flag.Arg(0), nil)
-	} else if nc := chanutil.Framing(*chanFraming); nc == nil {
+	} else if nc := newFraming(*chanFraming); nc == nil {
 		log.Fatalf("Unknown channel framing %q", *chanFraming)
 	} else {
 		ntype, _ := jrpc2.Network(flag.Arg(0))
@@ -295,4 +294,31 @@ func envOrDefault(env, dflt string) string {
 		return s
 	}
 	return dflt
+}
+
+// newFraming returns a channel.Framing described by the specified name, or nil
+// if the name is unknown. The framing types currently understood are:
+//
+//    header:t -- corresponds to channel.Header(t)
+//    strict:t -- corresponds to channel.StrictHeader(t)
+//    line     -- corresponds to channel.Line
+//    lsp      -- corresponds to channel.LSP
+//    raw      -- corresponds to channel.RawJSON
+//
+func newFraming(name string) channel.Framing {
+	if t := strings.TrimPrefix(name, "header:"); t != name {
+		return channel.Header(t)
+	}
+	if t := strings.TrimPrefix(name, "strict:"); t != name {
+		return channel.StrictHeader(t)
+	}
+	switch name {
+	case "line":
+		return channel.Line
+	case "lsp":
+		return channel.LSP
+	case "raw":
+		return channel.RawJSON
+	}
+	return nil
 }
