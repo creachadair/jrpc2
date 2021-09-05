@@ -115,6 +115,19 @@ func (fi *FuncInfo) Wrap() Func {
 		panic("handler: invalid FuncInfo value")
 	}
 
+	// Although it is not possible to completely eliminate reflection, the
+	// intent here is to hoist as much work as possible out of the body of the
+	// constructed Func wrapper, since that will be executed every time the
+	// handler is invoked.
+	//
+	// To do this, we "pre-compile" helper functions to unmarshal JSON into the
+	// input arguments (newInput) and to convert the results from reflectors
+	// back into values (decodeOut). We pre-check the function signature and
+	// types, so that the helpers do only as much reflection as is necessary:
+	// for example, we won't allocate a parameter value if the function does not
+	// accept a parameter, nor decode a return value if the function returns
+	// only an error.
+
 	// Special case: If fn has the exact signature of the Handle method, don't do
 	// any (additional) reflection at all.
 	if f, ok := fi.fn.(func(context.Context, *jrpc2.Request) (interface{}, error)); ok {
@@ -123,12 +136,12 @@ func (fi *FuncInfo) Wrap() Func {
 
 	// Construct a function to unpack the parameters from the request message,
 	// based on the signature of the user's callback.
-	var newinput func(req *jrpc2.Request) ([]reflect.Value, error)
+	var newInput func(req *jrpc2.Request) ([]reflect.Value, error)
 
 	if fi.Argument == nil {
 		// Case 1: The function does not want any request parameters.
 		// Nothing needs to be decoded, but verify no parameters were passed.
-		newinput = func(req *jrpc2.Request) ([]reflect.Value, error) {
+		newInput = func(req *jrpc2.Request) ([]reflect.Value, error) {
 			if req.HasParams() {
 				return nil, jrpc2.Errorf(code.InvalidParams, "no parameters accepted")
 			}
@@ -137,13 +150,13 @@ func (fi *FuncInfo) Wrap() Func {
 
 	} else if fi.Argument == reqType {
 		// Case 2: The function wants the underlying *jrpc2.Request value.
-		newinput = func(req *jrpc2.Request) ([]reflect.Value, error) {
+		newInput = func(req *jrpc2.Request) ([]reflect.Value, error) {
 			return []reflect.Value{reflect.ValueOf(req)}, nil
 		}
 
 	} else if fi.Argument.Kind() == reflect.Ptr {
 		// Case 3a: The function wants a pointer to its argument value.
-		newinput = func(req *jrpc2.Request) ([]reflect.Value, error) {
+		newInput = func(req *jrpc2.Request) ([]reflect.Value, error) {
 			in := reflect.New(fi.Argument.Elem())
 			if err := req.UnmarshalParams(in.Interface()); err != nil {
 				return nil, jrpc2.Errorf(code.InvalidParams, "invalid parameters: %v", err)
@@ -152,7 +165,7 @@ func (fi *FuncInfo) Wrap() Func {
 		}
 	} else {
 		// Case 3b: The function wants a bare argument value.
-		newinput = func(req *jrpc2.Request) ([]reflect.Value, error) {
+		newInput = func(req *jrpc2.Request) ([]reflect.Value, error) {
 			in := reflect.New(fi.Argument) // we still need a pointer to unmarshal
 			if err := req.UnmarshalParams(in.Interface()); err != nil {
 				return nil, jrpc2.Errorf(code.InvalidParams, "invalid parameters: %v", err)
@@ -197,7 +210,7 @@ func (fi *FuncInfo) Wrap() Func {
 	}
 
 	return Func(func(ctx context.Context, req *jrpc2.Request) (interface{}, error) {
-		rest, ierr := newinput(req)
+		rest, ierr := newInput(req)
 		if ierr != nil {
 			return nil, ierr
 		}
