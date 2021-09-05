@@ -19,6 +19,11 @@ func y2(_ context.Context, vs ...int) (int, error) { return len(vs), nil }
 
 func y3(context.Context) error { return errors.New("blah") }
 
+type argStruct struct {
+	A string `json:"alpha"`
+	B int    `json:"bravo"`
+}
+
 // Verify that the New function correctly handles the various type signatures
 // it's advertised to support, and not others.
 func TestNew(t *testing.T) {
@@ -35,6 +40,7 @@ func TestNew(t *testing.T) {
 		{v: func(context.Context) (int, error) { return 0, nil }},
 		{v: func(context.Context, []int) error { return nil }},
 		{v: func(context.Context, []bool) (float64, error) { return 0, nil }},
+		{v: func(context.Context, *argStruct) int { return 0 }},
 		{v: func(context.Context, ...int) error { return nil }},
 		{v: func(context.Context, ...int) bool { return true }},
 		{v: func(context.Context, ...string) (bool, error) { return false, nil }},
@@ -63,6 +69,35 @@ func TestNew(t *testing.T) {
 		} else if test.bad && err == nil {
 			t.Errorf("newHandler(%T): got %+v, want error", test.v, got)
 		}
+	}
+}
+
+// Verify that the handling of pointer-typed arguments does not incorrectly
+// introduce another pointer indirection.
+func TestNew_pointerRegression(t *testing.T) {
+	var got argStruct
+	call := handler.New(func(_ context.Context, arg *argStruct) error {
+		got = *arg
+		t.Logf("Got argument struct: %+v", got)
+		return nil
+	})
+	req, err := jrpc2.ParseRequests([]byte(`{
+   "jsonrpc": "2.0",
+   "id":      "foo",
+   "method":  "bar",
+   "params":{
+      "alpha": "xyzzy",
+      "bravo": 23
+   }}`))
+	if err != nil {
+		t.Fatalf("Parse request failed: %v", err)
+	}
+	if _, err := call.Handle(context.Background(), req[0]); err != nil {
+		t.Errorf("Handle failed: %v", err)
+	}
+	want := argStruct{A: "xyzzy", B: 23}
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("Wrong argStruct value: (-want, +got)\n%s", diff)
 	}
 }
 

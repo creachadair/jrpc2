@@ -144,7 +144,7 @@ func (fi *FuncInfo) Wrap() Func {
 	} else if fi.Argument.Kind() == reflect.Ptr {
 		// Case 3a: The function wants a pointer to its argument value.
 		newinput = func(req *jrpc2.Request) ([]reflect.Value, error) {
-			in := reflect.New(fi.Argument)
+			in := reflect.New(fi.Argument.Elem())
 			if err := req.UnmarshalParams(in.Interface()); err != nil {
 				return nil, jrpc2.Errorf(code.InvalidParams, "invalid parameters: %v", err)
 			}
