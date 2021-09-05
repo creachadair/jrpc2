@@ -8,6 +8,5 @@ require (
 
 go 1.16
 
-// These versions introduced a bug in handler.New that would cause a wrapped
-// handler to fail on arguments of pointer type.
+// A bug in handler.New could panic a wrapped handler on pointer arguments.
 retract [v0.21.2, v0.22.0]
