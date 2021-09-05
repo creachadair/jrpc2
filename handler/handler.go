@@ -119,7 +119,7 @@ type FuncInfo struct {
 }
 
 // Wrap adapts the function represented by fi in a Func that satisfies the
-// jrpc2.Handler interface.  The wrappedfunction can obtain the *jrpc2.Request
+// jrpc2.Handler interface.  The wrapped function can obtain the *jrpc2.Request
 // value from its context argument using the jrpc2.InboundRequest helper.
 //
 // This method panics if fi == nil or if it does not represent a valid function
