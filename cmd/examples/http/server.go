@@ -22,7 +22,6 @@ import (
 	"github.com/creachadair/jrpc2/handler"
 	"github.com/creachadair/jrpc2/jhttp"
 	"github.com/creachadair/jrpc2/metrics"
-	"github.com/creachadair/jrpc2/server"
 )
 
 var port = flag.Int("port", 0, "Service port")
@@ -34,16 +33,17 @@ func main() {
 	}
 
 	// Start a local server with a single trivial method and bridge it to HTTP.
-	local := server.NewLocal(handler.Map{
+	srv := jrpc2.NewServer(handler.Map{
 		"Ping": handler.New(func(ctx context.Context, msg ...string) string {
 			return "OK: " + strings.Join(msg, ", ")
 		}),
-	}, &server.LocalOptions{
-		Server: &jrpc2.ServerOptions{
-			Logger:  log.New(os.Stderr, "[jhttp.Bridge] ", log.LstdFlags|log.Lshortfile),
-			Metrics: metrics.New(),
-		},
+	}, &jrpc2.ServerOptions{
+		Logger:  log.New(os.Stderr, "[jhttp.Bridge] ", log.LstdFlags|log.Lshortfile),
+		Metrics: metrics.New(),
 	})
-	http.Handle("/rpc", jhttp.NewBridge(local.Client))
+	bridge := jhttp.NewBridge(srv, nil)
+	defer bridge.Close()
+
+	http.Handle("/rpc", bridge)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", *port), nil))
 }
