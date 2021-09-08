@@ -3,6 +3,7 @@ package jhttp_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -15,16 +16,21 @@ import (
 	"github.com/creachadair/jrpc2/jhttp"
 )
 
+var testService = handler.Map{
+	"Test1": handler.New(func(ctx context.Context, ss []string) int {
+		return len(ss)
+	}),
+	"Test2": handler.New(func(ctx context.Context, req json.RawMessage) int {
+		return len(req)
+	}),
+}
+
 func TestBridge(t *testing.T) {
 	// Set up a JSON-RPC server to answer requests bridged from HTTP.
-	srv := jrpc2.NewServer(handler.Map{
-		"Test": handler.New(func(ctx context.Context, ss ...string) (string, error) {
-			return strings.Join(ss, " "), nil
-		}),
-	}, nil)
+	srv := jrpc2.NewServer(testService, nil)
 
 	// Bridge HTTP to the JSON-RPC server.
-	b := jhttp.NewBridge(srv)
+	b := jhttp.NewBridge(srv, nil)
 	defer checkClose(t, b)
 
 	// Create an HTTP test server to call into the bridge.
@@ -36,7 +42,7 @@ func TestBridge(t *testing.T) {
 		rsp, err := http.Post(hsrv.URL, "application/json", strings.NewReader(`{
   "jsonrpc": "2.0",
   "id": 1,
-  "method": "Test",
+  "method": "Test1",
   "params": ["a", "foolish", "consistency", "is", "the", "hobgoblin"]
 }
 `))
@@ -50,7 +56,7 @@ func TestBridge(t *testing.T) {
 			t.Errorf("Reading POST body: %v", err)
 		}
 
-		const want = `{"jsonrpc":"2.0","id":1,"result":"a foolish consistency is the hobgoblin"}`
+		const want = `{"jsonrpc":"2.0","id":1,"result":6}`
 		if got := string(body); got != want {
 			t.Errorf("POST body: got %#q, want %#q", got, want)
 		}
@@ -59,8 +65,8 @@ func TestBridge(t *testing.T) {
 	// Verify that the bridge will accept a batch.
 	t.Run("PostBatchOK", func(t *testing.T) {
 		rsp, err := http.Post(hsrv.URL, "application/json", strings.NewReader(`[
-  {"jsonrpc":"2.0", "id": 3, "method": "Test", "params": ["first"]},
-  {"jsonrpc":"2.0", "id": 7, "method": "Test", "params": ["among", "equals"]}
+  {"jsonrpc":"2.0", "id": 3, "method": "Test1", "params": ["first"]},
+  {"jsonrpc":"2.0", "id": 7, "method": "Test1", "params": ["among", "equals"]}
 ]
 `))
 		if err != nil {
@@ -73,8 +79,8 @@ func TestBridge(t *testing.T) {
 			t.Errorf("Reading POST body: %v", err)
 		}
 
-		const want = `[{"jsonrpc":"2.0","id":3,"result":"first"},` +
-			`{"jsonrpc":"2.0","id":7,"result":"among equals"}]`
+		const want = `[{"jsonrpc":"2.0","id":3,"result":1},` +
+			`{"jsonrpc":"2.0","id":7,"result":2}]`
 		if got := string(body); got != want {
 			t.Errorf("POST body: got %#q, want %#q", got, want)
 		}
@@ -147,14 +153,46 @@ func TestBridge(t *testing.T) {
 	})
 }
 
-func TestChannel(t *testing.T) {
-	srv := jrpc2.NewServer(handler.Map{
-		"Test": handler.New(func(ctx context.Context, arg json.RawMessage) (int, error) {
-			return len(arg), nil
-		}),
-	}, nil)
+// Verify that the content-type check hook works.
+func TestBridge_contentTypeCheck(t *testing.T) {
+	srv := jrpc2.NewServer(testService, nil)
 
-	b := jhttp.NewBridge(srv)
+	b := jhttp.NewBridge(srv, &jhttp.BridgeOptions{
+		CheckContentType: func(ctype string) bool {
+			return ctype == "application/octet-stream"
+		},
+	})
+	defer checkClose(t, b)
+
+	hsrv := httptest.NewServer(b)
+	defer hsrv.Close()
+
+	const reqTemplate = `{"jsonrpc":"2.0","id":%q,"method":"Test1","params":["a","b","c"]}`
+	t.Run("ContentTypeOK", func(t *testing.T) {
+		rsp, err := http.Post(hsrv.URL, "application/octet-stream",
+			strings.NewReader(fmt.Sprintf(reqTemplate, "ok")))
+		if err != nil {
+			t.Fatalf("POST request failed: %v", err)
+		} else if got, want := rsp.StatusCode, http.StatusOK; got != want {
+			t.Errorf("POST response code: got %v, want %v", got, want)
+		}
+	})
+
+	t.Run("ContentTypeBad", func(t *testing.T) {
+		rsp, err := http.Post(hsrv.URL, "text/plain",
+			strings.NewReader(fmt.Sprintf(reqTemplate, "bad")))
+		if err != nil {
+			t.Fatalf("POST request failed: %v", err)
+		} else if got, want := rsp.StatusCode, http.StatusUnsupportedMediaType; got != want {
+			t.Errorf("POST response code: got %v, want %v", got, want)
+		}
+	})
+}
+
+func TestChannel(t *testing.T) {
+	srv := jrpc2.NewServer(testService, nil)
+
+	b := jhttp.NewBridge(srv, nil)
 	defer checkClose(t, b)
 	hsrv := httptest.NewServer(b)
 	defer hsrv.Close()
@@ -178,7 +216,7 @@ func TestChannel(t *testing.T) {
 
 		for _, test := range tests {
 			var got int
-			if err := cli.CallResult(ctx, "Test", test.params, &got); err != nil {
+			if err := cli.CallResult(ctx, "Test2", test.params, &got); err != nil {
 				t.Errorf("Call Test(%v): unexpected error: %v", test.params, err)
 			} else if got != test.want {
 				t.Errorf("Call Test(%v): got %d, want %d", test.params, got, test.want)

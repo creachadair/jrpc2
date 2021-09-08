@@ -41,7 +41,7 @@ func main() {
 		Logger:  log.New(os.Stderr, "[jhttp.Bridge] ", log.LstdFlags|log.Lshortfile),
 		Metrics: metrics.New(),
 	})
-	bridge := jhttp.NewBridge(srv)
+	bridge := jhttp.NewBridge(srv, nil)
 	defer bridge.Close()
 
 	http.Handle("/rpc", bridge)

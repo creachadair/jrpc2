@@ -26,8 +26,9 @@ import (
 // Allowed). If the Content-Type is not application/json, the bridge reports
 // 415 (Unsupported Media Type).
 type Bridge struct {
-	ch  channel.Channel
-	srv *jrpc2.Server
+	ch        channel.Channel
+	srv       *jrpc2.Server
+	checkType func(string) bool
 }
 
 // ServeHTTP implements the required method of http.Handler.
@@ -35,7 +36,8 @@ func (b Bridge) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if req.Method != "POST" {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
-	} else if req.Header.Get("Content-Type") != "application/json" {
+	}
+	if !b.checkType(req.Header.Get("Content-Type")) {
 		w.WriteHeader(http.StatusUnsupportedMediaType)
 		return
 	}
@@ -93,7 +95,28 @@ func (b Bridge) Close() error { b.ch.Close(); return b.srv.Wait() }
 // NewBridge starts srv constructs a new Bridge that dispatches HTTP requests
 // to it.  The server must be unstarted, or NewBridge will panic. The server
 // will run until the bridge is closed.
-func NewBridge(srv *jrpc2.Server) Bridge {
+func NewBridge(srv *jrpc2.Server, opts *BridgeOptions) Bridge {
 	cch, sch := channel.Direct()
-	return Bridge{ch: cch, srv: srv.Start(sch)}
+	return Bridge{
+		ch:        cch,
+		srv:       srv.Start(sch),
+		checkType: opts.checkContentType(),
+	}
+}
+
+// BridgeOptions are optional settings for a Bridge. A nil pointer is ready for
+// use and provides default values as described.
+type BridgeOptions struct {
+	// If non-nil, this function is called to check whether the HTTP request's
+	// declared content-type is valid. If this function returns false, the
+	// request is rejected. If nil, the default check requires a content type of
+	// "application/json".
+	CheckContentType func(contentType string) bool
+}
+
+func (o *BridgeOptions) checkContentType() func(string) bool {
+	if o == nil || o.CheckContentType == nil {
+		return func(ctype string) bool { return ctype == "application/json" }
+	}
+	return o.CheckContentType
 }
