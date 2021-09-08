@@ -3,7 +3,6 @@ package jhttp_test
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -14,30 +13,19 @@ import (
 	"github.com/creachadair/jrpc2"
 	"github.com/creachadair/jrpc2/handler"
 	"github.com/creachadair/jrpc2/jhttp"
-	"github.com/creachadair/jrpc2/server"
 )
 
 func TestBridge(t *testing.T) {
 	// Set up a JSON-RPC server to answer requests bridged from HTTP.
-	loc := server.NewLocal(handler.Map{
+	srv := jrpc2.NewServer(handler.Map{
 		"Test": handler.New(func(ctx context.Context, ss ...string) (string, error) {
 			return strings.Join(ss, " "), nil
 		}),
-	}, &server.LocalOptions{
-		Client: &jrpc2.ClientOptions{
-			EncodeContext: func(ctx context.Context, _ string, p json.RawMessage) (json.RawMessage, error) {
-				if jhttp.HTTPRequest(ctx) == nil {
-					return nil, errors.New("no HTTP request in context")
-				}
-				return p, nil
-			},
-		},
-	})
-	defer loc.Close()
+	}, nil)
 
 	// Bridge HTTP to the JSON-RPC server.
-	b := jhttp.NewBridge(loc.Client)
-	defer b.Close()
+	b := jhttp.NewBridge(srv)
+	defer checkClose(t, b)
 
 	// Create an HTTP test server to call into the bridge.
 	hsrv := httptest.NewServer(b)
@@ -160,15 +148,14 @@ func TestBridge(t *testing.T) {
 }
 
 func TestChannel(t *testing.T) {
-	loc := server.NewLocal(handler.Map{
+	srv := jrpc2.NewServer(handler.Map{
 		"Test": handler.New(func(ctx context.Context, arg json.RawMessage) (int, error) {
 			return len(arg), nil
 		}),
 	}, nil)
-	defer loc.Close()
 
-	b := jhttp.NewBridge(loc.Client)
-	defer b.Close()
+	b := jhttp.NewBridge(srv)
+	defer checkClose(t, b)
 	hsrv := httptest.NewServer(b)
 	defer hsrv.Close()
 
@@ -224,4 +211,11 @@ type counter struct {
 func (c counter) Do(req *http.Request) (*http.Response, error) {
 	defer func() { *c.z++ }()
 	return c.c.Do(req)
+}
+
+func checkClose(t *testing.T, c io.Closer) {
+	t.Helper()
+	if err := c.Close(); err != nil {
+		t.Errorf("Error in Close: %v", err)
+	}
 }

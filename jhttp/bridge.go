@@ -3,17 +3,16 @@
 package jhttp
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strconv"
 
 	"github.com/creachadair/jrpc2"
+	"github.com/creachadair/jrpc2/channel"
 )
 
-// A Bridge is a http.Handler that bridges requests to a JSON-RPC client.
+// A Bridge is a http.Handler that bridges requests to a JSON-RPC server.
 //
 // The body of the HTTP POST request must contain the complete JSON-RPC request
 // message, encoded with Content-Type: application/json. Either a single
@@ -26,16 +25,13 @@ import (
 // If the HTTP request method is not "POST", the bridge reports 405 (Method Not
 // Allowed). If the Content-Type is not application/json, the bridge reports
 // 415 (Unsupported Media Type).
-//
-// The bridge attaches the inbound HTTP request to the context passed to the
-// client, allowing an EncodeContext callback to retrieve state from the HTTP
-// headers. Use jhttp.HTTPRequest to retrieve the request from the context.
 type Bridge struct {
-	cli *jrpc2.Client
+	ch  channel.Channel
+	srv *jrpc2.Server
 }
 
 // ServeHTTP implements the required method of http.Handler.
-func (b *Bridge) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+func (b Bridge) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if req.Method != "POST" {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -49,70 +45,38 @@ func (b *Bridge) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (b *Bridge) serveInternal(w http.ResponseWriter, req *http.Request) error {
+func (b Bridge) serveInternal(w http.ResponseWriter, req *http.Request) error {
 	body, err := ioutil.ReadAll(req.Body)
 	if err != nil {
 		return err
 	}
+
+	// The HTTP request requires a response, but the server will not reply if
+	// all the requests are notifications. Check whether we have any calls
+	// needing a response, and choose whether to wait for a reply based on that.
 	jreq, err := jrpc2.ParseRequests(body)
 	if err != nil {
 		return err
 	}
-
-	// Because the bridge shares the JSON-RPC client between potentially many
-	// HTTP clients, we must virtualize the ID space for requests to preserve
-	// the HTTP client's assignment of IDs.
-	//
-	// To do this, we keep track of the inbound ID for each request so that we
-	// can map the responses back. This takes advantage of the fact that the
-	// *jrpc2.Client detangles batch order so that responses come back in the
-	// same order (modulo notifications) even if the server response did not
-	// preserve order.
-
-	// Generate request specifications for the client.
-	var inboundID []string                // for requests
-	spec := make([]jrpc2.Spec, len(jreq)) // requests & notifications
-	for i, req := range jreq {
-		spec[i] = jrpc2.Spec{
-			Method: req.Method(),
-			Notify: req.IsNotification(),
-		}
-		if req.HasParams() {
-			var p json.RawMessage
-			req.UnmarshalParams(&p)
-			spec[i].Params = p
-		}
-		if !spec[i].Notify {
-			inboundID = append(inboundID, req.ID())
+	var hasCall bool
+	for _, req := range jreq {
+		if !req.IsNotification() {
+			hasCall = true
+			break
 		}
 	}
-
-	ctx := context.WithValue(req.Context(), httpReqKey{}, req)
-	rsps, err := b.cli.Batch(ctx, spec)
-	if err != nil {
+	if err := b.ch.Send(body); err != nil {
 		return err
 	}
 
-	// If all the requests were notifications, report success without responses.
-	if len(rsps) == 0 {
+	// If there are only notifications, report success without responses.
+	if !hasCall {
 		w.WriteHeader(http.StatusNoContent)
 		return nil
 	}
 
-	// Otherwise, map the responses back to their original IDs, and marshal the
-	// response back into the body.
-	for i, rsp := range rsps {
-		rsp.SetID(inboundID[i])
-	}
-
-	// If the original request was a single message, make sure we encode the
-	// response the same way.
-	var reply []byte
-	if len(rsps) == 1 && (len(body) == 0 || body[0] != '[') {
-		reply, err = json.Marshal(rsps[0])
-	} else {
-		reply, err = json.Marshal(rsps)
-	}
+	// Wait for the server to reply.
+	reply, err := b.ch.Recv()
 	if err != nil {
 		return err
 	}
@@ -122,23 +86,14 @@ func (b *Bridge) serveInternal(w http.ResponseWriter, req *http.Request) error {
 	return nil
 }
 
-// Close shuts down the client associated with b and reports the result from
-// its Close method.
-func (b *Bridge) Close() error { return b.cli.Close() }
+// Close closes the channel to the server, waits for the server to exit, and
+// reports the exit status of the server.
+func (b Bridge) Close() error { b.ch.Close(); return b.srv.Wait() }
 
-// NewBridge constructs a new Bridge that dispatches requests through c.  It is
-// safe for the caller to continue to use c concurrently with the bridge, as
-// long as it does not close the client.
-func NewBridge(c *jrpc2.Client) *Bridge { return &Bridge{cli: c} }
-
-type httpReqKey struct{}
-
-// HTTPRequest returns the HTTP request associated with ctx, or nil. The
-// context passed to the JSON-RPC client by the Bridge will contain this value.
-func HTTPRequest(ctx context.Context) *http.Request {
-	req, ok := ctx.Value(httpReqKey{}).(*http.Request)
-	if ok {
-		return req
-	}
-	return nil
+// NewBridge starts srv constructs a new Bridge that dispatches HTTP requests
+// to it.  The server must be unstarted, or NewBridge will panic. The server
+// will run until the bridge is closed.
+func NewBridge(srv *jrpc2.Server) Bridge {
+	cch, sch := channel.Direct()
+	return Bridge{ch: cch, srv: srv.Start(sch)}
 }
