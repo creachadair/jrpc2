@@ -92,9 +92,9 @@ func (b Bridge) serveInternal(w http.ResponseWriter, req *http.Request) error {
 // reports the exit status of the server.
 func (b Bridge) Close() error { b.ch.Close(); return b.srv.Wait() }
 
-// NewBridge starts srv constructs a new Bridge that dispatches HTTP requests
-// to it.  The server must be unstarted, or NewBridge will panic. The server
-// will run until the bridge is closed.
+// NewBridge constructs a new Bridge that starts srv and dispatches HTTP
+// requests to it.  The server must be unstarted or NewBridge will panic.
+// The server will run until the bridge is closed.
 func NewBridge(srv *jrpc2.Server, opts *BridgeOptions) Bridge {
 	cch, sch := channel.Direct()
 	return Bridge{
