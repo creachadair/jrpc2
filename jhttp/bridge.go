@@ -56,8 +56,12 @@ func (b Bridge) serveInternal(w http.ResponseWriter, req *http.Request) error {
 	// The HTTP request requires a response, but the server will not reply if
 	// all the requests are notifications. Check whether we have any calls
 	// needing a response, and choose whether to wait for a reply based on that.
+	//
+	// Note that we are forgiving about a missing version marker in a request,
+	// since we can't tell at this point whether the server is willing to accept
+	// messages like that.
 	jreq, err := jrpc2.ParseRequests(body)
-	if err != nil {
+	if err != nil && err != jrpc2.ErrInvalidVersion {
 		return err
 	}
 	var hasCall bool
