@@ -10,3 +10,6 @@ go 1.16
 
 // A bug in handler.New could panic a wrapped handler on pointer arguments.
 retract [v0.21.2, v0.22.0]
+
+// Checksum mismatch due to accidental double tag push. Safe to use, but warns.
+retract v0.23.0
