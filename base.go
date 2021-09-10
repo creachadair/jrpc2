@@ -28,8 +28,8 @@ type Handler interface {
 	// return a value of type *jrpc2.Error to control the response code sent
 	// back to the caller; otherwise the server will wrap the resulting value.
 	//
-	// The context passed to the handler by a *jrpc2.Server includes three
-	// special values that the handler may extract.
+	// The context passed to the handler by a *jrpc2.Server includes two special
+	// values that the handler may extract.
 	//
 	// To obtain the server instance running the handler, write:
 	//
