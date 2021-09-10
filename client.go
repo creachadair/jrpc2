@@ -347,8 +347,9 @@ func (c *Client) Batch(ctx context.Context, specs []Spec) ([]*Response, error) {
 	return rsps, nil
 }
 
-// A Spec combines a method name and parameter value. If the Notify field is
-// true, the spec is sent as a notification instead of a request.
+// A Spec combines a method name and parameter value as part of a Batch.  If
+// the Notify field is true, the request is sent as a notification instead of a
+// request.
 type Spec struct {
 	Method string
 	Params interface{}
