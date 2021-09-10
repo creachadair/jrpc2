@@ -195,11 +195,10 @@ func (fi *FuncInfo) Wrap() Func {
 	} else {
 		// The function returns both a value and an error.
 		decodeOut = func(vals []reflect.Value) (interface{}, error) {
-			out, oerr := vals[0].Interface(), vals[1].Interface()
-			if oerr != nil {
+			if oerr := vals[1].Interface(); oerr != nil {
 				return nil, oerr.(error)
 			}
-			return out, nil
+			return vals[0].Interface(), nil
 		}
 	}
 
