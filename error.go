@@ -24,15 +24,6 @@ func (e Error) HasData() bool { return len(e.Data) != 0 }
 // ErrCode trivially satisfies the code.ErrCoder interface for an *Error.
 func (e Error) ErrCode() code.Code { return e.Code }
 
-// UnmarshalData decodes the error data associated with e into v.  It reports
-// ErrNoData without modifying v if there was no data message attached to e.
-func (e Error) UnmarshalData(v interface{}) error {
-	if !e.HasData() {
-		return ErrNoData
-	}
-	return json.Unmarshal(e.Data, v)
-}
-
 // MarshalJSON implements the json.Marshaler interface for Error values.
 func (e Error) MarshalJSON() ([]byte, error) {
 	return json.Marshal(jerror{C: int32(e.Code), M: e.Message, D: e.Data})
@@ -49,9 +40,6 @@ func (e *Error) UnmarshalJSON(data []byte) error {
 	e.Data = v.D
 	return nil
 }
-
-// ErrNoData indicates that there are no data to unmarshal.
-var ErrNoData = errors.New("no data to unmarshal")
 
 // errServerStopped is returned by Server.Wait when the server was shut down by
 // an explicit call to its Stop method or orderly termination of its channel.

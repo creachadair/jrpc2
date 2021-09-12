@@ -291,11 +291,6 @@ func TestErrorOnly(t *testing.T) {
 			t.Errorf("ErrorOnly: got %v, want *Error", err)
 		} else if e.Code != 1 || e.Message != errMessage {
 			t.Errorf("ErrorOnly: got (%s, %s), want (1, %s)", e.Code, e.Message, errMessage)
-		} else {
-			var data json.RawMessage
-			if err, want := e.UnmarshalData(&data), jrpc2.ErrNoData; err != want {
-				t.Errorf("UnmarshalData: got %#q, %v, want %v", string(data), err, want)
-			}
 		}
 	})
 	t.Run("CallExpectingOK", func(t *testing.T) {
@@ -467,10 +462,7 @@ func TestErrors(t *testing.T) {
 		if e.Message != errMessage {
 			t.Errorf("Error message: got %q, want %q", e.Message, errMessage)
 		}
-		var data json.RawMessage
-		if err := e.UnmarshalData(&data); err != nil {
-			t.Errorf("Unmarshaling error data: %v", err)
-		} else if s := string(data); s != errData {
+		if s := string(e.Data); s != errData {
 			t.Errorf("Error data: got %q, want %q", s, errData)
 		}
 	} else {
