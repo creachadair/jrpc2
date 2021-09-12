@@ -18,9 +18,6 @@ type Error struct {
 // Error renders e to a human-readable string for the error interface.
 func (e Error) Error() string { return fmt.Sprintf("[%d] %s", e.Code, e.Message) }
 
-// HasData reports whether e has error data to unmarshal.
-func (e Error) HasData() bool { return len(e.Data) != 0 }
-
 // ErrCode trivially satisfies the code.ErrCoder interface for an *Error.
 func (e Error) ErrCode() code.Code { return e.Code }
 
