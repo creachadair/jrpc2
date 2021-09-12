@@ -34,7 +34,7 @@ package channel
 import (
 	"errors"
 	"io"
-	"strings"
+	"net"
 )
 
 // A Channel represents the ability to transmit and receive data records.  A
@@ -61,9 +61,7 @@ type Channel interface {
 // IsErrClosing reports whether err is the internal error returned by a read
 // from a pipe or socket that is closed. This is false for err == nil.
 func IsErrClosing(err error) bool {
-	// That we must check the string here appears to be working as intended, or at least
-	// there is no intent to make it better.  https://github.com/golang/go/issues/4373
-	return err != nil && strings.Contains(err.Error(), "use of closed network connection")
+	return err != nil && errors.Is(err, net.ErrClosed)
 }
 
 // A Framing converts a reader and a writer into a Channel with a particular
