@@ -76,7 +76,8 @@ func (r *Request) HasParams() bool { return len(r.params) != 0 }
 // method. The jrpc2.StrictFields helper function adapts existing values to
 // this interface.
 //
-// If v has type *json.RawMessage, decoding cannot fail.
+// If r has parameters and v has type *json.RawMessage, unmarshaling will
+// always succeed.
 func (r *Request) UnmarshalParams(v interface{}) error {
 	if len(r.params) == 0 {
 		return nil
@@ -159,6 +160,9 @@ func (r *Response) Error() *Error { return r.err }
 // implementation of json.Unmarshaler, or implementing a DisallowUnknownFields
 // method. The jrpc2.StrictFields helper function adapts existing values to
 // this interface.
+//
+// If r has a result and v has type *json.RawMessage, unmarshaling will always
+// succeed.
 func (r *Response) UnmarshalResult(v interface{}) error {
 	if r.err != nil {
 		return r.err
