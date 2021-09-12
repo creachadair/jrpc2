@@ -106,11 +106,10 @@ func (r *Request) ParamString() string { return string(r.params) }
 var ErrInvalidVersion = Errorf(code.InvalidRequest, "incorrect version marker")
 
 // ParseRequests parses a single request or a batch of requests from JSON.
-// The parsed parameters are either nil or have concrete type json.RawMessage.
 //
-// If any of the requests is missing or has an invalid JSON-RPC version, it
-// returns ErrInvalidVersion along with the parsed results. Otherwise, no
-// validation apart from basic structure is performed on the results.
+// If msg is syntactically valid apart from one or more of the requests having
+// a missing or invalid JSON-RPC version, ParseRequests returns ErrInvalidVersion
+// along with the parsed results.
 func ParseRequests(msg []byte) ([]*Request, error) {
 	var req jmessages
 	if err := req.parseJSON(msg); err != nil {
