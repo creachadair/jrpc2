@@ -429,10 +429,10 @@ func (s *Server) pushReq(ctx context.Context, wantID bool, method string, params
 		return nil, ErrConnClosed
 	}
 
-	kind := "Notify"
+	kind := "notification"
 	var jid json.RawMessage
 	if wantID {
-		kind = "Callback"
+		kind = "call"
 		id := strconv.FormatInt(s.callID, 10)
 		s.callID++
 
@@ -453,7 +453,7 @@ func (s *Server) pushReq(ctx context.Context, wantID bool, method string, params
 		P:  bits,
 	}})
 	s.metrics.CountAndSetMax("rpc.bytesWritten", int64(nw))
-	s.metrics.Count("rpc.push"+kind+"s", 1)
+	s.metrics.Count("rpc."+kind+"sPushed", 1)
 	return rsp, err
 }
 
