@@ -34,9 +34,7 @@ func (c split) Send(msg []byte) error {
 	if bytes.IndexByte(msg, c.split) >= 0 {
 		return errors.New("message contains split byte")
 	}
-	out := make([]byte, len(msg)+1)
-	copy(out, msg)
-	out[len(msg)] = c.split
+	out := append(msg, c.split)
 	_, err := c.wc.Write(out)
 	return err
 }
