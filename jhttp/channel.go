@@ -64,13 +64,15 @@ func (c *Channel) Send(msg []byte) error {
 	}
 
 	// Each Send starts a goroutine to wait for the corresponding reply from the
-	// HTTP server, and c.wg tracks these goroutines. Responses are delivered to
-	// the c.rsp channel without interpretation; error handling happens in Recv.
+	// HTTP server, and c.wg tracks these goroutines. Acknowledgement replies to
+	// notifications are handled immediately; (non-empty) responses to calls are
+	// delivered to the c.rsp channel. Error handling happens in Recv, since
+	// that is where the caller is prepared to receive an error.
 	//
-	// The goroutine for a Send cannot exit until either a Recv occurs, or until
-	// the channel is closed (draining any further undelivered responses).  The
-	// caller should thus avoid calling Send a large number of times with no
-	// intervening Recv calls.
+	// The goroutine for a Send whose request returns a non-empty result cannot
+	// exit until either a Recv occurs, or until the channel is closed (draining
+	// any further undelivered responses).  The caller should thus avoid sending
+	// too many call requests with no intervening Recv calls.
 	req, err := http.NewRequest("POST", c.url, bytes.NewReader(msg))
 	if err != nil {
 		return err
@@ -80,6 +82,13 @@ func (c *Channel) Send(msg []byte) error {
 	go func() {
 		defer c.wg.Done()
 		rsp, err := cli.Do(req)
+
+		// If the server replied with an empty acknowledgement for a
+		// notification, exit early so that we don't depend on a Recv.
+		if err == nil && rsp.StatusCode == http.StatusNoContent {
+			rsp.Body.Close()
+			return
+		}
 		c.rsp <- response{rsp, err}
 	}()
 	return nil
@@ -87,29 +96,24 @@ func (c *Channel) Send(msg []byte) error {
 
 // Recv receives the next available response and reports its body.
 func (c *Channel) Recv() ([]byte, error) {
-	for {
-		next, ok := <-c.rsp
-		if !ok {
-			return nil, io.EOF
-		} else if next.err != nil {
-			return nil, next.err // HTTP failure, not request failure
-		}
-
-		// Ensure the body is fully read and closed before continuing.
-		data, err := ioutil.ReadAll(next.rsp.Body)
-		next.rsp.Body.Close()
-
-		switch next.rsp.StatusCode {
-		case http.StatusOK:
-			// ok, we have a message to report
-			return data, err
-		case http.StatusNoContent:
-			// ok, but no message to report; wait for another
-			continue
-		default:
-			return nil, fmt.Errorf("unexpected HTTP status %s", next.rsp.Status)
-		}
+	next, ok := <-c.rsp
+	if !ok {
+		return nil, io.EOF
+	} else if next.err != nil {
+		return nil, next.err // HTTP failure, not request failure
 	}
+
+	// Ensure the body is fully read and closed before continuing.
+	data, err := ioutil.ReadAll(next.rsp.Body)
+	next.rsp.Body.Close()
+
+	// N.B. Empty responses (StatusNoContent) is handled by Send, so we will
+	// not see those responses here.
+	if next.rsp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected HTTP status %s", next.rsp.Status)
+	}
+	// ok, we have a message to report
+	return data, err
 }
 
 // Close shuts down the channel, discarding any pending responses.
