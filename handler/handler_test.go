@@ -49,6 +49,7 @@ func TestNew(t *testing.T) {
 		{v: func(context.Context, *jrpc2.Request) (byte, error) { return '0', nil }},
 		{v: func(context.Context) bool { return true }},
 		{v: func(context.Context, int) bool { return true }},
+		{v: func(_ context.Context, s [1]string) string { return s[0] }},
 
 		// Things that aren't supposed to work.
 		{v: func() error { return nil }, bad: true},                           // wrong # of params
