@@ -314,7 +314,7 @@ type Args []interface{}
 func (a Args) UnmarshalJSON(data []byte) error {
 	var elts []json.RawMessage
 	if err := json.Unmarshal(data, &elts); err != nil {
-		return fmt.Errorf("decoding args: %w", err)
+		return filterJSONError("args", "array", err)
 	} else if len(elts) != len(a) {
 		return fmt.Errorf("wrong number of args (got %d, want %d)", len(elts), len(a))
 	}
@@ -349,7 +349,7 @@ type Obj map[string]interface{}
 func (o Obj) UnmarshalJSON(data []byte) error {
 	var base map[string]json.RawMessage
 	if err := json.Unmarshal(data, &base); err != nil {
-		return fmt.Errorf("decoding object: %v", err)
+		return filterJSONError("decoding", "object", err)
 	}
 	for key, val := range base {
 		arg, ok := o[key]
@@ -360,4 +360,11 @@ func (o Obj) UnmarshalJSON(data []byte) error {
 		}
 	}
 	return nil
+}
+
+func filterJSONError(tag, want string, err error) error {
+	if t, ok := err.(*json.UnmarshalTypeError); ok {
+		return fmt.Errorf("%s: cannot decode %s as %s", tag, t.Value, want)
+	}
+	return err
 }
