@@ -48,8 +48,8 @@ type binarg struct{ X, Y int }
 
 func intResult(rsp *jrpc2.Response) int {
 	var v int
-	if err := rsp.UnmarshalResult(&v); err != nil {
-		log.Fatalln("UnmarshalResult:", err)
+	if err := rsp.UnmarshalData(&v); err != nil {
+		log.Fatalln("UnmarshalData:", err)
 	}
 	return v
 }
@@ -70,7 +70,7 @@ func main() {
 	cli := jrpc2.NewClient(channel.RawJSON(conn, conn), &jrpc2.ClientOptions{
 		OnNotify: func(req *jrpc2.Request) {
 			var params json.RawMessage
-			req.UnmarshalParams(&params)
+			req.UnmarshalData(&params)
 			log.Printf("[server push] Method %q params %#q", req.Method(), string(params))
 		},
 	})

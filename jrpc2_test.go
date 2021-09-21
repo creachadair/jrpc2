@@ -50,7 +50,7 @@ func (dummy) Add(_ context.Context, req *jrpc2.Request) (interface{}, error) {
 		return nil, errors.New("ignoring notification")
 	}
 	var vals []int
-	if err := req.UnmarshalParams(&vals); err != nil {
+	if err := req.UnmarshalData(&vals); err != nil {
 		return nil, err
 	}
 	var sum int
@@ -150,7 +150,7 @@ func TestCall(t *testing.T) {
 			continue
 		}
 		var got int
-		if err := rsp.UnmarshalResult(&got); err != nil {
+		if err := rsp.UnmarshalData(&got); err != nil {
 			t.Errorf("Unmarshaling result: %v", err)
 			continue
 		}
@@ -226,7 +226,7 @@ func TestBatch(t *testing.T) {
 			continue
 		}
 		var got int
-		if err := rsp.UnmarshalResult(&got); err != nil {
+		if err := rsp.UnmarshalData(&got); err != nil {
 			t.Errorf("Umarshaling result %d: %v", i+1, err)
 			continue
 		}
@@ -243,7 +243,7 @@ func TestNotificationOrder(t *testing.T) {
 	loc := server.NewLocal(handler.Map{
 		"Test": handler.New(func(_ context.Context, req *jrpc2.Request) error {
 			var seq int32
-			if err := req.UnmarshalParams(&handler.Args{&seq}); err != nil {
+			if err := req.UnmarshalData(&handler.Args{&seq}); err != nil {
 				t.Errorf("Invalid test parameters: %v", err)
 				return err
 			}
@@ -301,7 +301,7 @@ func TestErrorOnly(t *testing.T) {
 		// Per https://www.jsonrpc.org/specification#response_object, a "result"
 		// field is required on success, so verify that it is set null.
 		var got json.RawMessage
-		if err := rsp.UnmarshalResult(&got); err != nil {
+		if err := rsp.UnmarshalData(&got); err != nil {
 			t.Fatalf("Failed to unmarshal result data: %v", err)
 		} else if r := string(got); r != "null" {
 			t.Errorf("ErrorOnly response: got %q, want null", r)
@@ -389,7 +389,7 @@ func TestHandlerCancel(t *testing.T) {
 		}),
 		"Test": handler.New(func(ctx context.Context, req *jrpc2.Request) error {
 			var id string
-			if err := req.UnmarshalParams(&handler.Args{&id}); err != nil {
+			if err := req.UnmarshalData(&handler.Args{&id}); err != nil {
 				return err
 			}
 			t.Logf("Test handler: cancelling %q...", id)
@@ -1106,11 +1106,11 @@ func TestStrictFields(t *testing.T) {
 		"Test": handler.New(func(ctx context.Context, req *jrpc2.Request) (interface{}, error) {
 			var ps, qs params
 
-			if err := req.UnmarshalParams(jrpc2.StrictFields(&ps)); err == nil {
+			if err := req.UnmarshalData(jrpc2.StrictFields(&ps)); err == nil {
 				t.Errorf("Unmarshal strict: got %+v, want error", ps)
 			}
 
-			if err := req.UnmarshalParams(&qs); err != nil {
+			if err := req.UnmarshalData(&qs); err != nil {
 				t.Errorf("Unmarshal non-strict (default): unexpected error: %v", err)
 			} else {
 				t.Logf("Parameters OK: %+v", qs)
@@ -1137,18 +1137,18 @@ func TestStrictFields(t *testing.T) {
 
 	t.Run("NonStrictResult", func(t *testing.T) {
 		var res result
-		if err := rsp.UnmarshalResult(&res); err != nil {
-			t.Errorf("UnmarshalResult: %v", err)
+		if err := rsp.UnmarshalData(&res); err != nil {
+			t.Errorf("UnmarshalData: %v", err)
 		}
 		t.Logf("Result: %+v", res)
 	})
 
 	t.Run("StrictResult", func(t *testing.T) {
 		var res result
-		if err := rsp.UnmarshalResult(jrpc2.StrictFields(&res)); err == nil {
-			t.Errorf("UnmarshalResult: got %+v, want error", res)
+		if err := rsp.UnmarshalData(jrpc2.StrictFields(&res)); err == nil {
+			t.Errorf("UnmarshalData: got %+v, want error", res)
 		} else {
-			t.Logf("UnmarshalResult: got expected error: %v", err)
+			t.Logf("UnmarshalData: got expected error: %v", err)
 		}
 	})
 }

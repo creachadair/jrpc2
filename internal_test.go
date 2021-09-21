@@ -80,7 +80,7 @@ func errEQ(x, y error) bool {
 	return code.FromError(x) == code.FromError(y) && x.Error() == y.Error()
 }
 
-func TestUnmarshalParams(t *testing.T) {
+func TestUnmarshalData(t *testing.T) {
 	type xy struct {
 		X int  `json:"x"`
 		Y bool `json:"y"`
@@ -120,9 +120,9 @@ func TestUnmarshalParams(t *testing.T) {
 		// Allocate a zero of the expected type to unmarshal into.
 		target := reflect.New(reflect.TypeOf(test.want)).Interface()
 		{
-			err := req[0].UnmarshalParams(target)
+			err := req[0].UnmarshalData(target)
 			if got := code.FromError(err); got != test.code {
-				t.Errorf("UnmarshalParams error: got code %d, want %d [%v]", got, test.code, err)
+				t.Errorf("UnmarshalData error: got code %d, want %d [%v]", got, test.code, err)
 			}
 			if err != nil {
 				continue

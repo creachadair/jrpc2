@@ -306,13 +306,13 @@ func (c *Client) Call(ctx context.Context, method string, params interface{}) (*
 
 // CallResult invokes Call with the given method and params. If it succeeds,
 // the result is decoded into result. This is a convenient shorthand for Call
-// followed by UnmarshalResult. It will panic if result == nil.
+// followed by UnmarshalData. It will panic if result == nil.
 func (c *Client) CallResult(ctx context.Context, method string, params, result interface{}) error {
 	rsp, err := c.Call(ctx, method, params)
 	if err != nil {
 		return err
 	}
-	return rsp.UnmarshalResult(result)
+	return rsp.UnmarshalData(result)
 }
 
 // Batch initiates a batch of concurrent requests, and blocks until all the

@@ -69,7 +69,7 @@ func ExampleClient_Call() {
 		log.Fatalf("Call: %v", err)
 	}
 	var msg string
-	if err := rsp.UnmarshalResult(&msg); err != nil {
+	if err := rsp.UnmarshalData(&msg); err != nil {
 		log.Fatalf("Decoding result: %v", err)
 	}
 	fmt.Println(msg)
@@ -105,7 +105,7 @@ func ExampleClient_Batch() {
 	fmt.Printf("len(rsps) = %d\n", len(rsps))
 	for i, rsp := range rsps {
 		var msg string
-		if err := rsp.UnmarshalResult(&msg); err != nil {
+		if err := rsp.UnmarshalData(&msg); err != nil {
 			log.Fatalf("Invalid result: %v", err)
 		}
 		fmt.Printf("Response #%d: %s\n", i+1, msg)
@@ -116,7 +116,7 @@ func ExampleClient_Batch() {
 	// Response #1: Hello, world!
 }
 
-func ExampleRequest_UnmarshalParams() {
+func ExampleRequest_UnmarshalData() {
 	const msg = `{"jsonrpc":"2.0", "id":101, "method":"M", "params":{"a":1, "b":2, "c":3}}`
 
 	reqs, err := jrpc2.ParseRequests([]byte(msg))
@@ -130,20 +130,20 @@ func ExampleRequest_UnmarshalParams() {
 	}
 
 	// By default, unmarshaling ignores unknown fields (here, "c").
-	if err := reqs[0].UnmarshalParams(&t); err != nil {
-		log.Fatalf("UnmarshalParams: %v", err)
+	if err := reqs[0].UnmarshalData(&t); err != nil {
+		log.Fatalf("UnmarshalData: %v", err)
 	}
 
 	// Solution 1: Use the jrpc2.StrictFields helper.
-	err = reqs[0].UnmarshalParams(jrpc2.StrictFields(&t))
+	err = reqs[0].UnmarshalData(jrpc2.StrictFields(&t))
 	if code.FromError(err) != code.InvalidParams {
-		log.Fatalf("UnmarshalParams strict: %v", err)
+		log.Fatalf("UnmarshalData strict: %v", err)
 	}
 	fmt.Printf("t.A=%d, t.B=%d\n", t.A, t.B)
 
 	// Solution 2: Unmarshal as json.RawMessage and decode separately.
 	var tmp json.RawMessage
-	reqs[0].UnmarshalParams(&tmp) // cannot fail
+	reqs[0].UnmarshalData(&tmp) // cannot fail
 	if err := json.Unmarshal(tmp, &u); err != nil {
 		log.Fatalf("Unmarshal: %v", err)
 	}
@@ -154,7 +154,7 @@ func ExampleRequest_UnmarshalParams() {
 	// u.A=1, u.B=2
 }
 
-func ExampleResponse_UnmarshalResult() {
+func ExampleResponse_UnmarshalData() {
 	// var cli = jrpc2.NewClient(cch, nil)
 	rsp, err := cli.Call(ctx, "Echo", []string{"alpha", "oscar", "kilo"})
 	if err != nil {
@@ -163,7 +163,7 @@ func ExampleResponse_UnmarshalResult() {
 	var r1, r3 string
 
 	// Note the nil, which tells the decoder to skip that argument.
-	if err := rsp.UnmarshalResult(&handler.Args{&r1, nil, &r3}); err != nil {
+	if err := rsp.UnmarshalData(&handler.Args{&r1, nil, &r3}); err != nil {
 		log.Fatalf("Decoding result: %v", err)
 	}
 	fmt.Println(r1, r3)

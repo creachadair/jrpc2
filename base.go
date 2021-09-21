@@ -66,7 +66,7 @@ func (r *Request) Method() string { return r.method }
 // HasParams reports whether the request has non-empty parameters.
 func (r *Request) HasParams() bool { return len(r.params) != 0 }
 
-// UnmarshalParams decodes the request parameters of r into v. If r has empty
+// UnmarshalData decodes the request parameters of r into v. If r has empty
 // parameters, it returns nil without modifying v. If r is invalid it returns
 // an InvalidParams error.
 //
@@ -78,7 +78,7 @@ func (r *Request) HasParams() bool { return len(r.params) != 0 }
 //
 // If r has parameters and v has type *json.RawMessage, unmarshaling will
 // always succeed.
-func (r *Request) UnmarshalParams(v interface{}) error {
+func (r *Request) UnmarshalData(v interface{}) error {
 	if len(r.params) == 0 {
 		return nil
 	}
@@ -150,8 +150,8 @@ func (r *Response) ID() string { return r.id }
 // Error returns a non-nil *Error if the response contains an error.
 func (r *Response) Error() *Error { return r.err }
 
-// UnmarshalResult decodes the result message into v. If the request failed,
-// UnmarshalResult returns the *Error value that would also be returned by
+// UnmarshalData decodes the result message into v. If the request failed,
+// UnmarshalData returns the *Error value that would also be returned by
 // r.Error(), and v is unmodified.
 //
 // By default, unknown object keys are ignored when unmarshaling into a v of
@@ -162,7 +162,7 @@ func (r *Response) Error() *Error { return r.err }
 //
 // If r has a result and v has type *json.RawMessage, unmarshaling will always
 // succeed.
-func (r *Response) UnmarshalResult(v interface{}) error {
+func (r *Response) UnmarshalData(v interface{}) error {
 	if r.err != nil {
 		return r.err
 	}
@@ -468,7 +468,7 @@ type strictFielder interface {
 // For example:
 //
 //       var obj RequestType
-//       err := req.UnmarshalParams(jrpc2.StrictFields(&obj))`
+//       err := req.UnmarshalData(jrpc2.StrictFields(&obj))`
 //
 func StrictFields(v interface{}) interface{} { return &strict{v: v} }
 

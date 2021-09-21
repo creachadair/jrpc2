@@ -106,11 +106,11 @@ call reflects an error in sending the request: The caller must check each
 response separately for errors from the server. Responses are returned in the
 same order as the Spec values, save that notifications are omitted.
 
-To decode the result from a successful response use its UnmarshalResult method:
+To decode the result from a successful response use its UnmarshalData method:
 
    var result int
-   if err := rsp.UnmarshalResult(&result); err != nil {
-      log.Fatalln("UnmarshalResult:", err)
+   if err := rsp.UnmarshalData(&result); err != nil {
+      log.Fatalln("UnmarshalData:", err)
    }
 
 To close a client and discard all its pending work, call cli.Close().

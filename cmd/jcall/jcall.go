@@ -146,7 +146,7 @@ func newClient(conn channel.Channel) *jrpc2.Client {
 	opts := &jrpc2.ClientOptions{
 		OnNotify: func(req *jrpc2.Request) {
 			var p json.RawMessage
-			req.UnmarshalParams(&p)
+			req.UnmarshalData(&p)
 			fmt.Printf(`{"method":%q,"params":%s}`+"\n", req.Method(), string(p))
 		},
 	}
@@ -180,7 +180,7 @@ func printResults(rsps []*jrpc2.Response) (time.Duration, error) {
 		}
 		pstart := time.Now()
 		var result json.RawMessage
-		if perr := rsp.UnmarshalResult(&result); perr != nil {
+		if perr := rsp.UnmarshalData(&result); perr != nil {
 			log.Printf("Decoding (%d): %v", i+1, perr)
 			set(perr)
 			continue
@@ -232,7 +232,7 @@ func issueSequential(ctx context.Context, cli *jrpc2.Client, specs []jrpc2.Spec)
 		cdur := time.Since(cstart)
 		pstart := time.Now()
 		var result json.RawMessage
-		if perr := rsp.UnmarshalResult(&result); perr != nil {
+		if perr := rsp.UnmarshalData(&result); perr != nil {
 			return dur, err
 		}
 		fmt.Println(string(result))

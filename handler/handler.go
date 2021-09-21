@@ -158,7 +158,7 @@ func (fi *FuncInfo) Wrap() Func {
 		// Case 3a: The function wants a pointer to its argument value.
 		newInput = func(ctx reflect.Value, req *jrpc2.Request) ([]reflect.Value, error) {
 			in := reflect.New(fi.Argument.Elem())
-			if err := req.UnmarshalParams(in.Interface()); err != nil {
+			if err := req.UnmarshalData(in.Interface()); err != nil {
 				return nil, jrpc2.Errorf(code.InvalidParams, "invalid parameters: %v", err)
 			}
 			return []reflect.Value{ctx, in}, nil
@@ -167,7 +167,7 @@ func (fi *FuncInfo) Wrap() Func {
 		// Case 3b: The function wants a bare argument value.
 		newInput = func(ctx reflect.Value, req *jrpc2.Request) ([]reflect.Value, error) {
 			in := reflect.New(fi.Argument) // we still need a pointer to unmarshal
-			if err := req.UnmarshalParams(in.Interface()); err != nil {
+			if err := req.UnmarshalData(in.Interface()); err != nil {
 				return nil, jrpc2.Errorf(code.InvalidParams, "invalid parameters: %v", err)
 			}
 			// Indirect the pointer back off for the callee.
@@ -302,7 +302,7 @@ func Check(fn interface{}) (*FuncInfo, error) {
 //       var x, y int
 //       var s string
 //
-//       if err := req.UnmarshalParams(&handler.Args{&x, &y, &s}); err != nil {
+//       if err := req.UnmarshalData(&handler.Args{&x, &y, &s}); err != nil {
 //          return nil, err
 //       }
 //       // do useful work with x, y, and s

@@ -22,7 +22,7 @@ func TestLockRaceRegression(t *testing.T) {
 			defer close(hdone) // signal we passed the deadlock point
 
 			var id string
-			if err := req.UnmarshalParams(&handler.Args{&id}); err != nil {
+			if err := req.UnmarshalData(&handler.Args{&id}); err != nil {
 				return err
 			}
 			jrpc2.ServerFromContext(ctx).CancelRequest(id)
