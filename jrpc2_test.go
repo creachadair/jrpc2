@@ -113,7 +113,7 @@ var callTests = []struct {
 	{"Test.Nil", json.RawMessage("null"), 42},
 }
 
-func TestMethodNames(t *testing.T) {
+func TestServerInfo_methodNames(t *testing.T) {
 	loc := server.NewLocal(handler.ServiceMap{
 		"Test": testService,
 	}, nil)
@@ -129,7 +129,7 @@ func TestMethodNames(t *testing.T) {
 	}
 }
 
-func TestCall(t *testing.T) {
+func TestClient_Call(t *testing.T) {
 	loc := server.NewLocal(handler.ServiceMap{
 		"Test": testService,
 	}, &server.LocalOptions{
@@ -163,7 +163,7 @@ func TestCall(t *testing.T) {
 	}
 }
 
-func TestCallResult(t *testing.T) {
+func TestClient_CallResult(t *testing.T) {
 	loc := server.NewLocal(handler.ServiceMap{
 		"Test": testService,
 	}, &server.LocalOptions{
@@ -186,7 +186,7 @@ func TestCallResult(t *testing.T) {
 	}
 }
 
-func TestBatch(t *testing.T) {
+func TestClient_Batch(t *testing.T) {
 	loc := server.NewLocal(handler.ServiceMap{
 		"Test": testService,
 	}, &server.LocalOptions{
@@ -237,7 +237,7 @@ func TestBatch(t *testing.T) {
 }
 
 // Verify that notifications respect order of arrival.
-func TestNotificationOrder(t *testing.T) {
+func TestServer_notificationOrder(t *testing.T) {
 	var last int32
 
 	loc := server.NewLocal(handler.Map{
@@ -268,7 +268,7 @@ func TestNotificationOrder(t *testing.T) {
 
 // Verify that a method that returns only an error (no result payload) is set
 // up and handled correctly.
-func TestErrorOnly(t *testing.T) {
+func TestHandler_errorOnly(t *testing.T) {
 	const errMessage = "not enough strings"
 	loc := server.NewLocal(handler.Map{
 		"ErrorOnly": handler.New(func(_ context.Context, ss []string) error {
@@ -311,7 +311,7 @@ func TestErrorOnly(t *testing.T) {
 
 // Verify that a timeout set on the context is respected by the server and
 // propagates back to the client as an error.
-func TestTimeout(t *testing.T) {
+func TestServer_contextTimeout(t *testing.T) {
 	loc := server.NewLocal(handler.Map{
 		"Stall": handler.New(func(ctx context.Context) (bool, error) {
 			t.Log("Stalling...")
@@ -342,7 +342,7 @@ func TestTimeout(t *testing.T) {
 }
 
 // Verify that stopping the server terminates in-flight requests.
-func TestServerStopCancellation(t *testing.T) {
+func TestServer_stopCancelsHandlers(t *testing.T) {
 	started := make(chan struct{})
 	stopped := make(chan error, 1)
 	loc := server.NewLocal(handler.Map{
@@ -378,7 +378,7 @@ func TestServerStopCancellation(t *testing.T) {
 }
 
 // Test that a handler can cancel an in-flight request.
-func TestHandlerCancel(t *testing.T) {
+func TestServer_CancelRequest(t *testing.T) {
 	ready := make(chan struct{})
 	loc := server.NewLocal(handler.Map{
 		"Stall": handler.New(func(ctx context.Context) error {
@@ -429,7 +429,7 @@ func TestHandlerCancel(t *testing.T) {
 
 // Test that an error with data attached to it is correctly propagated back
 // from the server to the client, in a value of concrete type *Error.
-func TestErrors(t *testing.T) {
+func TestError_withData(t *testing.T) {
 	const errCode = -32000
 	const errData = `{"caroline":452}`
 	const errMessage = "error thingy"
@@ -483,7 +483,7 @@ func TestErrors(t *testing.T) {
 }
 
 // Test that a client correctly reports bad parameters.
-func TestBadCallParams(t *testing.T) {
+func TestClient_badCallParams(t *testing.T) {
 	loc := server.NewLocal(handler.Map{
 		"Test": handler.New(func(_ context.Context, v interface{}) error {
 			return jrpc2.Errorf(129, "this should not be reached")
@@ -502,7 +502,7 @@ func TestBadCallParams(t *testing.T) {
 }
 
 // Verify that metrics are correctly propagated to server info.
-func TestServerInfo(t *testing.T) {
+func TestServer_serverInfoMetrics(t *testing.T) {
 	loc := server.NewLocal(handler.Map{
 		"Metricize": handler.New(func(ctx context.Context) (bool, error) {
 			m := jrpc2.ServerFromContext(ctx).Metrics()
@@ -565,7 +565,7 @@ func TestServerInfo(t *testing.T) {
 // Ensure that a correct request not sent via the *Client type will still
 // elicit a correct response from the server. Here we simulate a "different"
 // client by writing requests directly into the channel.
-func TestOtherClient(t *testing.T) {
+func TestServer_nonLibraryClient(t *testing.T) {
 	srv, cli := channel.Direct()
 	s := jrpc2.NewServer(handler.Map{
 		"X": testOK,
@@ -680,7 +680,7 @@ func TestOtherClient(t *testing.T) {
 }
 
 // Verify that server-side push notifications work.
-func TestPushNotify(t *testing.T) {
+func TestServer_Notify(t *testing.T) {
 	// Set up a server and client with server-side notification support.  Here
 	// we're just capturing the name of the notification method, as a sign we
 	// got the right thing.
@@ -731,7 +731,7 @@ func TestPushNotify(t *testing.T) {
 }
 
 // Verify that server-side callbacks can time out.
-func TestCallbackTimeout(t *testing.T) {
+func TestServer_callbackTimeout(t *testing.T) {
 	loc := server.NewLocal(handler.Map{
 		"Test": handler.New(func(ctx context.Context) error {
 			tctx, cancel := context.WithTimeout(ctx, 5*time.Millisecond)
@@ -760,7 +760,7 @@ func TestCallbackTimeout(t *testing.T) {
 }
 
 // Verify that server-side callbacks work.
-func TestPushCall(t *testing.T) {
+func TestServer_Callback(t *testing.T) {
 	loc := server.NewLocal(handler.Map{
 		"CallMeMaybe": handler.New(func(ctx context.Context) error {
 			if rsp, err := jrpc2.ServerFromContext(ctx).Callback(ctx, "succeed", nil); err != nil {
@@ -804,7 +804,7 @@ func TestPushCall(t *testing.T) {
 }
 
 // Verify that a server push after the client closes does not trigger a panic.
-func TestDeadServerPush(t *testing.T) {
+func TestServer_pushAfterClose(t *testing.T) {
 	loc := server.NewLocal(make(handler.Map), &server.LocalOptions{
 		Server: &jrpc2.ServerOptions{AllowPush: true},
 	})
@@ -819,7 +819,7 @@ func TestDeadServerPush(t *testing.T) {
 }
 
 // Verify that an OnCancel hook is called when expected.
-func TestOnCancel(t *testing.T) {
+func TestClient_onCancelHook(t *testing.T) {
 	hooked := make(chan struct{}) // closed when hook notification is finished
 
 	loc := server.NewLocal(handler.Map{
@@ -905,7 +905,7 @@ func TestContextPlumbing(t *testing.T) {
 }
 
 // Verify that the request-checking hook works.
-func TestRequestHook(t *testing.T) {
+func TestServer_checkRequestHook(t *testing.T) {
 	const wantResponse = "Hey girl"
 	const wantToken = "OK"
 
@@ -985,7 +985,7 @@ func TestRequestHook(t *testing.T) {
 
 // Verify that calling a wrapped method which takes no parameters, but in which
 // the caller provided parameters, will correctly report an error.
-func TestNoParams(t *testing.T) {
+func TestHandler_noParams(t *testing.T) {
 	loc := server.NewLocal(handler.Map{"Test": testOK}, nil)
 	defer loc.Close()
 
@@ -1045,7 +1045,7 @@ func TestNetwork(t *testing.T) {
 }
 
 // Verify that the context passed to an assigner has the correct structure.
-func TestAssignContext(t *testing.T) {
+func TestHandler_assignContext(t *testing.T) {
 	loc := server.NewLocal(assignFunc(func(ctx context.Context, method string) jrpc2.Handler {
 		req := jrpc2.InboundRequest(ctx)
 		if req == nil {
@@ -1073,7 +1073,7 @@ type assignFunc func(context.Context, string) jrpc2.Handler
 func (a assignFunc) Assign(ctx context.Context, m string) jrpc2.Handler { return a(ctx, m) }
 func (assignFunc) Names() []string                                      { return nil }
 
-func TestWaitStatus(t *testing.T) {
+func TestServer_WaitStatus(t *testing.T) {
 	check := func(t *testing.T, stat jrpc2.ServerStatus, closed, stopped bool, wantErr error) {
 		t.Helper()
 		t.Logf("Server status: %+v", stat)
@@ -1119,7 +1119,7 @@ func (buggyChannel) Send([]byte) error       { panic("should not be called") }
 func (b buggyChannel) Recv() ([]byte, error) { return []byte(b.data), b.err }
 func (buggyChannel) Close() error            { return nil }
 
-func TestStrictFields(t *testing.T) {
+func TestRequest_strictFields(t *testing.T) {
 	type other struct {
 		C bool `json:"charlie"`
 	}

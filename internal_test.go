@@ -80,7 +80,7 @@ func errEQ(x, y error) bool {
 	return code.FromError(x) == code.FromError(y) && x.Error() == y.Error()
 }
 
-func TestUnmarshalParams(t *testing.T) {
+func TestRequest_UnmarshalParams(t *testing.T) {
 	type xy struct {
 		X int  `json:"x"`
 		Y bool `json:"y"`
@@ -149,7 +149,7 @@ func (h hmap) Names() []string                                 { return nil }
 
 // Verify that if the client context terminates during a request, the client
 // will terminate and report failure.
-func TestClientCancellation(t *testing.T) {
+func TestClient_contextCancellation(t *testing.T) {
 	started := make(chan struct{})
 	stopped := make(chan struct{})
 	cpipe, spipe := channel.Direct()
@@ -202,7 +202,7 @@ func TestClientCancellation(t *testing.T) {
 	}
 }
 
-func TestSpecialMethods(t *testing.T) {
+func TestServer_specialMethods(t *testing.T) {
 	s := NewServer(hmap{
 		"rpc.nonesuch": methodFunc(func(context.Context, *Request) (interface{}, error) {
 			return "OK", nil
@@ -224,7 +224,7 @@ func TestSpecialMethods(t *testing.T) {
 
 // Verify that the option to remove the special behaviour of rpc.* methods can
 // be correctly disabled by the server options.
-func TestDisableBuiltin(t *testing.T) {
+func TestServer_disableBuiltinHook(t *testing.T) {
 	s := NewServer(hmap{
 		"rpc.nonesuch": methodFunc(func(context.Context, *Request) (interface{}, error) {
 			return "OK", nil
