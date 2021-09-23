@@ -396,8 +396,8 @@ func (s *Server) Notify(ctx context.Context, method string, params interface{}) 
 //
 // This is a non-standard extension of JSON-RPC, and may not be supported by
 // all clients. If you are not sure whether the client supports push calls, you
-// should set a deadeline on ctx, otherwise the callback may block forever for
-// a client response that will never arrive.
+// should set a deadline on ctx, otherwise the callback may block forever for a
+// client response that will never arrive.
 //
 // Unless s was constructed with the AllowPush option set true, this method
 // will always report an error (ErrPushUnsupported) without sending
