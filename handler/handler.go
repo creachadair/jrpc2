@@ -263,6 +263,8 @@ func Check(fn interface{}) (*FuncInfo, error) {
 	// Check argument values.
 	if np := info.Type.NumIn(); np == 0 || np > 2 {
 		return nil, errors.New("wrong number of parameters")
+	} else if info.Type.In(0) != ctxType {
+		return nil, errors.New("first parameter is not context.Context")
 	} else if np == 2 {
 		info.Argument = info.Type.In(1)
 		info.IsVariadic = info.Type.IsVariadic()
@@ -272,8 +274,6 @@ func Check(fn interface{}) (*FuncInfo, error) {
 	no := info.Type.NumOut()
 	if no < 1 || no > 2 {
 		return nil, errors.New("wrong number of results")
-	} else if info.Type.In(0) != ctxType {
-		return nil, errors.New("first parameter is not context.Context")
 	} else if no == 2 && info.Type.Out(1) != errType {
 		return nil, errors.New("result is not of type error")
 	}
