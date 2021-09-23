@@ -730,6 +730,35 @@ func TestPushNotify(t *testing.T) {
 	}
 }
 
+// Verify that server-side callbacks can time out.
+func TestCallbackTimeout(t *testing.T) {
+	loc := server.NewLocal(handler.Map{
+		"Test": handler.New(func(ctx context.Context) error {
+			tctx, cancel := context.WithTimeout(ctx, 5*time.Millisecond)
+			defer cancel()
+			rsp, err := jrpc2.ServerFromContext(ctx).Callback(tctx, "hey", nil)
+			if err == context.DeadlineExceeded {
+				t.Logf("Callback correctly failed: %v", err)
+				return nil
+			} else if err != nil {
+				return fmt.Errorf("unexpected error: %v", err)
+			}
+			return fmt.Errorf("got rsp=%+v, want error", rsp)
+		}),
+	}, &server.LocalOptions{
+		Server: &jrpc2.ServerOptions{AllowPush: true},
+
+		// N.B. Client does not have a callback handler, so calls will be ignored
+		// and no response will be generated.
+	})
+	defer loc.Close()
+	ctx := context.Background()
+
+	if _, err := loc.Client.Call(ctx, "Test", nil); err != nil {
+		t.Errorf("Call failed: %v", err)
+	}
+}
+
 // Verify that server-side callbacks work.
 func TestPushCall(t *testing.T) {
 	loc := server.NewLocal(handler.Map{
