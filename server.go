@@ -395,8 +395,12 @@ func (s *Server) Notify(ctx context.Context, method string, params interface{}) 
 // client have concrete type *jrpc2.Error.
 //
 // This is a non-standard extension of JSON-RPC, and may not be supported by
-// all clients. Unless s was constructed with the AllowPush option set true,
-// this method will always report an error (ErrPushUnsupported) without sending
+// all clients. If you are not sure whether the client supports push calls, you
+// should set a deadeline on ctx, otherwise the callback may block forever for
+// a client response that will never arrive.
+//
+// Unless s was constructed with the AllowPush option set true, this method
+// will always report an error (ErrPushUnsupported) without sending
 // anything. If Callback is called after the client connection is closed, it
 // returns ErrConnClosed.
 func (s *Server) Callback(ctx context.Context, method string, params interface{}) (*Response, error) {
@@ -412,6 +416,25 @@ func (s *Server) Callback(ctx context.Context, method string, params interface{}
 		return nil, filterError(err)
 	}
 	return rsp, nil
+}
+
+// waitCallback blocks until pctx ends, and then if p is still waiting for a
+// response, deliver an error to the caller.
+func (s *Server) waitCallback(pctx context.Context, id string, p *Response) {
+	<-pctx.Done()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, ok := s.call[id]; !ok {
+		return
+	}
+	delete(s.call, id)
+	err := pctx.Err()
+	s.log("Context ended for callback id %q, err=%v", id, err)
+
+	p.ch <- &jmessage{
+		ID: json.RawMessage(id),
+		E:  &Error{Code: code.FromError(err), Message: err.Error()},
+	}
 }
 
 func (s *Server) pushReq(ctx context.Context, wantID bool, method string, params interface{}) (rsp *Response, _ error) {
@@ -443,6 +466,7 @@ func (s *Server) pushReq(ctx context.Context, wantID bool, method string, params
 			cancel: func() {},
 		}
 		s.call[id] = rsp
+		go s.waitCallback(ctx, id, rsp)
 	}
 
 	s.log("Posting server %s %q %s", kind, method, string(bits))
