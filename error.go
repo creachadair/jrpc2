@@ -46,6 +46,16 @@ var errServerStopped = errors.New("the server has been stopped")
 // explicit call to its Close method.
 var errClientStopped = errors.New("the client has been stopped")
 
+// errEmptyMethod is the error reported for an empty request method name.
+var errEmptyMethod = &Error{Code: code.InvalidRequest, Message: "empty method name"}
+
+// errChannelClosed is the error reported to a pending callback when the client
+// channel has closed before the call completed.
+var errChannelClosed = &Error{Code: code.Cancelled, Message: "client channel terminated"}
+
+// errEmptyBatch is the error reported for an empty request batch.
+var errEmptyBatch = &Error{Code: code.InvalidRequest, Message: "empty request batch"}
+
 // ErrConnClosed is returned by a server's push-to-client methods if they are
 // called after the client connection is closed.
 var ErrConnClosed = errors.New("client connection is closed")

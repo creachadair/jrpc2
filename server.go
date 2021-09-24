@@ -286,7 +286,7 @@ func (s *Server) checkAndAssign(next jmessages) tasks {
 		} else if !s.versionOK(req.V) {
 			t.err = ErrInvalidVersion
 		} else if req.M == "" {
-			t.err = &Error{Code: code.InvalidRequest, Message: "empty method name"}
+			t.err = errEmptyMethod
 		} else if s.setContext(t, id) {
 			t.m = s.assign(t.ctx, req.M)
 			if t.m == nil {
@@ -572,7 +572,7 @@ func (s *Server) stop(err error) {
 	for id, rsp := range s.call {
 		rsp.ch <- &jmessage{
 			ID: json.RawMessage(id),
-			E:  &Error{Message: "client channel terminated", Code: code.Cancelled},
+			E:  errChannelClosed,
 		}
 		delete(s.call, id)
 	}
@@ -615,7 +615,7 @@ func (s *Server) read(ch receiver) {
 		} else if derr != nil { // parse failure; report and continue
 			s.pushError(derr)
 		} else if len(in) == 0 {
-			s.pushError(&Error{Code: code.InvalidRequest, Message: "empty request batch"})
+			s.pushError(errEmptyBatch)
 		} else {
 			s.log("Received request batch of size %d (qlen=%d)", len(in), s.inq.Len())
 			s.inq.PushBack(in)
