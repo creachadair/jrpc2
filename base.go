@@ -103,7 +103,7 @@ func (r *Request) ParamString() string { return string(r.params) }
 
 // ErrInvalidVersion is returned by ParseRequests if one or more of the
 // requests in the input has a missing or invalid version marker.
-var ErrInvalidVersion = Errorf(code.InvalidRequest, "incorrect version marker")
+var ErrInvalidVersion error = &Error{Code: code.InvalidRequest, Message: "incorrect version marker"}
 
 // ParseRequests parses a single request or a batch of requests from JSON.
 //
