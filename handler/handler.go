@@ -91,6 +91,8 @@ var (
 	ctxType = reflect.TypeOf((*context.Context)(nil)).Elem() // type context.Context
 	errType = reflect.TypeOf((*error)(nil)).Elem()           // type error
 	reqType = reflect.TypeOf((*jrpc2.Request)(nil))          // type *jrpc2.Request
+
+	errNoParameters = &jrpc2.Error{Code: code.InvalidParams, Message: "no parameters accepted"}
 )
 
 // FuncInfo captures type signature information from a valid handler function.
@@ -143,7 +145,7 @@ func (fi *FuncInfo) Wrap() Func {
 		// Nothing needs to be decoded, but verify no parameters were passed.
 		newInput = func(ctx reflect.Value, req *jrpc2.Request) ([]reflect.Value, error) {
 			if req.HasParams() {
-				return nil, jrpc2.Errorf(code.InvalidParams, "no parameters accepted")
+				return nil, errNoParameters
 			}
 			return []reflect.Value{ctx}, nil
 		}
