@@ -251,9 +251,13 @@ func (s *Server) deliver(rsps jmessages, ch sender, elapsed time.Duration) error
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	// Ensure all the inflight requests get their contexts cancelled.
+	// Cancel the contexts of all the inflight requests that were executed.
+	// The extra check is necessary, to prevent a duplicate request from
+	// cancelling its valid predecessor in that ID.
 	for _, rsp := range rsps {
-		s.cancel(string(rsp.ID))
+		if rsp.err == nil {
+			s.cancel(string(rsp.ID))
+		}
 	}
 
 	nw, err := encode(ch, rsps)
@@ -734,6 +738,10 @@ func (ts tasks) responses(rpcLog RPCLogger) jmessages {
 		rsp := &jmessage{V: Version, ID: task.hreq.id, batch: task.batch}
 		if rsp.ID == nil {
 			rsp.ID = json.RawMessage("null")
+		}
+		if task.m == nil {
+			// No method was ever assigned for this task, so it was never run.
+			rsp.err = errors.New("task not executed")
 		}
 		if task.err == nil {
 			rsp.R = task.val
