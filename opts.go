@@ -44,6 +44,10 @@ type ServerOptions struct {
 	// this setting does not constrain order of issue.
 	Concurrency int
 
+	// If set, this function is called to create a new base request context.
+	// If unset, the server uses a background context.
+	NewContext func() context.Context
+
 	// If set, this function is called with the method name and encoded request
 	// parameters received from the client, before they are delivered to the
 	// handler. Its return value replaces the context and argument values. This
@@ -92,6 +96,13 @@ func (s *ServerOptions) startTime() time.Time {
 		return time.Time{}
 	}
 	return s.StartTime
+}
+
+func (o *ServerOptions) newContext() func() context.Context {
+	if o == nil || o.NewContext == nil {
+		return context.Background
+	}
+	return o.NewContext
 }
 
 type decoder = func(context.Context, string, json.RawMessage) (context.Context, json.RawMessage, error)

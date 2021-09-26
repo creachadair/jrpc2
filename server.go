@@ -23,19 +23,20 @@ type logger = func(string, ...interface{})
 // responses on a channel.Channel provided by the caller, and dispatches
 // requests to user-defined Handlers.
 type Server struct {
-	wg      sync.WaitGroup      // ready when workers are done at shutdown time
-	mux     Assigner            // associates method names with handlers
-	sem     *semaphore.Weighted // bounds concurrent execution (default 1)
-	allow1  bool                // allow v1 requests with no version marker
-	allowP  bool                // allow server notifications to the client
-	log     logger              // write debug logs here
-	rpcLog  RPCLogger           // log RPC requests and responses here
-	dectx   decoder             // decode context from request
-	ckreq   verifier            // request checking hook
-	expctx  bool                // whether to expect request context
-	metrics *metrics.M          // metrics collected during execution
-	start   time.Time           // when Start was called
-	builtin bool                // whether built-in rpc.* methods are enabled
+	wg      sync.WaitGroup         // ready when workers are done at shutdown time
+	mux     Assigner               // associates method names with handlers
+	sem     *semaphore.Weighted    // bounds concurrent execution (default 1)
+	allow1  bool                   // allow v1 requests with no version marker
+	allowP  bool                   // allow server notifications to the client
+	log     logger                 // write debug logs here
+	rpcLog  RPCLogger              // log RPC requests and responses here
+	newctx  func() context.Context // create a new base request context
+	dectx   decoder                // decode context from request
+	ckreq   verifier               // request checking hook
+	expctx  bool                   // whether to expect request context
+	metrics *metrics.M             // metrics collected during execution
+	start   time.Time              // when Start was called
+	builtin bool                   // whether built-in rpc.* methods are enabled
 
 	mu *sync.Mutex // protects the fields below
 
@@ -74,6 +75,7 @@ func NewServer(mux Assigner, opts *ServerOptions) *Server {
 		allowP:  opts.allowPush(),
 		log:     opts.logger(),
 		rpcLog:  opts.rpcLog(),
+		newctx:  opts.newContext(),
 		dectx:   dc,
 		ckreq:   opts.checkRequest(),
 		expctx:  exp,
@@ -306,7 +308,7 @@ func (s *Server) checkAndAssign(next jmessages) tasks {
 // setContext constructs and attaches a request context to t, and reports
 // whether this succeeded.
 func (s *Server) setContext(t *task, id string) bool {
-	base, params, err := s.dectx(context.Background(), t.hreq.method, t.hreq.params)
+	base, params, err := s.dectx(s.newctx(), t.hreq.method, t.hreq.params)
 	t.hreq.params = params
 	if err != nil {
 		t.err = Errorf(code.InternalError, "invalid request context: %v", err)

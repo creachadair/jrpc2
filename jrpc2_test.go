@@ -1200,3 +1200,31 @@ func TestServerFromContext(t *testing.T) {
 		t.Errorf("ServerFromContext: got %p, want %p", got, loc.Server)
 	}
 }
+
+func TestServer_newContext(t *testing.T) {
+	// Prepare a context with a test value attached to it, that the handler can
+	// extract to verify that the base context was plumbed in correctly.
+	type ctxKey string
+	ctx := context.WithValue(context.Background(), ctxKey("test"), 42)
+
+	loc := server.NewLocal(handler.Map{
+		"Test": handler.New(func(ctx context.Context) error {
+			val := ctx.Value(ctxKey("test"))
+			if val == nil {
+				t.Error("Test value is not present in context")
+			} else if v, ok := val.(int); !ok || v != 42 {
+				t.Errorf("Wrong test value: got %+v, want %v", val, 42)
+			}
+			return nil
+		}),
+	}, &server.LocalOptions{
+		Server: &jrpc2.ServerOptions{
+			// Use the test context constructed above as the base request context.
+			NewContext: func() context.Context { return ctx },
+		},
+	})
+	defer loc.Close()
+	if _, err := loc.Client.Call(context.Background(), "Test", nil); err != nil {
+		t.Errorf("Call failed: %v", err)
+	}
+}
