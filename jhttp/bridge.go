@@ -3,13 +3,16 @@
 package jhttp
 
 import (
+	"bytes"
+	"context"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strconv"
 
 	"github.com/creachadair/jrpc2"
-	"github.com/creachadair/jrpc2/channel"
+	"github.com/creachadair/jrpc2/server"
 )
 
 // A Bridge is a http.Handler that bridges requests to a JSON-RPC server.
@@ -25,9 +28,12 @@ import (
 // If the HTTP request method is not "POST", the bridge reports 405 (Method Not
 // Allowed). If the Content-Type is not application/json, the bridge reports
 // 415 (Unsupported Media Type).
+//
+// The bridge attaches the inbound HTTP request to the context passed to the
+// client, allowing an EncodeContext callback to retrieve state from the HTTP
+// headers. Use jhttp.HTTPRequest to retrieve the request from the context.
 type Bridge struct {
-	ch        channel.Channel
-	srv       *jrpc2.Server
+	local     server.Local
 	checkType func(string) bool
 }
 
@@ -64,25 +70,62 @@ func (b Bridge) serveInternal(w http.ResponseWriter, req *http.Request) error {
 	if err != nil && err != jrpc2.ErrInvalidVersion {
 		return err
 	}
-	var hasCall bool
-	for _, req := range jreq {
-		if !req.IsNotification() {
-			hasCall = true
-			break
+
+	// Because the bridge shares the JSON-RPC client between potentially many
+	// HTTP clients, we must virtualize the ID space for requests to preserve
+	// the HTTP client's assignment of IDs.
+	//
+	// To do this, we keep track of the inbound ID for each request so that we
+	// can map the responses back. This takes advantage of the fact that the
+	// *jrpc2.Client detangles batch order so that responses come back in the
+	// same order (modulo notifications) even if the server response did not
+	// preserve order.
+
+	// Generate request specifications for the client.
+	var inboundID []string                // for requests
+	spec := make([]jrpc2.Spec, len(jreq)) // requests & notifications
+	for i, req := range jreq {
+		spec[i] = jrpc2.Spec{
+			Method: req.Method(),
+			Notify: req.IsNotification(),
+		}
+		if req.HasParams() {
+			var p json.RawMessage
+			req.UnmarshalParams(&p)
+			spec[i].Params = p
+		}
+		if !spec[i].Notify {
+			inboundID = append(inboundID, req.ID())
 		}
 	}
-	if err := b.ch.Send(body); err != nil {
+
+	// Attach the HTTP request to the client context, so the encoder can see it.
+	ctx := context.WithValue(req.Context(), httpReqKey{}, req)
+	rsps, err := b.local.Client.Batch(ctx, spec)
+	if err != nil {
 		return err
 	}
 
-	// If there are only notifications, report success without responses.
-	if !hasCall {
+	// If all the requests were notifications, report success without responses.
+	if len(rsps) == 0 {
 		w.WriteHeader(http.StatusNoContent)
 		return nil
 	}
 
-	// Wait for the server to reply.
-	reply, err := b.ch.Recv()
+	// Otherwise, map the responses back to their original IDs, and marshal the
+	// response back into the body.
+	for i, rsp := range rsps {
+		rsp.SetID(inboundID[i])
+	}
+
+	// If the original request was a single message, make sure we encode the
+	// response the same way.
+	var reply []byte
+	if len(rsps) == 1 && !bytes.HasPrefix(bytes.TrimSpace(body), []byte("[")) {
+		reply, err = json.Marshal(rsps[0])
+	} else {
+		reply, err = json.Marshal(rsps)
+	}
 	if err != nil {
 		return err
 	}
@@ -93,17 +136,17 @@ func (b Bridge) serveInternal(w http.ResponseWriter, req *http.Request) error {
 }
 
 // Close closes the channel to the server, waits for the server to exit, and
-// reports the exit status of the server.
-func (b Bridge) Close() error { b.ch.Close(); return b.srv.Wait() }
+// reports its exit status.
+func (b Bridge) Close() error { return b.local.Close() }
 
-// NewBridge constructs a new Bridge that starts srv and dispatches HTTP
-// requests to it.  The server must be unstarted or NewBridge will panic.
-// The server will run until the bridge is closed.
-func NewBridge(srv *jrpc2.Server, opts *BridgeOptions) Bridge {
-	cch, sch := channel.Direct()
+// NewBridge constructs a new Bridge that starts a server on mux and dispatches
+// HTTP requests to it.  The server will run until the bridge is closed.
+func NewBridge(mux jrpc2.Assigner, opts *BridgeOptions) Bridge {
 	return Bridge{
-		ch:        cch,
-		srv:       srv.Start(sch),
+		local: server.NewLocal(mux, &server.LocalOptions{
+			Client: opts.clientOptions(),
+			Server: opts.serverOptions(),
+		}),
 		checkType: opts.checkContentType(),
 	}
 }
@@ -111,6 +154,12 @@ func NewBridge(srv *jrpc2.Server, opts *BridgeOptions) Bridge {
 // BridgeOptions are optional settings for a Bridge. A nil pointer is ready for
 // use and provides default values as described.
 type BridgeOptions struct {
+	// Options for the bridge client (default nil).
+	Client *jrpc2.ClientOptions
+
+	// Options for the bridge server (default nil).
+	Server *jrpc2.ServerOptions
+
 	// If non-nil, this function is called to check whether the HTTP request's
 	// declared content-type is valid. If this function returns false, the
 	// request is rejected. If nil, the default check requires a content type of
@@ -118,9 +167,35 @@ type BridgeOptions struct {
 	CheckContentType func(contentType string) bool
 }
 
+func (o *BridgeOptions) clientOptions() *jrpc2.ClientOptions {
+	if o == nil {
+		return nil
+	}
+	return o.Client
+}
+
+func (o *BridgeOptions) serverOptions() *jrpc2.ServerOptions {
+	if o == nil {
+		return nil
+	}
+	return o.Server
+}
+
 func (o *BridgeOptions) checkContentType() func(string) bool {
 	if o == nil || o.CheckContentType == nil {
 		return func(ctype string) bool { return ctype == "application/json" }
 	}
 	return o.CheckContentType
+}
+
+type httpReqKey struct{}
+
+// HTTPRequest returns the HTTP request associated with ctx, or nil. The
+// context passed to the JSON-RPC client by the Bridge will contain this value.
+func HTTPRequest(ctx context.Context) *http.Request {
+	req, ok := ctx.Value(httpReqKey{}).(*http.Request)
+	if ok {
+		return req
+	}
+	return nil
 }
