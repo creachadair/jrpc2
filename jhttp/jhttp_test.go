@@ -3,6 +3,7 @@ package jhttp_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -25,12 +26,18 @@ var testService = handler.Map{
 	}),
 }
 
-func TestBridge(t *testing.T) {
-	// Set up a JSON-RPC server to answer requests bridged from HTTP.
-	srv := jrpc2.NewServer(testService, nil)
+func checkContext(ctx context.Context, _ string, p json.RawMessage) (json.RawMessage, error) {
+	if jhttp.HTTPRequest(ctx) == nil {
+		return nil, errors.New("no HTTP request in context")
+	}
+	return p, nil
+}
 
-	// Bridge HTTP to the JSON-RPC server.
-	b := jhttp.NewBridge(srv, nil)
+func TestBridge(t *testing.T) {
+	// Set up a bridge with the test configuration.
+	b := jhttp.NewBridge(testService, &jhttp.BridgeOptions{
+		Client: &jrpc2.ClientOptions{EncodeContext: checkContext},
+	})
 	defer checkClose(t, b)
 
 	// Create an HTTP test server to call into the bridge.
@@ -155,9 +162,7 @@ func TestBridge(t *testing.T) {
 
 // Verify that the content-type check hook works.
 func TestBridge_contentTypeCheck(t *testing.T) {
-	srv := jrpc2.NewServer(testService, nil)
-
-	b := jhttp.NewBridge(srv, &jhttp.BridgeOptions{
+	b := jhttp.NewBridge(testService, &jhttp.BridgeOptions{
 		CheckContentType: func(ctype string) bool {
 			return ctype == "application/octet-stream"
 		},
@@ -190,9 +195,7 @@ func TestBridge_contentTypeCheck(t *testing.T) {
 }
 
 func TestChannel(t *testing.T) {
-	srv := jrpc2.NewServer(testService, nil)
-
-	b := jhttp.NewBridge(srv, nil)
+	b := jhttp.NewBridge(testService, nil)
 	defer checkClose(t, b)
 	hsrv := httptest.NewServer(b)
 	defer hsrv.Close()

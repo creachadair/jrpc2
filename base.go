@@ -147,6 +147,9 @@ type Response struct {
 // ID returns the request identifier for r.
 func (r *Response) ID() string { return r.id }
 
+// SetID sets the ID of r to s, for use in proxies.
+func (r *Response) SetID(s string) { r.id = s }
+
 // Error returns a non-nil *Error if the response contains an error.
 func (r *Response) Error() *Error { return r.err }
 

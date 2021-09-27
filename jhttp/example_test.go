@@ -9,20 +9,17 @@ import (
 	"net/http/httptest"
 	"strings"
 
-	"github.com/creachadair/jrpc2"
 	"github.com/creachadair/jrpc2/handler"
 	"github.com/creachadair/jrpc2/jhttp"
 )
 
 func Example() {
-	// Set up a local server to demonstrate the API.
-	srv := jrpc2.NewServer(handler.Map{
+	// Set up a bridge to demonstrate the API.
+	b := jhttp.NewBridge(handler.Map{
 		"Test": handler.New(func(ctx context.Context, ss ...string) (string, error) {
 			return strings.Join(ss, " "), nil
 		}),
 	}, nil)
-
-	b := jhttp.NewBridge(srv, nil)
 	defer b.Close()
 
 	hsrv := httptest.NewServer(b)
