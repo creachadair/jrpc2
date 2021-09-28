@@ -56,10 +56,7 @@ func TestLocal(t *testing.T) {
 func TestLocalConcurrent(t *testing.T) {
 	once.Do(setup)
 	loc := server.NewLocal(handler.Map{
-		"Test": handler.New(func(_ context.Context, req *jrpc2.Request) error {
-			t.Logf("Call id=%q", req.ID())
-			return nil
-		}),
+		"Test": handler.New(func(context.Context) error { return nil }),
 	}, testOpts)
 
 	const numCallers = 20
