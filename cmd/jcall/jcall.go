@@ -6,6 +6,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -33,6 +34,7 @@ var (
 	chanFraming = flag.String("f", envOrDefault("JCALL_FRAMING", "raw"), "Channel framing")
 	doBatch     = flag.Bool("batch", false, "Issue calls as a batch rather than sequentially")
 	doErrors    = flag.Bool("e", false, "Print error values to stdout")
+	doIndent    = flag.Bool("i", false, "Indent JSON output")
 	doMulti     = flag.Bool("m", false, "Issue the same call repeatedly with different arguments")
 	doTiming    = flag.Bool("T", false, "Print call timing stats")
 	withLogging = flag.Bool("v", false, "Enable verbose logging")
@@ -171,7 +173,7 @@ func printResults(rsps []*jrpc2.Response) (time.Duration, error) {
 		if rerr := rsp.Error(); rerr != nil {
 			if *doErrors {
 				etxt, _ := json.Marshal(rerr)
-				fmt.Println(string(etxt))
+				fmt.Println(formatJSON(etxt))
 			} else {
 				log.Printf("Error (%d): %v", i+1, rerr)
 			}
@@ -185,7 +187,7 @@ func printResults(rsps []*jrpc2.Response) (time.Duration, error) {
 			set(perr)
 			continue
 		}
-		fmt.Println(string(result))
+		fmt.Println(formatJSON(result))
 		dur += time.Since(pstart)
 	}
 	return dur, err
@@ -235,7 +237,7 @@ func issueSequential(ctx context.Context, cli *jrpc2.Client, specs []jrpc2.Spec)
 		if perr := rsp.UnmarshalResult(&result); perr != nil {
 			return dur, err
 		}
-		fmt.Println(string(result))
+		fmt.Println(formatJSON(result))
 		pdur := time.Since(pstart)
 		dur += pdur
 		tprintf("[call %s]: %v call, %v print [%s]\n", spec.Method, cdur, pdur, callStatus(err))
@@ -272,6 +274,15 @@ func param(s string) interface{} {
 		return nil
 	}
 	return json.RawMessage(s)
+}
+
+func formatJSON(data []byte) string {
+	if *doIndent {
+		var buf bytes.Buffer
+		json.Indent(&buf, data, "", "  ")
+		return buf.String()
+	}
+	return string(data)
 }
 
 func isHTTP(addr string) bool {
