@@ -141,6 +141,13 @@ func (b Bridge) Close() error { return b.local.Close() }
 
 // NewBridge constructs a new Bridge that starts a server on mux and dispatches
 // HTTP requests to it.  The server will run until the bridge is closed.
+//
+// Note that a bridge is not able to push calls or notifications from the
+// server back to the remote client. The bridge client is shared by multiple
+// active HTTP requests, and has no way to know which of the callers the push
+// should be forwarded to. You can enable push on the bridge server and set
+// hooks on the bridge client as usual, but the remote client will not see push
+// messages from the server.
 func NewBridge(mux jrpc2.Assigner, opts *BridgeOptions) Bridge {
 	return Bridge{
 		local: server.NewLocal(mux, &server.LocalOptions{
