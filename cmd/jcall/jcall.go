@@ -28,7 +28,6 @@ import (
 var (
 	dialTimeout = flag.Duration("dial", 5*time.Second, "Timeout on dialing the server (0 for no timeout)")
 	callTimeout = flag.Duration("timeout", 0, "Timeout on each call (0 for no timeout)")
-	doHTTP      = flag.Bool("http", false, "Connect via HTTP (address is the endpoint URL)")
 	doNotify    = flag.Bool("notify", false, "Send a notification")
 	withContext = flag.Bool("c", false, "Send context with request")
 	chanFraming = flag.String("f", envOrDefault("JCALL_FRAMING", "raw"), "Channel framing")
@@ -111,7 +110,7 @@ func main() {
 	// connection; the HTTP client will handle that.
 	start := time.Now()
 	var cc channel.Channel
-	if *doHTTP || isHTTP(flag.Arg(0)) {
+	if isHTTP(flag.Arg(0)) {
 		cc = jhttp.NewChannel(flag.Arg(0), nil)
 	} else if nc := newFraming(*chanFraming); nc == nil {
 		log.Fatalf("Unknown channel framing %q", *chanFraming)
