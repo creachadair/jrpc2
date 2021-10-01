@@ -75,6 +75,23 @@ func (m *M) SetLabel(name string, value interface{}) {
 	}
 }
 
+// EditLabel calls edit with the current value of the specified label.
+// The value returned by edit replaces the contents of the label.
+// If edit returns nil, the label is removed from the set.
+// If the label did not exist, the argument to edit is nil.
+func (m *M) EditLabel(name string, edit func(interface{}) interface{}) {
+	if m != nil {
+		m.mu.Lock()
+		defer m.mu.Unlock()
+		newValue := edit(m.label[name])
+		if newValue == nil {
+			delete(m.label, name)
+		} else {
+			m.label[name] = newValue
+		}
+	}
+}
+
 // Snapshot copies an atomic snapshot of the collected metrics into the non-nil
 // fields of the provided snapshot value. Only the fields of snap that are not
 // nil are snapshotted.
