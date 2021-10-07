@@ -90,9 +90,8 @@ func mustServe(t *testing.T, lst net.Listener, newService func() Service) <-chan
 		defer close(sc)
 		// Start a server loop to accept connections from the clients. This should
 		// exit cleanly once all the clients have finished and the listener closes.
-		if err := Loop(lst, newService, &LoopOptions{
-			Framing: newChan,
-		}); err != nil {
+		lst := NetAccepter(lst, newChan)
+		if err := Loop(lst, newService, nil); err != nil {
 			t.Errorf("Loop: unexpected failure: %v", err)
 		}
 	}()

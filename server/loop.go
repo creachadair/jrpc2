@@ -34,6 +34,32 @@ func (s static) New() Service                            { return s }
 func (s static) Assigner() (jrpc2.Assigner, error)       { return s.methods, nil }
 func (static) Finish(jrpc2.Assigner, jrpc2.ServerStatus) {}
 
+// An Accepter obtains client connections from an external source and
+// constructs channels from them.
+type Accepter interface {
+	// Accept accepts a connection and returns a new channel for it.
+	Accept() (channel.Channel, error)
+}
+
+// NetAccepter adapts a net.Listener to the Accepter interface, using f as the
+// channel framing.
+func NetAccepter(lst net.Listener, f channel.Framing) Accepter {
+	return netAccepter{Listener: lst, newChannel: f}
+}
+
+type netAccepter struct {
+	net.Listener
+	newChannel channel.Framing
+}
+
+func (n netAccepter) Accept() (channel.Channel, error) {
+	conn, err := n.Listener.Accept()
+	if err != nil {
+		return nil, err
+	}
+	return n.newChannel(conn, conn), nil
+}
+
 // Loop obtains connections from lst and starts a server for each using a
 // service instance returned by newService and the given options. Each server
 // runs in a new goroutine.
@@ -41,8 +67,7 @@ func (static) Finish(jrpc2.Assigner, jrpc2.ServerStatus) {}
 // If the listener reports an error, the loop will terminate and that error
 // will be reported to the caller of Loop once any active servers have
 // returned.
-func Loop(lst net.Listener, newService func() Service, opts *LoopOptions) error {
-	newChannel := opts.framing()
+func Loop(lst Accepter, newService func() Service, opts *LoopOptions) error {
 	serverOpts := opts.serverOpts()
 	log := func(string, ...interface{}) {}
 	if serverOpts != nil && serverOpts.Logger != nil {
@@ -51,7 +76,7 @@ func Loop(lst net.Listener, newService func() Service, opts *LoopOptions) error 
 
 	var wg sync.WaitGroup
 	for {
-		conn, err := lst.Accept()
+		ch, err := lst.Accept()
 		if err != nil {
 			if channel.IsErrClosing(err) {
 				err = nil
@@ -61,7 +86,6 @@ func Loop(lst net.Listener, newService func() Service, opts *LoopOptions) error 
 			wg.Wait()
 			return err
 		}
-		ch := newChannel(conn, conn)
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -84,10 +108,6 @@ func Loop(lst net.Listener, newService func() Service, opts *LoopOptions) error 
 // LoopOptions control the behaviour of the Loop function.  A nil *LoopOptions
 // provides default values as described.
 type LoopOptions struct {
-	// If non-nil, this function is used to convert a stream connection to an
-	// RPC channel. If this field is nil, channel.RawJSON is used.
-	Framing channel.Framing
-
 	// If non-nil, these options are used when constructing the server to
 	// handle requests on an inbound connection.
 	ServerOptions *jrpc2.ServerOptions
@@ -98,11 +118,4 @@ func (o *LoopOptions) serverOpts() *jrpc2.ServerOptions {
 		return nil
 	}
 	return o.ServerOptions
-}
-
-func (o *LoopOptions) framing() channel.Framing {
-	if o == nil || o.Framing == nil {
-		return channel.RawJSON
-	}
-	return o.Framing
 }
