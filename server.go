@@ -23,9 +23,11 @@ type logger = func(string, ...interface{})
 // responses on a channel.Channel provided by the caller, and dispatches
 // requests to user-defined Handlers.
 type Server struct {
-	wg      sync.WaitGroup         // ready when workers are done at shutdown time
-	mux     Assigner               // associates method names with handlers
-	sem     *semaphore.Weighted    // bounds concurrent execution (default 1)
+	wg  sync.WaitGroup      // ready when workers are done at shutdown time
+	mux Assigner            // associates method names with handlers
+	sem *semaphore.Weighted // bounds concurrent execution (default 1)
+
+	// Configurable settings
 	allow1  bool                   // allow v1 requests with no version marker
 	allowP  bool                   // allow server notifications to the client
 	log     logger                 // write debug logs here
