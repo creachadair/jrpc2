@@ -31,7 +31,7 @@ var (
 	callTimeout = flag.Duration("timeout", 0, "Timeout on each call (0 for no timeout)")
 	doNotify    = flag.Bool("notify", false, "Send a notification")
 	withContext = flag.Bool("c", false, "Send context with request")
-	chanFraming = flag.String("f", envOrDefault("JCALL_FRAMING", "raw"), "Channel framing")
+	chanFraming = flag.String("f", envOrDefault("JCALL_FRAMING", "line"), "Channel framing")
 	doBatch     = flag.Bool("batch", false, "Issue calls as a batch rather than sequentially")
 	doErrors    = flag.Bool("e", false, "Print error values to stdout")
 	doIndent    = flag.Bool("i", false, "Indent JSON output")
