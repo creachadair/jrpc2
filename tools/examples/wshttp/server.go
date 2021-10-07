@@ -13,9 +13,12 @@ import (
 	"flag"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/creachadair/jrpc2"
+	"github.com/creachadair/jrpc2/channel"
 	"github.com/creachadair/jrpc2/handler"
+	"github.com/creachadair/jrpc2/server"
 	"github.com/creachadair/wschannel"
 )
 
@@ -32,27 +35,37 @@ func main() {
 	http.Handle("/rpc", lst)
 	go hs.ListenAndServe()
 
-	srv := jrpc2.NewServer(handler.Map{
-		"Reverse": handler.New(func(_ context.Context, ss []string) []string {
-			for i, j := 0, len(ss)-1; i < j; i++ {
-				ss[i], ss[j] = ss[j], ss[i]
-				j--
-			}
-			return ss
-		}),
-	}, nil)
-
-	ctx := context.Background()
-	for {
-		ch, err := lst.Accept(ctx)
-		if err != nil {
-			hs.Shutdown(ctx)
-			log.Fatalf("Accept: %v", err)
-		}
-		log.Print("Client connected")
-		if err := srv.Start(ch).Wait(); err != nil {
-			log.Printf("Server error: %v", err)
-		}
-		log.Print("Client disconnected (wave bye)")
+	acc := accepter{
+		Listener: lst,
+		ctx:      context.Background(),
 	}
+	svc := handler.Map{"Reverse": handler.New(reverse)}
+
+	log.Printf("Listing at ws://%s/rpc", *listenAddr)
+	err := server.Loop(acc, server.Static(svc), &server.LoopOptions{
+		ServerOptions: &jrpc2.ServerOptions{
+			Logger: log.New(os.Stderr, "[ws-server] ", log.LstdFlags),
+		},
+	})
+	hs.Shutdown(acc.ctx)
+	if err != nil {
+		log.Fatalf("Loop exited: %v", err)
+	}
+}
+
+func reverse(_ context.Context, ss []string) []string {
+	for i, j := 0, len(ss)-1; i < j; i++ {
+		ss[i], ss[j] = ss[j], ss[i]
+		j--
+	}
+	return ss
+}
+
+type accepter struct {
+	*wschannel.Listener
+	ctx context.Context
+}
+
+func (a accepter) Accept() (channel.Channel, error) {
+	return a.Listener.Accept(a.ctx)
 }
