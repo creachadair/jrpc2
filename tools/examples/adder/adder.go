@@ -2,8 +2,8 @@
 // the process's stdin and stdout.
 //
 // Usage:
-//    $ go build github.com/creachadair/jrpc2/cmd/examples/adder
-//    $ ./adder
+//    go build github.com/creachadair/jrpc2/tools/examples/adder
+//    ./adder
 //
 // Queries to try (copy and paste):
 //    {"jsonrpc":"2.0", "id":1, "method":"Add", "params":[1,2,3]}

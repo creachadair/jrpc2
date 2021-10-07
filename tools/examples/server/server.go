@@ -3,10 +3,10 @@
 //
 // Usage (see also the client example):
 //
-//   go build github.com/creachadair/jrpc2/cmd/examples/server
+//   go build github.com/creachadair/jrpc2/tools/examples/server
 //   ./server -address :8080
 //
-// See also cmd/examples/client/client.go.
+// See also examples/client/client.go.
 package main
 
 import (
