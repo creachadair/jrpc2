@@ -23,6 +23,7 @@ import (
 	"github.com/creachadair/jrpc2/channel"
 	"github.com/creachadair/jrpc2/jctx"
 	"github.com/creachadair/jrpc2/jhttp"
+	"github.com/creachadair/wschannel"
 )
 
 var (
@@ -48,6 +49,13 @@ func init() {
 Connect to the specified address and transmit the specified JSON-RPC method
 calls in sequence (or as a batch, if -batch is set).  The resulting response
 values are printed to stdout.
+
+Supported address formats include:
+
+  host:port              -- TCP connection to the given host and port
+  some/path              -- Unix-domain socket at the given path
+  http://host:port/path  -- HTTP connection to the given URL
+  ws://host:port/path    -- Websocket connection to the given URL
 
 Without -m, each pair of arguments names a method and its parameters to call.
 With -m, the first argument names a method to be repeatedly called with each of
@@ -112,6 +120,12 @@ func main() {
 	var cc channel.Channel
 	if isHTTP(flag.Arg(0)) {
 		cc = jhttp.NewChannel(flag.Arg(0), nil)
+	} else if isWebsocket(flag.Arg(0)) {
+		ch, err := wschannel.Dial(flag.Arg(0), nil)
+		if err != nil {
+			log.Fatalf("Dial %q: %v", flag.Arg(0), err)
+		}
+		cc = ch
 	} else if nc := newFraming(*chanFraming); nc == nil {
 		log.Fatalf("Unknown channel framing %q", *chanFraming)
 	} else {
@@ -286,6 +300,10 @@ func formatJSON(data []byte) string {
 
 func isHTTP(addr string) bool {
 	return strings.HasPrefix(addr, "http:") || strings.HasPrefix(addr, "https:")
+}
+
+func isWebsocket(addr string) bool {
+	return strings.HasPrefix(addr, "ws:") || strings.HasPrefix(addr, "wss:")
 }
 
 func callStatus(err error) string {
