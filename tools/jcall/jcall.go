@@ -15,6 +15,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
 	"time"
@@ -37,6 +38,7 @@ var (
 	doIndent    = flag.Bool("i", false, "Indent JSON output")
 	doMulti     = flag.Bool("m", false, "Issue the same call repeatedly with different arguments")
 	doTiming    = flag.Bool("T", false, "Print call timing stats")
+	doWaitExit  = flag.Bool("W", false, "Wait for interrupt at exit")
 	withLogging = flag.Bool("v", false, "Enable verbose logging")
 	withMeta    = flag.String("meta", "", "Attach this JSON value as request metadata (implies -c)")
 )
@@ -125,6 +127,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("Dial %q: %v", flag.Arg(0), err)
 		}
+		defer ch.Close()
 		cc = ch
 	} else if nc := newFraming(*chanFraming); nc == nil {
 		log.Fatalf("Unknown channel framing %q", *chanFraming)
@@ -139,6 +142,12 @@ func main() {
 	}
 	tdial := time.Now()
 
+	done := make(chan os.Signal, 1)
+	if *doWaitExit {
+		signal.Notify(done, os.Interrupt)
+	} else {
+		close(done)
+	}
 	cli := newClient(cc)
 	pdur, err := issueCalls(ctx, cli, flag.Args()[1:])
 	// defer failure on error till after we print aggregate timing stats
@@ -155,6 +164,10 @@ func main() {
 	if err != nil {
 		os.Exit(1)
 	}
+	if *doWaitExit {
+		log.Print("<waiting at exit>")
+	}
+	<-done
 }
 
 func newClient(conn channel.Channel) *jrpc2.Client {
