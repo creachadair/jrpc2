@@ -83,6 +83,17 @@ func TestMetrics(t *testing.T) {
 	m.SetLabel("hey", nil)
 	wantLabel("hey", nil)
 
+	var numCalls int
+	m.SetLabel("dyno", func() interface{} {
+		numCalls++
+		return numCalls
+	})
+	wantLabel("dyno", 1)
+	wantLabel("dyno", 2)
+	wantLabel("dyno", 3)
+	m.SetLabel("dyno", nil)
+	wantLabel("dyno", nil)
+
 	wantLabel("quux", nil)
 	m.EditLabel("quux", func(v interface{}) interface{} {
 		return "x"

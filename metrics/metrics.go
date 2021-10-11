@@ -63,6 +63,12 @@ func (m *M) CountAndSetMax(name string, n int64) {
 
 // SetLabel sets the specified label to value. If value == nil the label is
 // removed from the set.
+//
+// As a special case, if value has the concrete type
+//
+//     func() interface{}
+//
+// then the value of the label is obtained by calling that function.
 func (m *M) SetLabel(name string, value interface{}) {
 	if m != nil {
 		m.mu.Lock()
@@ -111,7 +117,11 @@ func (m *M) Snapshot(snap Snapshot) {
 		}
 		if v := snap.Label; v != nil {
 			for name, val := range m.label {
-				v[name] = val
+				if fn, ok := val.(func() interface{}); ok {
+					v[name] = fn()
+				} else {
+					v[name] = val
+				}
 			}
 		}
 	}
