@@ -360,7 +360,7 @@ func (j *jmessage) parseJSON(data []byte) error {
 
 	// Report an error for extraneous fields.
 	if j.err == nil && len(extra) != 0 {
-		j.err = DataErrorf(code.InvalidRequest, extra, "extra fields in request")
+		j.err = Errorf(code.InvalidRequest, "extra fields in request").WithData(extra)
 	}
 	return nil
 }

@@ -292,7 +292,7 @@ func TestMarshalResponse(t *testing.T) {
 	}{
 		{"", nil, "", `{"jsonrpc":"2.0"}`},
 		{"null", nil, "", `{"jsonrpc":"2.0","id":null}`},
-		{"123", Errorf(code.ParseError, "failed").(*Error), "",
+		{"123", Errorf(code.ParseError, "failed"), "",
 			`{"jsonrpc":"2.0","id":123,"error":{"code":-32700,"message":"failed"}}`},
 		{"456", nil, `{"ok":true,"values":[4,5,6]}`,
 			`{"jsonrpc":"2.0","id":456,"result":{"ok":true,"values":[4,5,6]}}`},

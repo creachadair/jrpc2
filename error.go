@@ -26,6 +26,18 @@ func (e Error) MarshalJSON() ([]byte, error) {
 	return json.Marshal(jerror{C: int32(e.Code), M: e.Message, D: e.Data})
 }
 
+// WithData marshals v as JSON and constructs a copy of e whose Data field
+// includes the result. If v == nil or if marshaling v fails, e is returned
+// without modification.
+func (e *Error) WithData(v interface{}) *Error {
+	if v == nil {
+		return e
+	} else if data, err := json.Marshal(v); err == nil {
+		return &Error{Code: e.Code, Message: e.Message, Data: data}
+	}
+	return e
+}
+
 // UnmarshalJSON implements the json.Unmarshaler interface for Error values.
 func (e *Error) UnmarshalJSON(data []byte) error {
 	var v jerror
@@ -62,20 +74,6 @@ var ErrConnClosed = errors.New("client connection is closed")
 
 // Errorf returns an error value of concrete type *Error having the specified
 // code and formatted message string.
-// It is shorthand for DataErrorf(code, nil, msg, args...)
-func Errorf(code code.Code, msg string, args ...interface{}) error {
-	return DataErrorf(code, nil, msg, args...)
-}
-
-// DataErrorf returns an error value of concrete type *Error having the
-// specified code, error data, and formatted message string.
-// If v == nil this behaves identically to Errorf(code, msg, args...).
-func DataErrorf(code code.Code, v interface{}, msg string, args ...interface{}) error {
-	e := &Error{Code: code, Message: fmt.Sprintf(msg, args...)}
-	if v != nil {
-		if data, err := json.Marshal(v); err == nil {
-			e.Data = data
-		}
-	}
-	return e
+func Errorf(code code.Code, msg string, args ...interface{}) *Error {
+	return &Error{Code: code, Message: fmt.Sprintf(msg, args...)}
 }

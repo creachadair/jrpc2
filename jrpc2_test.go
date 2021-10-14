@@ -435,7 +435,7 @@ func TestError_withData(t *testing.T) {
 	const errMessage = "error thingy"
 	loc := server.NewLocal(handler.Map{
 		"Err": handler.New(func(_ context.Context) (int, error) {
-			return 17, jrpc2.DataErrorf(errCode, json.RawMessage(errData), errMessage)
+			return 17, jrpc2.Errorf(errCode, errMessage).WithData(json.RawMessage(errData))
 		}),
 		"Push": handler.New(func(ctx context.Context) (bool, error) {
 			return false, jrpc2.ServerFromContext(ctx).Notify(ctx, "PushBack", nil)
