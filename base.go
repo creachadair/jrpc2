@@ -67,17 +67,16 @@ func (r *Request) Method() string { return r.method }
 func (r *Request) HasParams() bool { return len(r.params) != 0 }
 
 // UnmarshalParams decodes the request parameters of r into v. If r has empty
-// parameters, it returns nil without modifying v. If r is invalid it returns
-// an InvalidParams error.
+// parameters, it returns nil without modifying v. If the parameters are
+// invalid, UnmarshalParams returns an InvalidParams error.
 //
-// By default, unknown object keys are ignored when unmarshaling into a v of
-// struct type. This can be overridden either by giving the type of v a custom
-// implementation of json.Unmarshaler, or implementing a DisallowUnknownFields
-// method. The jrpc2.StrictFields helper function adapts existing values to
-// this interface.
+// By default, unknown object keys are ignored and discarded when unmarshaling
+// into a v of struct type. If the type of v implements a DisallowUnknownFields
+// method, unknown fields will instead generate an InvalidParams error.  The
+// jrpc2.StrictFields helper adapts existing struct values to this interface.
+// For more specific behaviour, implement a custom json.Unmarshaler.
 //
-// If r has parameters and v has type *json.RawMessage, unmarshaling will
-// always succeed.
+// If v has type *json.RawMessage, unmarshaling will never report an error.
 func (r *Request) UnmarshalParams(v interface{}) error {
 	if len(r.params) == 0 {
 		return nil
@@ -154,17 +153,16 @@ func (r *Response) SetID(s string) { r.id = s }
 func (r *Response) Error() *Error { return r.err }
 
 // UnmarshalResult decodes the result message into v. If the request failed,
-// UnmarshalResult returns the *Error value that would also be returned by
-// r.Error(), and v is unmodified.
+// UnmarshalResult returns the same *Error value that is returned by r.Error(),
+// and v is unmodified.
 //
-// By default, unknown object keys are ignored when unmarshaling into a v of
-// struct type. This can be overridden either by giving the type of v a custom
-// implementation of json.Unmarshaler, or implementing a DisallowUnknownFields
-// method. The jrpc2.StrictFields helper function adapts existing values to
-// this interface.
+// By default, unknown object keys are ignored and discarded when unmarshaling
+// into a v of struct type. If the type of v implements a DisallowUnknownFields
+// method, unknown fields will instead generate an error.  The
+// jrpc2.StrictFields helper adapts existing struct values to this interface.
+// For more specific behaviour, implement a custom json.Unmarshaler.
 //
-// If r has a result and v has type *json.RawMessage, unmarshaling will always
-// succeed.
+// If v has type *json.RawMessage, unmarshaling will never report an error.
 func (r *Response) UnmarshalResult(v interface{}) error {
 	if r.err != nil {
 		return r.err
