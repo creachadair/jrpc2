@@ -371,12 +371,6 @@ func (j *jmessage) isRequestOrNotification() bool { return j.E == nil && j.R == 
 // isNotification reports whether j is a notification
 func (j *jmessage) isNotification() bool { return j.isRequestOrNotification() && fixID(j.ID) == nil }
 
-type jerror struct {
-	C int32           `json:"code"`
-	M string          `json:"message,omitempty"`
-	D json.RawMessage `json:"data,omitempty"`
-}
-
 // fixID filters id, treating "null" as a synonym for an unset ID.  This
 // supports interoperation with JSON-RPC v1 where "null" is used as an ID for
 // notifications.

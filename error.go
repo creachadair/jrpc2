@@ -10,9 +10,9 @@ import (
 
 // Error is the concrete type of errors returned from RPC calls.
 type Error struct {
-	Message string          // the human-readable error message
-	Code    code.Code       // the machine-readable error code
-	Data    json.RawMessage // optional ancillary error data
+	Code    code.Code       `json:"code"`              // the machine-readable error code
+	Message string          `json:"message,omitempty"` // the human-readable error message
+	Data    json.RawMessage `json:"data,omitempty"`    // optional ancillary error data
 }
 
 // Error renders e to a human-readable string for the error interface.
@@ -20,11 +20,6 @@ func (e Error) Error() string { return fmt.Sprintf("[%d] %s", e.Code, e.Message)
 
 // ErrCode trivially satisfies the code.ErrCoder interface for an *Error.
 func (e Error) ErrCode() code.Code { return e.Code }
-
-// MarshalJSON implements the json.Marshaler interface for Error values.
-func (e Error) MarshalJSON() ([]byte, error) {
-	return json.Marshal(jerror{C: int32(e.Code), M: e.Message, D: e.Data})
-}
 
 // WithData marshals v as JSON and constructs a copy of e whose Data field
 // includes the result. If v == nil or if marshaling v fails, e is returned
@@ -36,18 +31,6 @@ func (e *Error) WithData(v interface{}) *Error {
 		return &Error{Code: e.Code, Message: e.Message, Data: data}
 	}
 	return e
-}
-
-// UnmarshalJSON implements the json.Unmarshaler interface for Error values.
-func (e *Error) UnmarshalJSON(data []byte) error {
-	var v jerror
-	if err := json.Unmarshal(data, &v); err != nil {
-		return err
-	}
-	e.Code = code.Code(v.C)
-	e.Message = v.M
-	e.Data = v.D
-	return nil
 }
 
 // errServerStopped is returned by Server.Wait when the server was shut down by
