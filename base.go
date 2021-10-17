@@ -224,7 +224,7 @@ func (r *Response) wait() {
 // messages.  This handles the decoding of batch requests in JSON-RPC 2.0.
 type jmessages []*jmessage
 
-func (j jmessages) toJSON() ([]byte, error) {
+func (j jmessages) MarshalJSON() ([]byte, error) {
 	if len(j) == 1 && !j[0].batch {
 		return json.Marshal(j[0])
 	}
@@ -298,9 +298,8 @@ func isValidID(v json.RawMessage) bool {
 	return false // anything else is garbage
 }
 
-func (j *jmessage) fail(code code.Code, msg string) error {
+func (j *jmessage) fail(code code.Code, msg string) {
 	j.err = Errorf(code, msg)
-	return j.err
 }
 
 func (j *jmessage) parseJSON(data []byte) error {
@@ -312,7 +311,8 @@ func (j *jmessage) parseJSON(data []byte) error {
 
 	var obj map[string]json.RawMessage
 	if err := json.Unmarshal(data, &obj); err != nil {
-		return j.fail(code.ParseError, "request is not a JSON object")
+		j.fail(code.ParseError, "request is not a JSON object")
+		return j.err
 	}
 
 	*j = jmessage{}    // reset content
@@ -395,7 +395,7 @@ type receiver interface{ Recv() ([]byte, error) }
 
 // encode marshals rsps as JSON and forwards it to the channel.
 func encode(ch sender, rsps jmessages) (int, error) {
-	bits, err := rsps.toJSON()
+	bits, err := rsps.MarshalJSON()
 	if err != nil {
 		return 0, err
 	}

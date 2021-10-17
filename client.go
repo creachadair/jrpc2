@@ -198,7 +198,7 @@ func (c *Client) send(ctx context.Context, reqs jmessages) ([]*Response, error) 
 	// Marshal and prepare responses outside the lock. This may wind up being
 	// wasted work if there is already a failure, but in that case we're already
 	// on a closing path.
-	b, err := reqs.toJSON()
+	b, err := reqs.MarshalJSON()
 	if err != nil {
 		return nil, Errorf(code.InternalError, "marshaling request failed: %v", err)
 	}
