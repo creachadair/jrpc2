@@ -60,9 +60,9 @@ the server to finish, call:
    err := srv.Wait()
 
 This will report the error that led to the server exiting.  The code for this
-example is available from cmd/examples/adder/adder.go:
+example is available from tools/examples/adder/adder.go:
 
-    $ go run cmd/examples/adder/adder.go
+    $ go run tools/examples/adder/adder.go
 
 Interact with the server by sending JSON-RPC requests on stdin, such as for
 example:
