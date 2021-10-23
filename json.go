@@ -134,6 +134,10 @@ func (j *jmessage) fail(code code.Code, msg string) {
 func (j *jmessage) toJSON() ([]byte, error) {
 	var sb bytes.Buffer
 	sb.WriteString(`{"jsonrpc":"2.0"`)
+	if len(j.ID) != 0 {
+		sb.WriteString(`,"id":`)
+		sb.Write(j.ID)
+	}
 	if j.M != "" {
 		m, err := json.Marshal(j.M)
 		if err != nil {
@@ -141,20 +145,12 @@ func (j *jmessage) toJSON() ([]byte, error) {
 		}
 		sb.WriteString(`,"method":`)
 		sb.Write(m)
-		if len(j.ID) != 0 {
-			sb.WriteString(`,"id":`)
-			sb.Write(j.ID)
-		}
 		if len(j.P) != 0 {
 			sb.WriteString(`,"params":`)
 			sb.Write(j.P)
 		}
 		sb.WriteByte('}')
 		return sb.Bytes(), nil
-	}
-	if len(j.ID) != 0 {
-		sb.WriteString(`,"id":`)
-		sb.Write(j.ID)
 	}
 	if len(j.R) != 0 {
 		sb.WriteString(`,"result":`)
