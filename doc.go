@@ -153,9 +153,7 @@ methods:
 Maps may be further combined with the handler.ServiceMap type to allow
 different services to work together:
 
-   func GetStatus(context.Context) (string, error) {
-      return "all is well", nil
-   }
+   func GetStatus(context.Context) string { return "all is well" }
 
    assigner := handler.ServiceMap{
       "Math":   mathService,
