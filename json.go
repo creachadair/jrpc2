@@ -138,7 +138,8 @@ func (j *jmessage) toJSON() ([]byte, error) {
 		sb.WriteString(`,"id":`)
 		sb.Write(j.ID)
 	}
-	if j.M != "" {
+	switch {
+	case j.M != "":
 		m, err := json.Marshal(j.M)
 		if err != nil {
 			return nil, err
@@ -149,14 +150,12 @@ func (j *jmessage) toJSON() ([]byte, error) {
 			sb.WriteString(`,"params":`)
 			sb.Write(j.P)
 		}
-		sb.WriteByte('}')
-		return sb.Bytes(), nil
-	}
-	if len(j.R) != 0 {
+
+	case len(j.R) != 0:
 		sb.WriteString(`,"result":`)
 		sb.Write(j.R)
-	}
-	if j.E != nil {
+
+	case j.E != nil:
 		e, err := json.Marshal(j.E)
 		if err != nil {
 			return nil, err
@@ -164,6 +163,7 @@ func (j *jmessage) toJSON() ([]byte, error) {
 		sb.WriteString(`,"error":`)
 		sb.Write(e)
 	}
+
 	sb.WriteByte('}')
 	return sb.Bytes(), nil
 }
