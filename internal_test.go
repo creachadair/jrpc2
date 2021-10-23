@@ -52,10 +52,10 @@ func TestParseRequests(t *testing.T) {
 		}, ErrInvalidVersion},
 
 		// A broken request.
-		{`{`, nil, Errorf(code.ParseError, "invalid request message")},
+		{`{`, nil, Errorf(code.ParseError, "invalid request value")},
 
 		// A broken batch.
-		{`["bad"{]`, nil, Errorf(code.ParseError, "invalid request batch")},
+		{`["bad"{]`, nil, Errorf(code.ParseError, "invalid request value")},
 	}
 	for _, test := range tests {
 		got, err := ParseRequests([]byte(test.input))

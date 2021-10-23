@@ -652,11 +652,11 @@ func TestServer_nonLibraryClient(t *testing.T) {
 
 		// A broken batch request should report a single top-level error.
 		{`[{"jsonrpc":"2.0", "method":"A", "id": 1}, {"jsonrpc":"2.0"]`, // N.B. syntax error
-			`{"jsonrpc":"2.0","id":null,"error":{"code":-32700,"message":"invalid request batch"}}`},
+			`{"jsonrpc":"2.0","id":null,"error":{"code":-32700,"message":"invalid request value"}}`},
 
 		// A broken single request should report a top-level error.
 		{`{"bogus"][++`,
-			`{"jsonrpc":"2.0","id":null,"error":{"code":-32700,"message":"invalid request message"}}`},
+			`{"jsonrpc":"2.0","id":null,"error":{"code":-32700,"message":"invalid request value"}}`},
 
 		// Various invalid ID checks.
 		{`{"jsonrpc":"2.0", "id":[], "method":"X"}`, invalidIDMessage},    // invalid ID: array

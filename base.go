@@ -242,10 +242,10 @@ func (j *jmessages) parseJSON(data []byte) error {
 	if len(data) == 0 || data[0] != '[' {
 		msgs = append(msgs, nil)
 		if err := json.Unmarshal(data, &msgs[0]); err != nil {
-			return Errorf(code.ParseError, "invalid request message")
+			return errInvalidRequest
 		}
 	} else if err := json.Unmarshal(data, &msgs); err != nil {
-		return Errorf(code.ParseError, "invalid request batch")
+		return errInvalidRequest
 	} else {
 		batch = true
 	}
