@@ -13,6 +13,9 @@ const payloadText = `{
   "alpha": [1, 2, 3, 4, 5],
   "bravo": true,
   "charlie": {
+    "foo": ["xyz", "pdq"],
+    "bar": false,
+    "baz": 1.00003e+19
   },
   "delta": null,
   "echo": 3.352391934e-19,
