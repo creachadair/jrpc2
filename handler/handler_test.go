@@ -430,10 +430,8 @@ func ExamplePositional() {
 		fmt.Printf("%s is %d years old (fact check: %v)\n", name, age, accurate)
 		return nil
 	}
-	fi, err := handler.Positional(fn, "name", "age", "accurate")
-	if err != nil {
-		log.Fatalf("Positional: %v", err)
-	}
+	call := handler.NewPos(fn, "name", "age", "accurate")
+
 	req, err := jrpc2.ParseRequests([]byte(`{
   "jsonrpc": "2.0",
   "id": 1,
@@ -447,7 +445,6 @@ func ExamplePositional() {
 	if err != nil {
 		log.Fatalf("Parse: %v", err)
 	}
-	call := fi.Wrap()
 	if _, err := call(context.Background(), req[0]); err != nil {
 		log.Fatalf("Call: %v", err)
 	}

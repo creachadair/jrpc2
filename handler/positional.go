@@ -6,6 +6,22 @@ import (
 	"reflect"
 )
 
+// NewPos adapts a function to a jrpc2.Handler. The concrete value of fn must
+// be a function accepted by Positional. The resulting Func will handle JSON
+// encoding and decoding, call fn, and report appropriate errors.
+//
+// NewPos is intended for use during program initialization, and will panic if
+// the type of fn does not have one of the accepted forms. Programs that need
+// to check for possible errors should call handler.Positional directly, and
+// use the Wrap method of the resulting FuncInfo to obtain the wrapper.
+func NewPos(fn interface{}, names ...string) Func {
+	fi, err := Positional(fn, names...)
+	if err != nil {
+		panic(err)
+	}
+	return fi.Wrap()
+}
+
 // Positional checks whether fn can serve as a jrpc2.Handler. The concrete
 // value of fn must be a function with one of the following type signature
 // schemes:
