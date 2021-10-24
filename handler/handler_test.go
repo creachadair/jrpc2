@@ -424,3 +424,33 @@ func ExampleObj_unmarshal() {
 	// Output:
 	// uid=501, name="P. T. Barnum"
 }
+
+func ExamplePositional() {
+	fn := func(ctx context.Context, name string, age int, accurate bool) error {
+		fmt.Printf("%s is %d years old (fact check: %v)\n", name, age, accurate)
+		return nil
+	}
+	fi, err := handler.Positional(fn, "name", "age", "accurate")
+	if err != nil {
+		log.Fatalf("Positional: %v", err)
+	}
+	req, err := jrpc2.ParseRequests([]byte(`{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "foo",
+  "params": {
+    "name": "Dennis",
+    "age": 37,
+    "accurate": true
+  }
+}`))
+	if err != nil {
+		log.Fatalf("Parse: %v", err)
+	}
+	call := fi.Wrap()
+	if _, err := call(context.Background(), req[0]); err != nil {
+		log.Fatalf("Call: %v", err)
+	}
+	// Output:
+	// Dennis is 37 years old (fact check: true)
+}
