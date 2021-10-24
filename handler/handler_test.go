@@ -24,9 +24,9 @@ type argStruct struct {
 	B int    `json:"bravo"`
 }
 
-// Verify that the New function correctly handles the various type signatures
+// Verify that the CHeck function correctly handles the various type signatures
 // it's advertised to support, and not others.
-func TestNew(t *testing.T) {
+func TestCheck(t *testing.T) {
 	tests := []struct {
 		v   interface{}
 		bad bool
@@ -66,9 +66,52 @@ func TestNew(t *testing.T) {
 	for _, test := range tests {
 		got, err := handler.Check(test.v)
 		if !test.bad && err != nil {
-			t.Errorf("newHandler(%T): unexpected error: %v", test.v, err)
+			t.Errorf("Check(%T): unexpected error: %v", test.v, err)
 		} else if test.bad && err == nil {
-			t.Errorf("newHandler(%T): got %+v, want error", test.v, got)
+			t.Errorf("Check(%T): got %+v, want error", test.v, got)
+		}
+	}
+}
+
+// Verify that the Positional function correctly handles its cases.
+func TestPositional(t *testing.T) {
+	tests := []struct {
+		v   interface{}
+		n   []string
+		bad bool
+	}{
+		{v: nil, bad: true},              // nil value
+		{v: "not a function", bad: true}, // not a function
+
+		// Things that should work.
+		{v: func(context.Context) error { return nil }},
+		{v: func(context.Context) int { return 1 }},
+		{v: func(context.Context, bool) bool { return false },
+			n: []string{"isTrue"}},
+		{v: func(context.Context, int, int) int { return 0 },
+			n: []string{"a", "b"}},
+		{v: func(context.Context, string, int, []float64) int { return 0 },
+			n: []string{"a", "b", "c"}},
+
+		// Things that should not work.
+		{v: func() error { return nil }, bad: true}, // no parameters
+		{v: func(int) int { return 0 }, bad: true},  // first argument not context
+		{v: func(context.Context, string) error { return nil },
+			n: nil, bad: true}, // not enough names
+		{v: func(context.Context, string, string, string) error { return nil },
+			n: []string{"x", "y"}, bad: true}, // too many names
+		{v: func(context.Context, string, ...float64) int { return 0 },
+			n: []string{"goHome", "youAreDrunk"}, bad: true}, // variadic
+
+		// N.B. Other cases are covered by TestCheck. The cases here are only
+		// those that Positional checks for explicitly.
+	}
+	for _, test := range tests {
+		got, err := handler.Positional(test.v, test.n...)
+		if !test.bad && err != nil {
+			t.Errorf("Positional(%T, %q): unexpected error: %v", test.v, test.n, err)
+		} else if test.bad && err == nil {
+			t.Errorf("Positional(%T, %q): got %+v, want error", test.v, test.n, got)
 		}
 	}
 }
@@ -99,6 +142,48 @@ func TestNew_pointerRegression(t *testing.T) {
 	want := argStruct{A: "xyzzy", B: 23}
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("Wrong argStruct value: (-want, +got)\n%s", diff)
+	}
+}
+
+// Verify that positional arguments are decoded properly.
+func TestPositional_decode(t *testing.T) {
+	fi, err := handler.Positional(func(ctx context.Context, a, b int) int {
+		return a + b
+	}, "first", "second")
+	if err != nil {
+		t.Fatalf("Positional: unexpected error: %v", err)
+	}
+	call := fi.Wrap()
+	tests := []struct {
+		input string
+		want  int
+		bad   bool
+	}{
+		{`{"jsonrpc":"2.0","id":1,"method":"add","params":{"first":5,"second":3}}`, 8, false},
+		{`{"jsonrpc":"2.0","id":2,"method":"add","params":{"first":5}}`, 5, false},
+		{`{"jsonrpc":"2.0","id":3,"method":"add","params":{"second":3}}`, 3, false},
+		{`{"jsonrpc":"2.0","id":4,"method":"add","params":{}}`, 0, false},
+		{`{"jsonrpc":"2.0","id":5,"method":"add","params":null}`, 0, false},
+		{`{"jsonrpc":"2.0","id":6,"method":"add"}`, 0, false},
+
+		{`{"jsonrpc":"2.0","id":6,"method":"add","params":["wrong", "type"]}`, 0, true},
+		{`{"jsonrpc":"2.0","id":6,"method":"add","params":{"unknown":"field"}}`, 0, true},
+	}
+	for _, test := range tests {
+		req, err := jrpc2.ParseRequests([]byte(test.input))
+		if err != nil {
+			t.Fatalf("ParseRequests %#q: unexpected error: %v", test.input, err)
+		}
+		got, err := call(context.Background(), req[0])
+		if !test.bad {
+			if err != nil {
+				t.Errorf("Call %#q: unexpected error: %v", test.input, err)
+			} else if z := got.(int); z != test.want {
+				t.Errorf("Call %#q: got %d, want %d", test.input, z, test.want)
+			}
+		} else if test.bad && err == nil {
+			t.Errorf("Call %#q: got %v, want error", test.input, got)
+		}
 	}
 }
 
@@ -338,4 +423,34 @@ func ExampleObj_unmarshal() {
 	fmt.Printf("uid=%d, name=%q\n", uid, name)
 	// Output:
 	// uid=501, name="P. T. Barnum"
+}
+
+func ExamplePositional() {
+	fn := func(ctx context.Context, name string, age int, accurate bool) error {
+		fmt.Printf("%s is %d years old (fact check: %v)\n", name, age, accurate)
+		return nil
+	}
+	fi, err := handler.Positional(fn, "name", "age", "accurate")
+	if err != nil {
+		log.Fatalf("Positional: %v", err)
+	}
+	req, err := jrpc2.ParseRequests([]byte(`{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "foo",
+  "params": {
+    "name": "Dennis",
+    "age": 37,
+    "accurate": true
+  }
+}`))
+	if err != nil {
+		log.Fatalf("Parse: %v", err)
+	}
+	call := fi.Wrap()
+	if _, err := call(context.Background(), req[0]); err != nil {
+		log.Fatalf("Call: %v", err)
+	}
+	// Output:
+	// Dennis is 37 years old (fact check: true)
 }
