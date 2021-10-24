@@ -80,13 +80,17 @@ func makeArgType(t reflect.Type, names []string) (reflect.Type, error) {
 		return nil, fmt.Errorf("got %d names for %d inputs", len(names), t.NumIn()-1)
 	}
 
-	// TODO(creachadair): I would like to make the generated wrapper strict
-	// about unknown fields. However, it is not currently possible to add
-	// methods to a type constructed by reflection.
+	// TODO(creachadair): I wanted to implement the strictFielder interface on
+	// the generated struct instead of having extra magic in the wrapper.
+	// However, it is not now possible to add methods to a type constructed by
+	// reflection.
 	//
 	// Embedding an anonymous field that exposes the method doesn't work for
-	// JSON unmarshaling: The struct will have the method, but its pointer will
-	// not, probably related to https://github.com/golang/go/issues/15924.
+	// JSON unmarshaling: The base struct will have the method, but its pointer
+	// will not, probably related to https://github.com/golang/go/issues/15924.
+	// JSON unmarshaling requires a pointer to its argument.
+	//
+	// For now, I worked around this by adding a hook into the wrapper compiler.
 
 	var fields []reflect.StructField
 	for i, name := range names {
