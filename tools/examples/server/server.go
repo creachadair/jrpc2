@@ -38,15 +38,11 @@ func Add(ctx context.Context, vs []int) int {
 	return sum
 }
 
-// Sub returns the difference arg.X - arg.Y.
-func Sub(ctx context.Context, arg binop) int {
-	return arg.X - arg.Y
-}
+// Sub returns the difference x - y.
+func Sub(ctx context.Context, x, y int) int { return x - y }
 
 // Mul returns the product arg.X * arg.Y.
-func Mul(ctx context.Context, arg binop) int {
-	return arg.X * arg.Y
-}
+func Mul(ctx context.Context, x, y int) int { return x * y }
 
 // Div converts its arguments to floating point and returns their ratio.
 func Div(ctx context.Context, arg binop) (float64, error) {
@@ -86,8 +82,8 @@ func main() {
 	mux := handler.ServiceMap{
 		"Math": handler.Map{
 			"Add":    handler.New(Add),
-			"Sub":    handler.New(Sub),
-			"Mul":    handler.New(Mul),
+			"Sub":    handler.NewPos(Sub, "X", "Y"),
+			"Mul":    handler.NewPos(Mul, "X", "Y"),
 			"Div":    handler.New(Div),
 			"Status": handler.New(Status),
 		},

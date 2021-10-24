@@ -53,7 +53,9 @@ func NewPos(fn interface{}, names ...string) Func {
 //   {"first": 17, "second": 23}
 //
 // where "first" is mapped to argument x and "second" to argument y.  Unknown
-// field keys generate an error.
+// field keys generate an error. The field names are not required to match the
+// parameter names declared by the function; it is the names assigned here that
+// determine which object keys are accepted.
 func Positional(fn interface{}, names ...string) (*FuncInfo, error) {
 	if fn == nil {
 		return nil, errors.New("nil function")

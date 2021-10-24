@@ -30,8 +30,8 @@ func add(ctx context.Context, cli *jrpc2.Client, vs ...int) (result int, err err
 	return
 }
 
-func div(ctx context.Context, cli *jrpc2.Client, args binarg) (result float64, err error) {
-	err = cli.CallResult(ctx, "Math.Div", args, &result)
+func div(ctx context.Context, cli *jrpc2.Client, x, y int) (result float64, err error) {
+	err = cli.CallResult(ctx, "Math.Div", handler.Obj{"X": x, "Y": y}, &result)
 	return
 }
 
@@ -43,8 +43,6 @@ func stat(ctx context.Context, cli *jrpc2.Client) (result string, err error) {
 func alert(ctx context.Context, cli *jrpc2.Client, msg string) error {
 	return cli.Notify(ctx, "Post.Alert", handler.Obj{"message": msg})
 }
-
-type binarg struct{ X, Y int }
 
 func intResult(rsp *jrpc2.Response) int {
 	var v int
@@ -88,7 +86,7 @@ func main() {
 	} else {
 		log.Printf("Math.Add result=%d", sum)
 	}
-	if quot, err := div(ctx, cli, binarg{82, 19}); err != nil {
+	if quot, err := div(ctx, cli, 82, 19); err != nil {
 		log.Fatalln("Math.Div:", err)
 	} else {
 		log.Printf("Math.Div result=%.3f", quot)
@@ -100,7 +98,7 @@ func main() {
 	}
 
 	// An error condition (division by zero)
-	if quot, err := div(ctx, cli, binarg{15, 0}); err != nil {
+	if quot, err := div(ctx, cli, 15, 0); err != nil {
 		log.Printf("Math.Div err=%v", err)
 	} else {
 		log.Fatalf("Math.Div succeeded unexpectedly: result=%v", quot)
@@ -114,7 +112,7 @@ func main() {
 			y := rand.Intn(100)
 			specs = append(specs, jrpc2.Spec{
 				Method: "Math.Mul",
-				Params: binarg{x, y},
+				Params: handler.Obj{"X": x, "Y": y},
 			})
 		}
 	}
@@ -140,7 +138,7 @@ func main() {
 			go func() {
 				defer wg.Done()
 				var result int
-				if err := cli.CallResult(ctx, "Math.Sub", binarg{x, y}, &result); err != nil {
+				if err := cli.CallResult(ctx, "Math.Sub", handler.Obj{"X": x, "Y": y}, &result); err != nil {
 					log.Printf("Req (%d-%d) failed: %v", x, y, err)
 					return
 				}
