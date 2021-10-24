@@ -3,6 +3,7 @@
 package handler
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -92,6 +93,8 @@ var (
 	errType = reflect.TypeOf((*error)(nil)).Elem()           // type error
 	reqType = reflect.TypeOf((*jrpc2.Request)(nil))          // type *jrpc2.Request
 
+	strictType = reflect.TypeOf((*interface{ DisallowUnknownFields() })(nil)).Elem()
+
 	errNoParameters = &jrpc2.Error{Code: code.InvalidParams, Message: "no parameters accepted"}
 )
 
@@ -102,6 +105,7 @@ type FuncInfo struct {
 	IsVariadic   bool         // true if the function is variadic on its argument
 	Result       reflect.Type // the non-error result type, or nil
 	ReportsError bool         // true if the function reports an error
+	strictFields bool         // enforce strict field checking
 
 	fn interface{} // the original function value
 }
@@ -136,6 +140,12 @@ func (fi *FuncInfo) Wrap() Func {
 		return Func(f)
 	}
 
+	// If strict field checking is desired, ensure arguments are wrapped.
+	wrapArg := func(v reflect.Value) interface{} { return v.Interface() }
+	if fi.strictFields && !fi.Argument.Implements(strictType) {
+		wrapArg = func(v reflect.Value) interface{} { return &strict{v.Interface()} }
+	}
+
 	// Construct a function to unpack the parameters from the request message,
 	// based on the signature of the user's callback.
 	var newInput func(ctx reflect.Value, req *jrpc2.Request) ([]reflect.Value, error)
@@ -160,7 +170,7 @@ func (fi *FuncInfo) Wrap() Func {
 		// Case 3a: The function wants a pointer to its argument value.
 		newInput = func(ctx reflect.Value, req *jrpc2.Request) ([]reflect.Value, error) {
 			in := reflect.New(fi.Argument.Elem())
-			if err := req.UnmarshalParams(in.Interface()); err != nil {
+			if err := req.UnmarshalParams(wrapArg(in)); err != nil {
 				return nil, jrpc2.Errorf(code.InvalidParams, "invalid parameters: %v", err)
 			}
 			return []reflect.Value{ctx, in}, nil
@@ -169,7 +179,7 @@ func (fi *FuncInfo) Wrap() Func {
 		// Case 3b: The function wants a bare argument value.
 		newInput = func(ctx reflect.Value, req *jrpc2.Request) ([]reflect.Value, error) {
 			in := reflect.New(fi.Argument) // we still need a pointer to unmarshal
-			if err := req.UnmarshalParams(in.Interface()); err != nil {
+			if err := req.UnmarshalParams(wrapArg(in)); err != nil {
 				return nil, jrpc2.Errorf(code.InvalidParams, "invalid parameters: %v", err)
 			}
 			// Indirect the pointer back off for the callee.
@@ -369,4 +379,14 @@ func filterJSONError(tag, want string, err error) error {
 		return fmt.Errorf("%s: cannot decode %s as %s", tag, t.Value, want)
 	}
 	return err
+}
+
+// strict is a wrapper for an arbitrary value that enforces strict field
+// checking when unmarshaling from JSON.
+type strict struct{ v interface{} }
+
+func (s *strict) UnmarshalJSON(data []byte) error {
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.DisallowUnknownFields()
+	return dec.Decode(s.v)
 }
