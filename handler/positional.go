@@ -14,13 +14,30 @@ import (
 //   func(context.Context, X1, x2, ..., Xn) Y
 //   func(context.Context, X1, x2, ..., Xn) error
 //
-// For JSON-marshalable types Xi and Y. If fn does not have one of these forms,
-// Positional reports an error. The given names must match the number of
+// For JSON-marshalable types X_i and Y. If fn does not have one of these
+// forms, Positional reports an error. The given names must match the number of
 // non-context arguments exactly. Variadic functions are not supported.
 //
-// This function works by creating an anonymous struct type whose fields
-// correspond to the non-context arguments of fn.  The names are used to assign
-// JSON decoding tags to the fields of this argument struct.
+// In contrast to Check, this function allows any number of arguments, but the
+// caller must provide names for them. Positional creates an anonymous struct
+// type whose fields correspond to the non-context arguments of fn.  The names
+// are used as the JSON field keys for the corresponding parameters.
+//
+// When converted into a handler.Func, the wrapped function accepts a JSON
+// object with the field keys named. For example, given:
+//
+//   func add(ctx context.Context, x, y int) int { return x + y }
+//
+//   fi, err := handler.Positional(add, "first", "second")
+//   // ...
+//   call := fi.Wrap()
+//
+// the resulting JSON-RPC handler accepts a parameter object like:
+//
+//   {"first": 17, "second": 23}
+//
+// where "first" is mapped to argument x and "second" to argument y.  Unknown
+// field keys generate an error.
 func Positional(fn interface{}, names ...string) (*FuncInfo, error) {
 	if fn == nil {
 		return nil, errors.New("nil function")
