@@ -102,7 +102,6 @@ var (
 type FuncInfo struct {
 	Type         reflect.Type // the complete function type
 	Argument     reflect.Type // the non-context argument type, or nil
-	IsVariadic   bool         // true if the function is variadic on its argument
 	Result       reflect.Type // the non-error result type, or nil
 	ReportsError bool         // true if the function reports an error
 	strictFields bool         // enforce strict field checking
@@ -214,12 +213,7 @@ func (fi *FuncInfo) Wrap() Func {
 		}
 	}
 
-	f := reflect.ValueOf(fi.fn)
-	call := f.Call
-	if fi.IsVariadic {
-		call = f.CallSlice
-	}
-
+	call := reflect.ValueOf(fi.fn).Call
 	return Func(func(ctx context.Context, req *jrpc2.Request) (interface{}, error) {
 		args, ierr := newInput(reflect.ValueOf(ctx), req)
 		if ierr != nil {
@@ -239,9 +233,6 @@ func (fi *FuncInfo) Wrap() Func {
 //    func(context.Context, X) error
 //    func(context.Context, X) Y
 //    func(context.Context, X) (Y, error)
-//    func(context.Context, ...X) error
-//    func(context.Context, ...X) Y
-//    func(context.Context, ...X) (Y, error)
 //    func(context.Context, *jrpc2.Request) error
 //    func(context.Context, *jrpc2.Request) Y
 //    func(context.Context, *jrpc2.Request) (Y, error)
@@ -277,9 +268,10 @@ func Check(fn interface{}) (*FuncInfo, error) {
 		return nil, errors.New("wrong number of parameters")
 	} else if info.Type.In(0) != ctxType {
 		return nil, errors.New("first parameter is not context.Context")
+	} else if info.Type.IsVariadic() {
+		return nil, errors.New("variadic functions are not supported")
 	} else if np == 2 {
 		info.Argument = info.Type.In(1)
-		info.IsVariadic = info.Type.IsVariadic()
 	}
 
 	// Check return values.

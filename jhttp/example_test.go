@@ -16,7 +16,7 @@ import (
 func Example() {
 	// Set up a bridge to demonstrate the API.
 	b := jhttp.NewBridge(handler.Map{
-		"Test": handler.New(func(ctx context.Context, ss ...string) (string, error) {
+		"Test": handler.New(func(ctx context.Context, ss []string) (string, error) {
 			return strings.Join(ss, " "), nil
 		}),
 	}, nil)

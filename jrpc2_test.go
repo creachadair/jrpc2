@@ -65,8 +65,8 @@ func (dummy) Mul(_ context.Context, req struct{ X, Y int }) (int, error) {
 	return req.X * req.Y, nil
 }
 
-// Max has a variadic signature.
-func (dummy) Max(_ context.Context, vs ...int) (int, error) {
+// Max takes a slice of arguments.
+func (dummy) Max(_ context.Context, vs []int) (int, error) {
 	if len(vs) == 0 {
 		return 0, jrpc2.Errorf(code.InvalidParams, "cannot compute max of no elements")
 	}

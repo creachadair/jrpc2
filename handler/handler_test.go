@@ -15,7 +15,7 @@ import (
 
 func y1(context.Context) (int, error) { return 0, nil }
 
-func y2(_ context.Context, vs ...int) (int, error) { return len(vs), nil }
+func y2(_ context.Context, vs []int) (int, error) { return len(vs), nil }
 
 func y3(context.Context) error { return errors.New("blah") }
 
@@ -41,9 +41,6 @@ func TestCheck(t *testing.T) {
 		{v: func(context.Context, []int) error { return nil }},
 		{v: func(context.Context, []bool) (float64, error) { return 0, nil }},
 		{v: func(context.Context, *argStruct) int { return 0 }},
-		{v: func(context.Context, ...int) error { return nil }},
-		{v: func(context.Context, ...int) bool { return true }},
-		{v: func(context.Context, ...string) (bool, error) { return false, nil }},
 		{v: func(context.Context, *jrpc2.Request) error { return nil }},
 		{v: func(context.Context, *jrpc2.Request) float64 { return 0 }},
 		{v: func(context.Context, *jrpc2.Request) (byte, error) { return '0', nil }},
