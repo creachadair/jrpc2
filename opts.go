@@ -17,7 +17,7 @@ import (
 // It is safe to share server options among multiple server instances.
 type ServerOptions struct {
 	// If not nil, send debug text logs here.
-	Logger *log.Logger
+	Logger Logger
 
 	// If not nil, the methods of this value are called to log each request
 	// received and each response or error returned.
@@ -72,12 +72,11 @@ type ServerOptions struct {
 	StartTime time.Time
 }
 
-func (s *ServerOptions) logger() logger {
+func (s *ServerOptions) logFunc() func(string, ...interface{}) {
 	if s == nil || s.Logger == nil {
 		return func(string, ...interface{}) {}
 	}
-	logger := s.Logger
-	return func(msg string, args ...interface{}) { logger.Output(2, fmt.Sprintf(msg, args...)) }
+	return s.Logger.Printf
 }
 
 func (s *ServerOptions) allowV1() bool      { return s != nil && s.AllowV1 }
@@ -142,8 +141,8 @@ func (s *ServerOptions) rpcLog() RPCLogger {
 // ClientOptions control the behaviour of a client created by NewClient.
 // A nil *ClientOptions provides sensible defaults.
 type ClientOptions struct {
-	// If not nil, send debug logs here.
-	Logger *log.Logger
+	// If not nil, send debug text logs here.
+	Logger Logger
 
 	// Instructs the client to tolerate responses that do not include the
 	// required "jsonrpc" version marker.
@@ -180,12 +179,11 @@ type ClientOptions struct {
 	OnCancel func(cli *Client, rsp *Response)
 }
 
-func (c *ClientOptions) logger() logger {
+func (c *ClientOptions) logFunc() func(string, ...interface{}) {
 	if c == nil || c.Logger == nil {
 		return func(string, ...interface{}) {}
 	}
-	logger := c.Logger
-	return func(msg string, args ...interface{}) { logger.Output(2, fmt.Sprintf(msg, args...)) }
+	return c.Logger.Printf
 }
 
 func (c *ClientOptions) allowV1() bool { return c != nil && c.AllowV1 }
@@ -265,6 +263,27 @@ func panicToError(f func() (interface{}, error)) (v interface{}, err error) {
 		}
 	}()
 	return f()
+}
+
+// A Logger records text logs from a server or a client. A nil logger discards
+// text log input.
+type Logger func(text string)
+
+// Printf writes a formatted message to the logger. If lg == nil, the message
+// is discarded.
+func (lg Logger) Printf(msg string, args ...interface{}) {
+	if lg != nil {
+		lg(fmt.Sprintf(msg, args...))
+	}
+}
+
+// StdLogger adapts a *log.Logger to a Logger. If logger == nil, the returned
+// function sends logs to the default logger .
+func StdLogger(logger *log.Logger) Logger {
+	if logger == nil {
+		return func(text string) { log.Output(2, text) }
+	}
+	return func(text string) { logger.Output(2, text) }
 }
 
 // An RPCLogger receives callbacks from a server to record the receipt of

@@ -3,8 +3,6 @@ package server_test
 import (
 	"context"
 	"flag"
-	"log"
-	"os"
 	"sync"
 	"testing"
 
@@ -13,25 +11,20 @@ import (
 	"github.com/creachadair/jrpc2/server"
 )
 
-var (
-	doDebug = flag.Bool("debug", false, "Enable server and client debugging logs")
+var doDebug = flag.Bool("debug", false, "Enable server and client debugging logs")
 
-	testOpts *server.LocalOptions
-	once     sync.Once
-)
-
-func setup() {
-	if *doDebug {
-		testOpts = &server.LocalOptions{
-			Client: &jrpc2.ClientOptions{Logger: log.New(os.Stderr, "[local client] ", 0)},
-			Server: &jrpc2.ServerOptions{Logger: log.New(os.Stderr, "[local server] ", 0)},
-		}
+func testOpts(t *testing.T) *server.LocalOptions {
+	if !*doDebug {
+		return nil
+	}
+	return &server.LocalOptions{
+		Client: &jrpc2.ClientOptions{Logger: func(s string) { t.Log(s) }},
+		Server: &jrpc2.ServerOptions{Logger: func(s string) { t.Log(s) }},
 	}
 }
 
 func TestLocal(t *testing.T) {
-	once.Do(setup)
-	loc := server.NewLocal(make(handler.Map), testOpts)
+	loc := server.NewLocal(make(handler.Map), testOpts(t))
 	ctx := context.Background()
 	si, err := jrpc2.RPCServerInfo(ctx, loc.Client)
 	if err != nil {
@@ -54,10 +47,9 @@ func TestLocal(t *testing.T) {
 
 // Test that concurrent callers to a local service do not deadlock.
 func TestLocalConcurrent(t *testing.T) {
-	once.Do(setup)
 	loc := server.NewLocal(handler.Map{
 		"Test": handler.New(func(context.Context) error { return nil }),
-	}, testOpts)
+	}, testOpts(t))
 
 	const numCallers = 20
 

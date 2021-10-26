@@ -37,7 +37,7 @@ type Client struct {
 func NewClient(ch channel.Channel, opts *ClientOptions) *Client {
 	c := &Client{
 		done:   new(sync.WaitGroup),
-		log:    opts.logger(),
+		log:    opts.logFunc(),
 		allow1: opts.allowV1(),
 		enctx:  opts.encodeContext(),
 		snote:  opts.handleNotification(),

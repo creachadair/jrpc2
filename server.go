@@ -17,8 +17,6 @@ import (
 	"golang.org/x/sync/semaphore"
 )
 
-type logger = func(string, ...interface{})
-
 // A Server is a JSON-RPC 2.0 server. The server receives requests and sends
 // responses on a channel.Channel provided by the caller, and dispatches
 // requests to user-defined Handlers.
@@ -28,17 +26,17 @@ type Server struct {
 	sem *semaphore.Weighted // bounds concurrent execution (default 1)
 
 	// Configurable settings
-	allow1  bool                   // allow v1 requests with no version marker
-	allowP  bool                   // allow server notifications to the client
-	log     logger                 // write debug logs here
-	rpcLog  RPCLogger              // log RPC requests and responses here
-	newctx  func() context.Context // create a new base request context
-	dectx   decoder                // decode context from request
-	ckreq   verifier               // request checking hook
-	expctx  bool                   // whether to expect request context
-	metrics *metrics.M             // metrics collected during execution
-	start   time.Time              // when Start was called
-	builtin bool                   // whether built-in rpc.* methods are enabled
+	allow1  bool                         // allow v1 requests with no version marker
+	allowP  bool                         // allow server notifications to the client
+	log     func(string, ...interface{}) // write debug logs here
+	rpcLog  RPCLogger                    // log RPC requests and responses here
+	newctx  func() context.Context       // create a new base request context
+	dectx   decoder                      // decode context from request
+	ckreq   verifier                     // request checking hook
+	expctx  bool                         // whether to expect request context
+	metrics *metrics.M                   // metrics collected during execution
+	start   time.Time                    // when Start was called
+	builtin bool                         // whether built-in rpc.* methods are enabled
 
 	mu *sync.Mutex // protects the fields below
 
@@ -75,7 +73,7 @@ func NewServer(mux Assigner, opts *ServerOptions) *Server {
 		sem:     semaphore.NewWeighted(opts.concurrency()),
 		allow1:  opts.allowV1(),
 		allowP:  opts.allowPush(),
-		log:     opts.logger(),
+		log:     opts.logFunc(),
 		rpcLog:  opts.rpcLog(),
 		newctx:  opts.newContext(),
 		dectx:   dc,
