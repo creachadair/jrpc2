@@ -253,7 +253,7 @@ func (c *ClientOptions) handleCallback() func(*jmessage) []byte {
 				rsp.E = &Error{Code: code.FromError(err), Message: err.Error()}
 			}
 		}
-		bits, _ := json.Marshal(rsp)
+		bits, _ := rsp.toJSON()
 		return bits
 	}
 }
