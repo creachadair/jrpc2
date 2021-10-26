@@ -138,16 +138,18 @@ func makeCaller(ft reflect.Type, fv reflect.Value, atype reflect.Type) interface
 		otypes[i] = ft.Out(i)
 	}
 
+	call := fv.Call
 	wtype := reflect.FuncOf(atypes, otypes, false)
 	wrap := reflect.MakeFunc(wtype, func(args []reflect.Value) []reflect.Value {
-		cargs := []reflect.Value{args[0]} // ctx
+		st := args[1]
+		cargs := make([]reflect.Value, st.NumField()+1)
+		cargs[0] = args[0] // ctx
 
 		// Unpack the struct fields into positional arguments.
-		st := args[1]
 		for i := 0; i < st.NumField(); i++ {
-			cargs = append(cargs, st.Field(i))
+			cargs[i+1] = st.Field(i)
 		}
-		return fv.Call(cargs)
+		return call(cargs)
 	})
 	return wrap.Interface()
 }
