@@ -14,7 +14,6 @@ import (
 	"flag"
 	"log"
 	"net/http"
-	"os"
 	"strings"
 
 	"github.com/creachadair/jrpc2"
@@ -36,7 +35,7 @@ func main() {
 		"Ping": handler.New(ping),
 	}, &jhttp.BridgeOptions{
 		Server: &jrpc2.ServerOptions{
-			Logger:  log.New(os.Stderr, "[jhttp.Bridge] ", log.LstdFlags|log.Lshortfile),
+			Logger:  jrpc2.StdLogger(nil),
 			Metrics: metrics.New(),
 		},
 	})

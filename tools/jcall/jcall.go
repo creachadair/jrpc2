@@ -182,7 +182,7 @@ func newClient(conn channel.Channel) *jrpc2.Client {
 		opts.EncodeContext = jctx.Encode
 	}
 	if *withLogging {
-		opts.Logger = log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile)
+		opts.Logger = jrpc2.StdLogger(nil)
 	}
 	return jrpc2.NewClient(conn, opts)
 }

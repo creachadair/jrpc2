@@ -13,7 +13,6 @@ import (
 	"flag"
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/creachadair/jrpc2"
 	"github.com/creachadair/jrpc2/channel"
@@ -44,7 +43,7 @@ func main() {
 	log.Printf("Listing at ws://%s/rpc", *listenAddr)
 	err := server.Loop(acc, server.Static(svc), &server.LoopOptions{
 		ServerOptions: &jrpc2.ServerOptions{
-			Logger: log.New(os.Stderr, "[ws-server] ", log.LstdFlags),
+			Logger: jrpc2.StdLogger(nil),
 		},
 	})
 	hs.Shutdown(acc.ctx)

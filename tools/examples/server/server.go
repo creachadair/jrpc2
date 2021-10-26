@@ -14,7 +14,6 @@ import (
 	"flag"
 	"log"
 	"net"
-	"os"
 
 	"github.com/creachadair/jrpc2"
 	"github.com/creachadair/jrpc2/channel"
@@ -100,7 +99,7 @@ func main() {
 	acc := server.NetAccepter(lst, channel.RawJSON)
 	server.Loop(acc, server.Static(mux), &server.LoopOptions{
 		ServerOptions: &jrpc2.ServerOptions{
-			Logger:      log.New(os.Stderr, "[jrpc2.Server] ", log.LstdFlags|log.Lshortfile),
+			Logger:      jrpc2.StdLogger(nil),
 			Concurrency: *maxTasks,
 			Metrics:     metrics.New(),
 			AllowPush:   true,
