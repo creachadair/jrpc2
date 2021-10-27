@@ -28,10 +28,10 @@ const methodName = "some long method name whatever"
 
 func BenchmarkEncodeMessage(b *testing.B) {
 	msgs := jmessages{
-		{V: "2.0", ID: []byte("12345"), M: methodName, R: []byte(payloadText)},
-		{V: "2.0", ID: nil, M: methodName, R: []byte(payloadText)},
-		{V: "2.0", ID: []byte("12345"), R: []byte(payloadText)},
-		{V: "2.0", ID: []byte("12345"), E: &Error{Code: 12345, Message: errMessage}},
+		{ID: []byte("12345"), M: methodName, R: []byte(payloadText)},
+		{ID: nil, M: methodName, R: []byte(payloadText)},
+		{ID: []byte("12345"), R: []byte(payloadText)},
+		{ID: []byte("12345"), E: &Error{Code: 12345, Message: errMessage}},
 	}
 	for i, msg := range msgs {
 		b.Run(strconv.Itoa(i+1)+"-std", func(b *testing.B) {

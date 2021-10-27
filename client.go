@@ -166,7 +166,6 @@ func (c *Client) req(ctx context.Context, method string, params interface{}) (*j
 	id := json.RawMessage(strconv.FormatInt(c.nextID, 10))
 	c.nextID++
 	return &jmessage{
-		V:  Version,
 		ID: id,
 		M:  method,
 		P:  bits,
@@ -179,7 +178,7 @@ func (c *Client) note(ctx context.Context, method string, params interface{}) (*
 	if err != nil {
 		return nil, err
 	}
-	return &jmessage{V: Version, M: method, P: bits}, nil
+	return &jmessage{M: method, P: bits}, nil
 }
 
 // send transmits the specified requests to the server and returns a slice of

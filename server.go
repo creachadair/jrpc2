@@ -477,7 +477,6 @@ func (s *Server) pushReq(ctx context.Context, wantID bool, method string, params
 
 	s.log("Posting server %s %q %s", kind, method, string(bits))
 	nw, err := encode(s.ch, jmessages{{
-		V:  Version,
 		ID: jid,
 		M:  method,
 		P:  bits,
@@ -675,7 +674,6 @@ func (s *Server) pushError(err error) {
 	}
 
 	nw, err := encode(s.ch, jmessages{{
-		V:  Version,
 		ID: json.RawMessage("null"),
 		E:  jerr,
 	}})
@@ -735,7 +733,7 @@ func (ts tasks) responses(rpcLog RPCLogger) jmessages {
 				continue
 			}
 		}
-		rsp := &jmessage{V: Version, ID: task.hreq.id, batch: task.batch}
+		rsp := &jmessage{ID: task.hreq.id, batch: task.batch}
 		if rsp.ID == nil {
 			rsp.ID = json.RawMessage("null")
 		}

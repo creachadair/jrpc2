@@ -232,7 +232,7 @@ func (c *ClientOptions) handleCallback() func(*jmessage) []byte {
 		// is difficult to debug.
 		//
 		// See https://github.com/creachadair/jrpc2/issues/41.
-		rsp := &jmessage{V: Version, ID: req.ID}
+		rsp := &jmessage{ID: req.ID}
 		v, err := panicToError(func() (interface{}, error) {
 			return cb(ctx, &Request{
 				id:     req.ID,
