@@ -3,7 +3,7 @@ package jhttp_test
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -34,7 +34,7 @@ func Example() {
 	if err != nil {
 		log.Fatalf("POST request failed: %v", err)
 	}
-	body, err := ioutil.ReadAll(rsp.Body)
+	body, err := io.ReadAll(rsp.Body)
 	rsp.Body.Close()
 	if err != nil {
 		log.Fatalf("Reading response body: %v", err)

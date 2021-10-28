@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"sync"
 )
@@ -104,7 +103,7 @@ func (c *Channel) Recv() ([]byte, error) {
 	}
 
 	// Ensure the body is fully read and closed before continuing.
-	data, err := ioutil.ReadAll(next.rsp.Body)
+	data, err := io.ReadAll(next.rsp.Body)
 	next.rsp.Body.Close()
 
 	// N.B. Empty responses (StatusNoContent) is handled by Send, so we will

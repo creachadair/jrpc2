@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -58,7 +57,7 @@ func TestBridge(t *testing.T) {
 		} else if got, want := rsp.StatusCode, http.StatusOK; got != want {
 			t.Errorf("POST response code: got %v, want %v", got, want)
 		}
-		body, err := ioutil.ReadAll(rsp.Body)
+		body, err := io.ReadAll(rsp.Body)
 		if err != nil {
 			t.Errorf("Reading POST body: %v", err)
 		}
@@ -81,7 +80,7 @@ func TestBridge(t *testing.T) {
 		} else if got, want := rsp.StatusCode, http.StatusOK; got != want {
 			t.Errorf("POST response code: got %v, want %v", got, want)
 		}
-		body, err := ioutil.ReadAll(rsp.Body)
+		body, err := io.ReadAll(rsp.Body)
 		if err != nil {
 			t.Errorf("Reading POST body: %v", err)
 		}
@@ -127,7 +126,7 @@ func TestBridge(t *testing.T) {
 		} else if got, want := rsp.StatusCode, http.StatusOK; got != want {
 			t.Errorf("POST status: got %v, want %v", got, want)
 		}
-		body, err := ioutil.ReadAll(rsp.Body)
+		body, err := io.ReadAll(rsp.Body)
 		if err != nil {
 			t.Errorf("Reading POST body: %v", err)
 		}
@@ -150,7 +149,7 @@ func TestBridge(t *testing.T) {
 		} else if got, want := rsp.StatusCode, http.StatusNoContent; got != want {
 			t.Errorf("POST status: got %v, want %v", got, want)
 		}
-		body, err := ioutil.ReadAll(rsp.Body)
+		body, err := io.ReadAll(rsp.Body)
 		if err != nil {
 			t.Errorf("Reading POST body: %v", err)
 		}

@@ -7,7 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strconv"
 
@@ -54,7 +54,7 @@ func (b Bridge) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 }
 
 func (b Bridge) serveInternal(w http.ResponseWriter, req *http.Request) error {
-	body, err := ioutil.ReadAll(req.Body)
+	body, err := io.ReadAll(req.Body)
 	if err != nil {
 		return err
 	}
