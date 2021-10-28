@@ -4,6 +4,7 @@ updates:
     directory: "/"
     schedule:
       interval: daily
-      time: "11:30"
+      time: "11:45"
+      timezone: "America/Los_Angeles"
     reviewers:
       - creachadair
