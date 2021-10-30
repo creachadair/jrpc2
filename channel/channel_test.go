@@ -1,7 +1,6 @@
 package channel
 
 import (
-	"fmt"
 	"io"
 	"strconv"
 	"strings"
@@ -84,8 +83,9 @@ var tests = []struct {
 	{"StrictHeader", StrictHeader("text/plain")},
 }
 
-// N.B. the messages in this list must be valid JSON, since the RawJSON framing
-// requires that structure. A Channel is not required to check this generally.
+// N.B. the first two messages in this list must be valid JSON, since the
+// RawJSON framing requires that structure. A Channel is not required to check
+// this generally.
 var messages = []string{
 	message1,
 	message2,
@@ -95,16 +95,11 @@ var messages = []string{
 	"[]",
 	"{}",
 	"[null]",
+	"    ",
+	"xy z z y",
 
 	// Include a long message to ensure size-dependent cases get exercised.
 	`[` + strings.Repeat(`"ABCDefghIJKLmnopQRSTuvwxYZ!",`, 8000) + `"END"]`,
-}
-
-func clip(msg string) string {
-	if len(msg) > 80 {
-		return msg[:80] + fmt.Sprintf(" ...[%d bytes]", len(msg))
-	}
-	return msg
 }
 
 func TestChannelTypes(t *testing.T) {
@@ -113,14 +108,21 @@ func TestChannelTypes(t *testing.T) {
 			lhs, rhs := newPipe(test.framing)
 			defer lhs.Close()
 			defer rhs.Close()
+			msgs := messages
 
-			for i, msg := range messages {
+			// The RawJSON encoding requires a self-delimited value.  The first
+			// two are by design, the rest may not be.
+			if test.name == "RawJSON" {
+				msgs = messages[:2]
+			}
+
+			for i, msg := range msgs {
 				n := strconv.Itoa(i + 1)
 				t.Run("LR-"+n, func(t *testing.T) {
-					testSendRecv(t, lhs, rhs, message1)
+					testSendRecv(t, lhs, rhs, msg)
 				})
 				t.Run("RL-"+n, func(t *testing.T) {
-					testSendRecv(t, rhs, lhs, message2)
+					testSendRecv(t, rhs, lhs, msg)
 				})
 			}
 		})

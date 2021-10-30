@@ -24,7 +24,7 @@ type jsonc struct {
 
 // Send implements part of the Channel interface.
 func (c jsonc) Send(msg []byte) error {
-	if len(msg) == 0 {
+	if len(msg) == 0 || isNull(msg) {
 		_, err := io.WriteString(c.wc, "null\n")
 		return err
 	}
@@ -37,11 +37,12 @@ func (c jsonc) Send(msg []byte) error {
 // treat any record returned as a json.RawMessage.
 func (c jsonc) Recv() ([]byte, error) {
 	c.buf = c.buf[:0] // reset
-	err := c.dec.Decode(&c.buf)
-	if err == nil && isNull(c.buf) {
+	if err := c.dec.Decode(&c.buf); err != nil {
+		return nil, err
+	} else if isNull(c.buf) {
 		return nil, nil
 	}
-	return c.buf, err
+	return c.buf, nil
 }
 
 // Close implements part of the Channel interface.
