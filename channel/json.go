@@ -5,7 +5,7 @@ import (
 	"io"
 )
 
-const bufSize = 2048
+const bufSize = 4096
 
 // RawJSON is a framing that transmits and receives records on r and wc, in which
 // each record is defined by being a complete JSON value. No padding or other
