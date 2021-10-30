@@ -30,6 +30,8 @@ There is also a working [example in the Go playground](https://play.golang.org/p
 
 This module is currently still at v0 and subject to change. To the extent practical, I try to avoid breaking changes to the API, but when I do make a breaking change I will update the minor version. For bug fixes and non-breaking minor changes I update only the patch. Hence, when going from (say) `v0.11.3` to `v0.12.0`, be advised that some API changes may occur.
 
+I am planning to commit to a stable v1 at some point. If you have opinions about what that should mean, please feel free to comment on https://github.com/creachadair/jrpc2/issues/46.
+
 ## Implementation Notes
 
 The following describes some of the implementation choices made by this module.
