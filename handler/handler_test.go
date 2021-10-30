@@ -284,8 +284,6 @@ func TestArgs(t *testing.T) {
 		if err := json.Unmarshal([]byte(test.json), &test.args); err != nil {
 			if test.ok {
 				t.Errorf("Unmarshal %#q: unexpected error: %v", test.json, err)
-			} else {
-				t.Logf("Unmarshal %#q: got expected error: %v", test.json, err)
 			}
 			continue
 		}

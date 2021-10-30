@@ -471,8 +471,6 @@ func TestError_withData(t *testing.T) {
 
 	if got, err := c.Call(context.Background(), "Push", nil); err == nil {
 		t.Errorf("Call(Push): got %#v, wanted error", got)
-	} else {
-		t.Logf("Call(Push): got expected error: %v", err)
 	}
 
 	if got, err := c.Call(context.Background(), "Code", nil); err == nil {
@@ -496,8 +494,6 @@ func TestClient_badCallParams(t *testing.T) {
 		t.Errorf("Call(Test): got %+v, wanted error", rsp)
 	} else if got, want := code.FromError(err), code.InvalidRequest; got != want {
 		t.Errorf("Call(Test): got code %v, want %v", got, want)
-	} else {
-		t.Logf("Call(Test): got expected error: %v", err)
 	}
 }
 
@@ -763,10 +759,8 @@ func TestServer_callbackTimeout(t *testing.T) {
 func TestServer_Callback(t *testing.T) {
 	loc := server.NewLocal(handler.Map{
 		"CallMeMaybe": handler.New(func(ctx context.Context) error {
-			if rsp, err := jrpc2.ServerFromContext(ctx).Callback(ctx, "succeed", nil); err != nil {
+			if _, err := jrpc2.ServerFromContext(ctx).Callback(ctx, "succeed", nil); err != nil {
 				t.Errorf("Callback failed: %v", err)
-			} else {
-				t.Logf("Callback succeeded: %v", rsp.ResultString())
 			}
 
 			if rsp, err := jrpc2.ServerFromContext(ctx).Callback(ctx, "fail", nil); err == nil {
@@ -1076,7 +1070,6 @@ func (assignFunc) Names() []string                                      { return
 func TestServer_WaitStatus(t *testing.T) {
 	check := func(t *testing.T, stat jrpc2.ServerStatus, closed, stopped bool, wantErr error) {
 		t.Helper()
-		t.Logf("Server status: %+v", stat)
 		if got, want := stat.Success(), wantErr == nil; got != want {
 			t.Errorf("Status success: got %v, want %v", got, want)
 		}
@@ -1141,8 +1134,6 @@ func TestRequest_strictFields(t *testing.T) {
 
 			if err := req.UnmarshalParams(&qs); err != nil {
 				t.Errorf("Unmarshal non-strict (default): unexpected error: %v", err)
-			} else {
-				t.Logf("Parameters OK: %+v", qs)
 			}
 
 			return map[string]string{
@@ -1169,15 +1160,12 @@ func TestRequest_strictFields(t *testing.T) {
 		if err := rsp.UnmarshalResult(&res); err != nil {
 			t.Errorf("UnmarshalResult: %v", err)
 		}
-		t.Logf("Result: %+v", res)
 	})
 
 	t.Run("StrictResult", func(t *testing.T) {
 		var res result
 		if err := rsp.UnmarshalResult(jrpc2.StrictFields(&res)); err == nil {
 			t.Errorf("UnmarshalResult: got %+v, want error", res)
-		} else {
-			t.Logf("UnmarshalResult: got expected error: %v", err)
 		}
 	})
 }

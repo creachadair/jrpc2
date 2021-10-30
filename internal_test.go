@@ -252,7 +252,6 @@ func TestBatchReply(t *testing.T) {
 	cpipe, spipe := channel.Direct()
 	srv := NewServer(hmap{
 		"test": methodFunc(func(_ context.Context, req *Request) (interface{}, error) {
-			t.Logf("Called %q", req.Method())
 			return req.Method() + " OK", nil
 		}),
 	}, nil).Start(spipe)

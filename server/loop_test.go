@@ -59,7 +59,6 @@ func (t *testSession) Finish(assigner jrpc2.Assigner, stat jrpc2.ServerStatus) {
 	if !stat.Success() {
 		t.t.Errorf("Finish unsuccessful: %v", stat.Err)
 	}
-	t.t.Logf("Server finished after %d calls, err=%v", t.nCall, stat.Err)
 }
 
 func mustListen(t *testing.T) net.Listener {
@@ -162,10 +161,8 @@ func TestLoop(t *testing.T) {
 			// Wait for the clients to be finished and then close the listener so that
 			// the service loop will stop.
 			wg.Wait()
-			t.Log("Clients are finished; stopping listener")
 			lst.Close()
 			<-sc
-			t.Log("Server is finished")
 		})
 	}
 }

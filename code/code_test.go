@@ -115,8 +115,6 @@ func TestErr(t *testing.T) {
 		got := test.code.Err()
 		if !eqv(got, test.want) {
 			t.Errorf("Code(%d).Err(): got %#v, want %#v", test.code, got, test.want)
-		} else {
-			t.Logf("Code(%d).Err() ok: %v", test.code, got)
 		}
 		if c := code.FromError(got); c != test.code {
 			t.Errorf("Code(%d).Err(): got code %v, want %v", test.code, c, test.code)
