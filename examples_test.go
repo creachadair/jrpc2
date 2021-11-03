@@ -1,6 +1,7 @@
 package jrpc2_test
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -133,26 +134,42 @@ func ExampleRequest_UnmarshalParams() {
 	if err := reqs[0].UnmarshalParams(&t); err != nil {
 		log.Fatalf("UnmarshalParams: %v", err)
 	}
+	fmt.Printf("t.A=%d, t.B=%d\n", t.A, t.B)
 
+	// To implement strict field checking, there are several options:
+	//
 	// Solution 1: Use the jrpc2.StrictFields helper.
 	err = reqs[0].UnmarshalParams(jrpc2.StrictFields(&t))
 	if code.FromError(err) != code.InvalidParams {
 		log.Fatalf("UnmarshalParams strict: %v", err)
 	}
-	fmt.Printf("t.A=%d, t.B=%d\n", t.A, t.B)
 
-	// Solution 2: Unmarshal as json.RawMessage and decode separately.
+	// Solution 2: Implement a DisallowUnknownFields method.
+	var p strictParams
+	err = reqs[0].UnmarshalParams(&p)
+	if code.FromError(err) != code.InvalidParams {
+		log.Fatalf("UnmarshalParams strict: %v", err)
+	}
+
+	// Solution 3: Decode the raw message separately.
 	var tmp json.RawMessage
 	reqs[0].UnmarshalParams(&tmp) // cannot fail
-	if err := json.Unmarshal(tmp, &u); err != nil {
-		log.Fatalf("Unmarshal: %v", err)
+	dec := json.NewDecoder(bytes.NewReader(tmp))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&u); err == nil {
+		log.Fatal("Decode should have failed for an unknown field")
 	}
-	fmt.Printf("u.A=%d, u.B=%d\n", u.A, u.B)
 
 	// Output:
 	// t.A=1, t.B=2
-	// u.A=1, u.B=2
 }
+
+type strictParams struct {
+	A int `json:"a"`
+	B int `json:"b"`
+}
+
+func (strictParams) DisallowUnknownFields() {}
 
 func ExampleResponse_UnmarshalResult() {
 	// var cli = jrpc2.NewClient(cch, nil)
