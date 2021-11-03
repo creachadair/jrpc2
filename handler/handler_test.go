@@ -421,20 +421,21 @@ func ExampleObj_unmarshal() {
 }
 
 func ExamplePositional() {
-	fn := func(ctx context.Context, name string, age int, accurate bool) error {
-		fmt.Printf("%s is %d years old (fact check: %v)\n", name, age, accurate)
+	fn := func(ctx context.Context, name string, age int, isOld bool) error {
+		fmt.Printf("%s is %d (is old: %v)\n", name, age, isOld)
 		return nil
 	}
-	call := handler.NewPos(fn, "name", "age", "accurate")
+	call := handler.NewPos(fn, "name", "age", "isOld")
 
-	req, err := jrpc2.ParseRequests([]byte(`{
+	req, err := jrpc2.ParseRequests([]byte(`
+{
   "jsonrpc": "2.0",
   "id": 1,
   "method": "foo",
   "params": {
     "name": "Dennis",
     "age": 37,
-    "accurate": true
+    "isOld": false
   }
 }`))
 	if err != nil {
@@ -444,5 +445,5 @@ func ExamplePositional() {
 		log.Fatalf("Call: %v", err)
 	}
 	// Output:
-	// Dennis is 37 years old (fact check: true)
+	// Dennis is 37 (is old: false)
 }
