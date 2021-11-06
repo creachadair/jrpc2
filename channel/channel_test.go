@@ -74,12 +74,14 @@ var tests = []struct {
 	name    string
 	framing Framing
 }{
+	{"Header", Header("")},
 	{"Header", Header("binary/octet-stream")},
 	{"LSP", LSP},
 	{"Line", Line},
 	{"NoMIME", Header("")},
 	{"RS", Split('\x1e')},
 	{"RawJSON", RawJSON},
+	{"StrictHeader", StrictHeader("")},
 	{"StrictHeader", StrictHeader("text/plain")},
 }
 
