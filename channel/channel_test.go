@@ -138,7 +138,6 @@ func TestEmptyMessage(t *testing.T) {
 			defer lhs.Close()
 			defer rhs.Close()
 
-			t.Log(`Testing lhs → rhs :: "" (empty line)`)
 			testSendRecv(t, lhs, rhs, "")
 		})
 		t.Run(test.name, func(t *testing.T) {
@@ -146,7 +145,6 @@ func TestEmptyMessage(t *testing.T) {
 			defer lhs.Close()
 			defer rhs.Close()
 
-			t.Log(`Testing lhs → rhs :: "" (empty line)`)
 			testSendRecv(t, lhs, rhs, "")
 		})
 	}
