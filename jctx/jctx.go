@@ -136,7 +136,7 @@ func UnmarshalMetadata(ctx context.Context, meta interface{}) error {
 		// If the metadata value is explicitly nil, we should report that there
 		// is no metadata message.
 		if msg := v.(json.RawMessage); msg != nil {
-			return json.Unmarshal(v.(json.RawMessage), meta)
+			return json.Unmarshal(msg, meta)
 		}
 	}
 	return ErrNoMetadata
