@@ -42,7 +42,8 @@ import (
 // framing so that records can be embedded in higher-level protocols.
 //
 // One sender and one receiver may use a Channel concurrently, but the methods
-// of a Channel are not otherwise required to be safe for concurrent use.
+// of a Channel are not otherwise required to be safe for concurrent use.  The
+// order of records received must be the same as the order sent.
 type Channel interface {
 	// Send transmits a record on the channel. Each call to Send transmits one
 	// complete record.
