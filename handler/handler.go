@@ -88,6 +88,17 @@ func New(fn interface{}) Func {
 	return fi.Wrap()
 }
 
+// NewStrict acts as New, but enforces strict field checking on an argument of
+// struct type.
+func NewStrict(fn interface{}) Func {
+	fi, err := Check(fn)
+	if err != nil {
+		panic(err)
+	}
+	fi.strictFields = true
+	return fi.Wrap()
+}
+
 var (
 	ctxType = reflect.TypeOf((*context.Context)(nil)).Elem() // type context.Context
 	errType = reflect.TypeOf((*error)(nil)).Elem()           // type error
