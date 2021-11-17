@@ -366,8 +366,8 @@ func (o Obj) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &base); err != nil {
 		return filterJSONError("decoding", "object", err)
 	}
-	for key, val := range base {
-		arg, ok := o[key]
+	for key, arg := range o {
+		val, ok := base[key]
 		if !ok {
 			continue
 		} else if err := json.Unmarshal(val, arg); err != nil {
