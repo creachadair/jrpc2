@@ -104,7 +104,7 @@ func Register(value int32, message string) Code {
 
 // FromError returns a Code to categorize the specified error.
 // If err == nil, it returns code.NoError.
-// If err is an ErrCoder, it returns the reported code value.
+// If err is (or wraps) an ErrCoder, it returns the reported code value.
 // If err is context.Canceled, it returns code.Cancelled.
 // If err is context.DeadlineExceeded, it returns code.DeadlineExceeded.
 // Otherwise it returns code.SystemError.
