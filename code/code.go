@@ -57,18 +57,16 @@ func (c Code) Err() error {
 	return codeError(c)
 }
 
-// Pre-defined standard error codes defined by the JSON-RPC specification.
+// Error codes from and including -32768 to -32000 are reserved for pre-defined
+// errors by the JSON-RPC specification. These constants cover the standard
+// codes and implementation-specific codes used by the jrpc2 module.
 const (
-	ParseError     Code = -32700 // Invalid JSON received by the server
-	InvalidRequest Code = -32600 // The JSON sent is not a valid request object
-	MethodNotFound Code = -32601 // The method does not exist or is unavailable
-	InvalidParams  Code = -32602 // Invalid method parameters
-	InternalError  Code = -32603 // Internal JSON-RPC error
-)
+	ParseError     Code = -32700 // [std] Invalid JSON received by the server
+	InvalidRequest Code = -32600 // [std] The JSON sent is not a valid request object
+	MethodNotFound Code = -32601 // [std] The method does not exist or is unavailable
+	InvalidParams  Code = -32602 // [std] Invalid method parameters
+	InternalError  Code = -32603 // [std] Internal JSON-RPC error
 
-// The JSON-RPC 2.0 specification reserves the range -32000 to -32099 for
-// implementation-defined server errors. These are used by the jrpc2 package.
-const (
 	NoError          Code = -32099 // Denotes a nil error (used by FromError)
 	SystemError      Code = -32098 // Errors from the operating environment
 	Cancelled        Code = -32097 // Request cancelled (context.Canceled)
