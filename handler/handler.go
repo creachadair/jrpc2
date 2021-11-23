@@ -152,7 +152,7 @@ func (fi *FuncInfo) Wrap() Func {
 
 	// If strict field checking is desired, ensure arguments are wrapped.
 	wrapArg := func(v reflect.Value) interface{} { return v.Interface() }
-	if fi.strictFields && !fi.Argument.Implements(strictType) {
+	if fi.strictFields && fi.Argument != nil && !fi.Argument.Implements(strictType) {
 		wrapArg = func(v reflect.Value) interface{} { return &strict{v.Interface()} }
 	}
 

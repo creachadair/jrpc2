@@ -132,6 +132,17 @@ func TestNewStrict(t *testing.T) {
 	}
 }
 
+// Verify that a handler with no argument type does not panic attempting to
+// enforce strict field checking.
+func TestNewStrict_argumentRegression(t *testing.T) {
+	defer func() {
+		if x := recover(); x != nil {
+			t.Fatalf("NewStrict panic: %v", x)
+		}
+	}()
+	handler.NewStrict(func(context.Context) error { return nil })
+}
+
 // Verify that the handling of pointer-typed arguments does not incorrectly
 // introduce another pointer indirection.
 func TestNew_pointerRegression(t *testing.T) {
