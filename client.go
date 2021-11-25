@@ -21,8 +21,11 @@ type Client struct {
 	log   func(string, ...interface{}) // write debug logs here
 	enctx encoder
 	snote func(*jmessage)
-	scall func(*jmessage) []byte
+	scall func(context.Context, *jmessage) []byte
 	chook func(*Client, *Response)
+
+	cbctx    context.Context // terminates when the client is closed
+	cbcancel func()          // cancels cbctx
 
 	allow1 bool // tolerate v1 replies with no version marker
 
@@ -35,6 +38,7 @@ type Client struct {
 
 // NewClient returns a new client that communicates with the server via ch.
 func NewClient(ch channel.Channel, opts *ClientOptions) *Client {
+	cbctx, cbcancel := context.WithCancel(context.Background())
 	c := &Client{
 		done:   new(sync.WaitGroup),
 		log:    opts.logFunc(),
@@ -43,6 +47,9 @@ func NewClient(ch channel.Channel, opts *ClientOptions) *Client {
 		snote:  opts.handleNotification(),
 		scall:  opts.handleCallback(),
 		chook:  opts.handleCancel(),
+
+		cbctx:    cbctx,
+		cbcancel: cbcancel,
 
 		// Lock-protected fields
 		ch:      ch,
@@ -99,7 +106,7 @@ func (c *Client) accept(ch receiver) error {
 }
 
 // handleRequest handles a callback or notification from the server. The
-// caller must hold c.mu, and this blocks until the handler completes.
+// caller must hold c.mu. This function does not block for the handler.
 // Precondition: msg is a request or notification, not a response or error.
 func (c *Client) handleRequest(msg *jmessage) {
 	if msg.isNotification() {
@@ -113,10 +120,22 @@ func (c *Client) handleRequest(msg *jmessage) {
 	} else if c.ch == nil {
 		c.log("Client channel is closed; discarding callback: %v", msg)
 	} else {
-		bits := c.scall(msg)
-		if err := c.ch.Send(bits); err != nil {
-			c.log("Sending reply for callback %v failed: %v", msg, err)
-		}
+		// Run the callback handler in its own goroutine. The context will be
+		// cancelled automatically when the client is closed.
+		ctx := context.WithValue(c.cbctx, clientKey{}, c)
+		c.done.Add(1)
+		go func() {
+			defer c.done.Done()
+			bits := c.scall(ctx, msg)
+
+			c.mu.Lock()
+			defer c.mu.Unlock()
+			if c.err != nil {
+				c.log("Discarding callback response: %v", c.err)
+			} else if err := c.ch.Send(bits); err != nil {
+				c.log("Sending reply for callback %v failed: %v", msg, err)
+			}
+		}()
 	}
 }
 
@@ -392,10 +411,14 @@ func (c *Client) stop(err error) {
 	}
 	c.ch.Close()
 
+	// Unblock and fail any pending callbacks.
+	c.cbcancel()
+
 	// Unblock and fail any pending requests.
 	for _, p := range c.pending {
 		p.cancel()
 	}
+
 	c.err = err
 	c.ch = nil
 }
