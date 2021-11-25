@@ -945,7 +945,7 @@ func TestClient_concurrentCallbacks(t *testing.T) {
 				}
 			}()
 			<-ready1       // C1 is ready
-			<-ready2       // c2 is ready
+			<-ready2       // C2 is ready
 			close(release) // allow all callbacks to proceed
 			wg.Wait()      // wait for all callbacks to be done
 			return ss
@@ -987,7 +987,7 @@ func TestClient_callbackUpCall(t *testing.T) {
 	var probe string
 	loc := server.NewLocal(handler.Map{
 		"Test": handler.New(func(ctx context.Context) error {
-			// Call back to the client, and prpoagate its response.
+			// Call back to the client, and propagate its response.
 			srv := jrpc2.ServerFromContext(ctx)
 			_, err := srv.Callback(ctx, "whatever", nil)
 			return err
