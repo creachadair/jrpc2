@@ -575,9 +575,8 @@ func (s *Server) stop(err error) {
 
 	// Cancel any in-flight requests that made it out of the queue, and
 	// terminate any pending callback invocations.
-	for id, rsp := range s.call {
-		delete(s.call, id)
-		rsp.cancel()
+	for _, rsp := range s.call {
+		rsp.cancel() // the waiter will clean up the map
 	}
 	for id, cancel := range s.used {
 		cancel()
