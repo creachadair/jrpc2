@@ -95,13 +95,13 @@ func (o *ServerOptions) newContext() func() context.Context {
 
 type decoder = func(context.Context, string, json.RawMessage) (context.Context, json.RawMessage, error)
 
-func (s *ServerOptions) decodeContext() (decoder, bool) {
+func (s *ServerOptions) decodeContext() decoder {
 	if s == nil || s.DecodeContext == nil {
 		return func(ctx context.Context, method string, params json.RawMessage) (context.Context, json.RawMessage, error) {
 			return ctx, params, nil
-		}, false
+		}
 	}
-	return s.DecodeContext, true
+	return s.DecodeContext
 }
 
 func (s *ServerOptions) metrics() *metrics.M {

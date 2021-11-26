@@ -31,7 +31,6 @@ type Server struct {
 	rpcLog  RPCLogger                    // log RPC requests and responses here
 	newctx  func() context.Context       // create a new base request context
 	dectx   decoder                      // decode context from request
-	expctx  bool                         // whether to expect request context
 	metrics *metrics.M                   // metrics collected during execution
 	start   time.Time                    // when Start was called
 	builtin bool                         // whether built-in rpc.* methods are enabled
@@ -65,7 +64,6 @@ func NewServer(mux Assigner, opts *ServerOptions) *Server {
 	if mux == nil {
 		panic("nil assigner")
 	}
-	dc, exp := opts.decodeContext()
 	s := &Server{
 		mux:     mux,
 		sem:     semaphore.NewWeighted(opts.concurrency()),
@@ -73,8 +71,7 @@ func NewServer(mux Assigner, opts *ServerOptions) *Server {
 		log:     opts.logFunc(),
 		rpcLog:  opts.rpcLog(),
 		newctx:  opts.newContext(),
-		dectx:   dc,
-		expctx:  exp,
+		dectx:   opts.decodeContext(),
 		mu:      new(sync.Mutex),
 		metrics: opts.metrics(),
 		start:   opts.startTime(),
@@ -351,12 +348,11 @@ func (s *Server) invoke(base context.Context, h Handler, req *Request) (json.Raw
 // ServerInfo returns an atomic snapshot of the current server info for s.
 func (s *Server) ServerInfo() *ServerInfo {
 	info := &ServerInfo{
-		Methods:     s.mux.Names(),
-		UsesContext: s.expctx,
-		StartTime:   s.start,
-		Counter:     make(map[string]int64),
-		MaxValue:    make(map[string]int64),
-		Label:       make(map[string]interface{}),
+		Methods:   s.mux.Names(),
+		StartTime: s.start,
+		Counter:   make(map[string]int64),
+		MaxValue:  make(map[string]int64),
+		Label:     make(map[string]interface{}),
 	}
 	s.metrics.Snapshot(metrics.Snapshot{
 		Counter:  info.Counter,
@@ -621,9 +617,6 @@ func (s *Server) read(ch receiver) {
 type ServerInfo struct {
 	// The list of method names exported by this server.
 	Methods []string `json:"methods,omitempty"`
-
-	// Whether this server understands context wrappers.
-	UsesContext bool `json:"usesContext"`
 
 	// Metric values defined by the evaluation of methods.
 	Counter  map[string]int64       `json:"counters,omitempty"`
