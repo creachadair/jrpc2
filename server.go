@@ -31,7 +31,6 @@ type Server struct {
 	rpcLog  RPCLogger                    // log RPC requests and responses here
 	newctx  func() context.Context       // create a new base request context
 	dectx   decoder                      // decode context from request
-	ckreq   verifier                     // request checking hook
 	expctx  bool                         // whether to expect request context
 	metrics *metrics.M                   // metrics collected during execution
 	start   time.Time                    // when Start was called
@@ -75,7 +74,6 @@ func NewServer(mux Assigner, opts *ServerOptions) *Server {
 		rpcLog:  opts.rpcLog(),
 		newctx:  opts.newContext(),
 		dectx:   dc,
-		ckreq:   opts.checkRequest(),
 		expctx:  exp,
 		mu:      new(sync.Mutex),
 		metrics: opts.metrics(),
@@ -314,12 +312,6 @@ func (s *Server) setContext(t *task, id string) bool {
 	t.hreq.params = params
 	if err != nil {
 		t.err = Errorf(code.InternalError, "invalid request context: %v", err)
-		return false
-	}
-
-	// Check request.
-	if err := s.ckreq(base, t.hreq); err != nil {
-		t.err = err
 		return false
 	}
 

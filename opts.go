@@ -51,12 +51,6 @@ type ServerOptions struct {
 	// If unset, context and parameters are used as given.
 	DecodeContext func(context.Context, string, json.RawMessage) (context.Context, json.RawMessage, error)
 
-	// If set, this function is called with the context and client request
-	// (after decoding, if DecodeContext is set) that are to be delivered to the
-	// handler. If CheckRequest reports a non-nil error, the request fails with
-	// that error without invoking the handler.
-	CheckRequest func(ctx context.Context, req *Request) error
-
 	// If set, use this value to record server metrics. All servers created
 	// from the same options will share the same metrics collector.  If none is
 	// set, an empty collector will be created for each new server.
@@ -108,15 +102,6 @@ func (s *ServerOptions) decodeContext() (decoder, bool) {
 		}, false
 	}
 	return s.DecodeContext, true
-}
-
-type verifier = func(context.Context, *Request) error
-
-func (s *ServerOptions) checkRequest() verifier {
-	if s == nil || s.CheckRequest == nil {
-		return func(context.Context, *Request) error { return nil }
-	}
-	return s.CheckRequest
 }
 
 func (s *ServerOptions) metrics() *metrics.M {
