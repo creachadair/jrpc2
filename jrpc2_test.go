@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -867,6 +868,151 @@ func TestClient_onCancelHook(t *testing.T) {
 	loc.Client.Close()
 	if err := loc.Server.Wait(); err != nil {
 		t.Errorf("Server exit status: %v", err)
+	}
+}
+
+// Verify that client callback handlers are cancelled when the client stops.
+func TestClient_closeEndsCallbacks(t *testing.T) {
+	ready := make(chan struct{})
+	loc := server.NewLocal(handler.Map{
+		"Test": handler.New(func(ctx context.Context) error {
+			// Call back to the client and block indefinitely until it returns.
+			srv := jrpc2.ServerFromContext(ctx)
+			_, err := srv.Callback(ctx, "whatever", nil)
+			return err
+		}),
+	}, &server.LocalOptions{
+		Server: &jrpc2.ServerOptions{AllowPush: true},
+		Client: &jrpc2.ClientOptions{
+			OnCallback: handler.New(func(ctx context.Context) error {
+				// Signal the test that the callback handler is running.  When the
+				// client is closed, it should terminate ctx and allow this to
+				// return. If that doesn't happen, time out and fail.
+				close(ready)
+				select {
+				case <-ctx.Done():
+					return ctx.Err()
+				case <-time.After(10 * time.Second):
+					return errors.New("context not cancelled before timeout")
+				}
+			}),
+		},
+	})
+	go func() {
+		rsp, err := loc.Client.Call(context.Background(), "Test", nil)
+		if err == nil {
+			t.Errorf("Client call: got %+v, wanted error", rsp)
+		}
+	}()
+	<-ready
+	loc.Client.Close()
+	loc.Server.Wait()
+}
+
+// Verify that it is possible for multiple callback handlers to execute
+// concurrently.
+func TestClient_concurrentCallbacks(t *testing.T) {
+	ready1 := make(chan struct{})
+	ready2 := make(chan struct{})
+	release := make(chan struct{})
+
+	loc := server.NewLocal(handler.Map{
+		"Test": handler.New(func(ctx context.Context) []string {
+			srv := jrpc2.ServerFromContext(ctx)
+
+			// Call two callbacks concurrently, wait until they are both running,
+			// then ungate them and wait for them both to reply. Return their
+			// responses back to the test for validation.
+			ss := make([]string, 2)
+			var wg sync.WaitGroup
+			wg.Add(2)
+			go func() {
+				defer wg.Done()
+				rsp, err := srv.Callback(ctx, "C1", nil)
+				if err != nil {
+					t.Errorf("Callback C1 failed: %v", err)
+				} else {
+					rsp.UnmarshalResult(&ss[0])
+				}
+			}()
+			go func() {
+				defer wg.Done()
+				rsp, err := srv.Callback(ctx, "C2", nil)
+				if err != nil {
+					t.Errorf("Callback C2 failed: %v", err)
+				} else {
+					rsp.UnmarshalResult(&ss[1])
+				}
+			}()
+			<-ready1       // C1 is ready
+			<-ready2       // C2 is ready
+			close(release) // allow all callbacks to proceed
+			wg.Wait()      // wait for all callbacks to be done
+			return ss
+		}),
+	}, &server.LocalOptions{
+		Server: &jrpc2.ServerOptions{AllowPush: true},
+		Client: &jrpc2.ClientOptions{
+			OnCallback: handler.Func(func(ctx context.Context, req *jrpc2.Request) (interface{}, error) {
+				// A trivial callback that reports its method name.
+				// The name is used to select which invocation we are serving.
+				switch req.Method() {
+				case "C1":
+					close(ready1)
+				case "C2":
+					close(ready2)
+				default:
+					return nil, fmt.Errorf("unexpected method %q", req.Method())
+				}
+				<-release
+				return req.Method(), nil
+			}),
+		},
+	})
+
+	var got []string
+	if err := loc.Client.CallResult(context.Background(), "Test", nil, &got); err != nil {
+		t.Errorf("Call Test failed: %v", err)
+	}
+	want := []string{"C1", "C2"}
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("Wrong callback results: (-want, +got)\n%s", diff)
+	}
+}
+
+// Verify that a callback can successfully call "up" into the server.
+func TestClient_callbackUpCall(t *testing.T) {
+	const pingMessage = "kittens!"
+
+	var probe string
+	loc := server.NewLocal(handler.Map{
+		"Test": handler.New(func(ctx context.Context) error {
+			// Call back to the client, and propagate its response.
+			srv := jrpc2.ServerFromContext(ctx)
+			_, err := srv.Callback(ctx, "whatever", nil)
+			return err
+		}),
+		"Ping": handler.New(func(context.Context) string {
+			// This method is called by the client-side callback.
+			return pingMessage
+		}),
+	}, &server.LocalOptions{
+		Server: &jrpc2.ServerOptions{AllowPush: true},
+		Client: &jrpc2.ClientOptions{
+			OnCallback: handler.New(func(ctx context.Context) error {
+				// Call back up into the server.
+				cli := jrpc2.ClientFromContext(ctx)
+				return cli.CallResult(ctx, "Ping", nil, &probe)
+			}),
+		},
+	})
+
+	if _, err := loc.Client.Call(context.Background(), "Test", nil); err != nil {
+		t.Errorf("Call Test failed: %v", err)
+	}
+	loc.Close()
+	if probe != pingMessage {
+		t.Errorf("Probe response: got %q, want %q", probe, pingMessage)
 	}
 }
 

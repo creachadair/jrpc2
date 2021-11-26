@@ -162,12 +162,17 @@ type ClientOptions struct {
 	OnNotify func(*Request)
 
 	// If set, this function is called if a request is received from the server.
-	// If unset, server requests are logged and discarded. At most one
-	// invocation of this callback will be active at a time.
-	// Server callbacks are a non-standard extension of JSON-RPC.
+	// If unset, server requests are logged and discarded. Multiple invocations
+	// of the callback handler may be active concurrently.
+	//
+	// The callback handler can retrieve the client from its context using the
+	// jrpc2.ClientFromContext function. The context terminates when the client
+	// is closed.
 	//
 	// If a callback handler panics, the client will recover the panic and
 	// report a system error back to the server describing the error.
+	//
+	// Server callbacks are a non-standard extension of JSON-RPC.
 	OnCallback func(context.Context, *Request) (interface{}, error)
 
 	// If set, this function is called when the context for a request terminates.
@@ -214,15 +219,12 @@ func (c *ClientOptions) handleCancel() func(*Client, *Response) {
 	return c.OnCancel
 }
 
-func (c *ClientOptions) handleCallback() func(*jmessage) []byte {
+func (c *ClientOptions) handleCallback() func(context.Context, *jmessage) []byte {
 	if c == nil || c.OnCallback == nil {
 		return nil
 	}
 	cb := c.OnCallback
-	return func(req *jmessage) []byte {
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-
+	return func(ctx context.Context, req *jmessage) []byte {
 		// Recover panics from the callback handler to ensure the server gets a
 		// response even if the callback fails without a result.
 		//
