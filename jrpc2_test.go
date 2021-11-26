@@ -134,10 +134,7 @@ func TestClient_Call(t *testing.T) {
 	loc := server.NewLocal(handler.ServiceMap{
 		"Test": testService,
 	}, &server.LocalOptions{
-		Server: &jrpc2.ServerOptions{
-			AllowV1:     true,
-			Concurrency: 16,
-		},
+		Server: &jrpc2.ServerOptions{Concurrency: 16},
 	})
 	defer loc.Close()
 	c := loc.Client
@@ -191,10 +188,7 @@ func TestClient_Batch(t *testing.T) {
 	loc := server.NewLocal(handler.ServiceMap{
 		"Test": testService,
 	}, &server.LocalOptions{
-		Server: &jrpc2.ServerOptions{
-			AllowV1:     true,
-			Concurrency: 16,
-		},
+		Server: &jrpc2.ServerOptions{Concurrency: 16},
 	})
 	defer loc.Close()
 	c := loc.Client

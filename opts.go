@@ -23,10 +23,6 @@ type ServerOptions struct {
 	// received and each response or error returned.
 	RPCLog RPCLogger
 
-	// Instructs the server to tolerate requests that do not include the
-	// required "jsonrpc" version marker.
-	AllowV1 bool
-
 	// Instructs the server to allow server callbacks and notifications, a
 	// non-standard extension to the JSON-RPC protocol. If AllowPush is false,
 	// the Notify and Callback methods of the server report errors if called.
@@ -79,7 +75,6 @@ func (s *ServerOptions) logFunc() func(string, ...interface{}) {
 	return s.Logger.Printf
 }
 
-func (s *ServerOptions) allowV1() bool      { return s != nil && s.AllowV1 }
 func (s *ServerOptions) allowPush() bool    { return s != nil && s.AllowPush }
 func (s *ServerOptions) allowBuiltin() bool { return s == nil || !s.DisableBuiltin }
 
@@ -144,10 +139,6 @@ type ClientOptions struct {
 	// If not nil, send debug text logs here.
 	Logger Logger
 
-	// Instructs the client to tolerate responses that do not include the
-	// required "jsonrpc" version marker.
-	AllowV1 bool
-
 	// If set, this function is called with the context, method name, and
 	// encoded request parameters before the request is sent to the server.
 	// Its return value replaces the request parameters. This allows the client
@@ -190,8 +181,6 @@ func (c *ClientOptions) logFunc() func(string, ...interface{}) {
 	}
 	return c.Logger.Printf
 }
-
-func (c *ClientOptions) allowV1() bool { return c != nil && c.AllowV1 }
 
 type encoder = func(context.Context, string, json.RawMessage) (json.RawMessage, error)
 
