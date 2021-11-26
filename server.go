@@ -26,7 +26,6 @@ type Server struct {
 	sem *semaphore.Weighted // bounds concurrent execution (default 1)
 
 	// Configurable settings
-	allow1  bool                         // allow v1 requests with no version marker
 	allowP  bool                         // allow server notifications to the client
 	log     func(string, ...interface{}) // write debug logs here
 	rpcLog  RPCLogger                    // log RPC requests and responses here
@@ -71,7 +70,6 @@ func NewServer(mux Assigner, opts *ServerOptions) *Server {
 	s := &Server{
 		mux:     mux,
 		sem:     semaphore.NewWeighted(opts.concurrency()),
-		allow1:  opts.allowV1(),
 		allowP:  opts.allowPush(),
 		log:     opts.logFunc(),
 		rpcLog:  opts.rpcLog(),
@@ -693,12 +691,7 @@ func (s *Server) cancel(id string) bool {
 	return ok
 }
 
-func (s *Server) versionOK(v string) bool {
-	if v == "" {
-		return s.allow1 // an empty version is OK if the server allows it
-	}
-	return v == Version // ... otherwise it must match the spec
-}
+func (s *Server) versionOK(v string) bool { return v == Version }
 
 // A task represents a pending method invocation received by the server.
 type task struct {

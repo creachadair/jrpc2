@@ -27,8 +27,6 @@ type Client struct {
 	cbctx    context.Context // terminates when the client is closed
 	cbcancel func()          // cancels cbctx
 
-	allow1 bool // tolerate v1 replies with no version marker
-
 	mu      sync.Mutex           // protects the fields below
 	ch      channel.Channel      // channel to the server
 	err     error                // error from a previous operation
@@ -40,13 +38,12 @@ type Client struct {
 func NewClient(ch channel.Channel, opts *ClientOptions) *Client {
 	cbctx, cbcancel := context.WithCancel(context.Background())
 	c := &Client{
-		done:   new(sync.WaitGroup),
-		log:    opts.logFunc(),
-		allow1: opts.allowV1(),
-		enctx:  opts.encodeContext(),
-		snote:  opts.handleNotification(),
-		scall:  opts.handleCallback(),
-		chook:  opts.handleCancel(),
+		done:  new(sync.WaitGroup),
+		log:   opts.logFunc(),
+		enctx: opts.encodeContext(),
+		snote: opts.handleNotification(),
+		scall: opts.handleCallback(),
+		chook: opts.handleCancel(),
 
 		cbctx:    cbctx,
 		cbcancel: cbcancel,
@@ -423,12 +420,7 @@ func (c *Client) stop(err error) {
 	c.ch = nil
 }
 
-func (c *Client) versionOK(v string) bool {
-	if v == "" {
-		return c.allow1
-	}
-	return v == Version
-}
+func (c *Client) versionOK(v string) bool { return v == Version }
 
 // marshalParams validates and marshals params to JSON for a request.  The
 // value of params must be either nil or encodable as a JSON object or array.
