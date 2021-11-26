@@ -25,8 +25,6 @@ var (
 	_ code.ErrCoder = (*jrpc2.Error)(nil)
 )
 
-var notAuthorized = code.Register(-32095, "request not authorized")
-
 var testOK = handler.New(func(ctx context.Context) (string, error) {
 	return "OK", nil
 })
@@ -1036,85 +1034,6 @@ func TestContextPlumbing(t *testing.T) {
 	if _, err := loc.Client.Call(ctx, "X", nil); err != nil {
 		t.Errorf("Call X failed: %v", err)
 	}
-}
-
-// Verify that the request-checking hook works.
-func TestServer_checkRequestHook(t *testing.T) {
-	const wantResponse = "Hey girl"
-	const wantToken = "OK"
-
-	loc := server.NewLocal(handler.Map{
-		"Test": handler.New(func(ctx context.Context) (string, error) {
-			return wantResponse, nil
-		}),
-	}, &server.LocalOptions{
-		// Enable auth checking and context decoding for the server.
-		Server: &jrpc2.ServerOptions{
-			DecodeContext: jctx.Decode,
-			CheckRequest: func(ctx context.Context, req *jrpc2.Request) error {
-				var token []byte
-				switch err := jctx.UnmarshalMetadata(ctx, &token); err {
-				case nil:
-					t.Logf("Metadata present: value=%q", string(token))
-				case jctx.ErrNoMetadata:
-					t.Log("Metadata not set")
-				default:
-					return err
-				}
-				if s := string(token); s != wantToken {
-					return jrpc2.Errorf(notAuthorized, "not authorized")
-				}
-				return nil
-			},
-		},
-
-		// Enable context encoding for the client.
-		Client: &jrpc2.ClientOptions{
-			EncodeContext: jctx.Encode,
-		},
-	})
-	defer loc.Close()
-	c := loc.Client
-
-	// Call without a token and verify that we get an error.
-	t.Run("NoToken", func(t *testing.T) {
-		var rsp string
-		err := c.CallResult(context.Background(), "Test", nil, &rsp)
-		if err == nil {
-			t.Errorf("Call(Test): got %q, wanted error", rsp)
-		} else if ec := code.FromError(err); ec != notAuthorized {
-			t.Errorf("Call(Test): got code %v, want %v", ec, notAuthorized)
-		}
-	})
-
-	// Call with a valid token and verify that we get a response.
-	t.Run("GoodToken", func(t *testing.T) {
-		ctx, err := jctx.WithMetadata(context.Background(), []byte(wantToken))
-		if err != nil {
-			t.Fatalf("Call(Test): attaching metadata: %v", err)
-		}
-		var rsp string
-		if err := c.CallResult(ctx, "Test", nil, &rsp); err != nil {
-			t.Errorf("Call(Test): unexpected error: %v", err)
-		}
-		if rsp != wantResponse {
-			t.Errorf("Call(Test): got %q, want %q", rsp, wantResponse)
-		}
-	})
-
-	// Call with an invalid token and verify that we get an error.
-	t.Run("BadToken", func(t *testing.T) {
-		ctx, err := jctx.WithMetadata(context.Background(), []byte("BAD"))
-		if err != nil {
-			t.Fatalf("Call(Test): attaching metadata: %v", err)
-		}
-		var rsp string
-		if err := c.CallResult(ctx, "Test", nil, &rsp); err == nil {
-			t.Errorf("Call(Test): got %q, wanted error", rsp)
-		} else if ec := code.FromError(err); ec != notAuthorized {
-			t.Errorf("Call(Test): got code %v, want %v", ec, notAuthorized)
-		}
-	})
 }
 
 // Verify that calling a wrapped method which takes no parameters, but in which
