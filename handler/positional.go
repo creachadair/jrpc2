@@ -26,9 +26,9 @@ func NewPos(fn interface{}, names ...string) Func {
 // value of fn must be a function with one of the following type signature
 // schemes:
 //
-//   func(context.Context, X1, x2, ..., Xn) (Y, error)
-//   func(context.Context, X1, x2, ..., Xn) Y
-//   func(context.Context, X1, x2, ..., Xn) error
+//   func(context.Context, X1, X2, ..., Xn) (Y, error)
+//   func(context.Context, X1, X2, ..., Xn) Y
+//   func(context.Context, X1, X2, ..., Xn) error
 //
 // For JSON-marshalable types X_i and Y. If fn does not have one of these
 // forms, Positional reports an error. The given names must match the number of
