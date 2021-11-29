@@ -1,8 +1,7 @@
-github.com/creachadair/jrpc2 v0.30.4/go.mod h1:w+GXZGc+NwsH0xsUOgeLBIIRM0jBOSTXhv28KaWGRZU=
 github.com/creachadair/jrpc2 v0.32.0 h1:j2zp35S6pg5OzmAnb5QvCCdds9cVqunCdXnDNah7xKA=
 github.com/creachadair/jrpc2 v0.32.0/go.mod h1:w+GXZGc+NwsH0xsUOgeLBIIRM0jBOSTXhv28KaWGRZU=
-github.com/creachadair/wschannel v0.0.0-20211126171509-9d600e868bb7 h1:4WyKuz3poxrS5XQPU2M68FwdCoh7/GOMOBViK2IaYpQ=
-github.com/creachadair/wschannel v0.0.0-20211126171509-9d600e868bb7/go.mod h1:t2qArncP9fd3Sc1VyxhM9kUxLcbrK5yyWXMi2iP1BEw=
+github.com/creachadair/wschannel v0.0.0-20211129151133-40c3e37c465d h1:sfk8rt/uEOWb15hkMHYer0MbWZHwzqFpWQiq+jP0YEo=
+github.com/creachadair/wschannel v0.0.0-20211129151133-40c3e37c465d/go.mod h1:C/POGF/QGpGHyX/rf/z20Kc7RoBLg3ajYQtdagOlnUk=
 github.com/google/go-cmp v0.5.6 h1:BKbKCqvP6I+rmFHt06ZmyQtvB8xAkWdhFyr0ZUNZcxQ=
 github.com/google/go-cmp v0.5.6/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
 github.com/gorilla/websocket v1.4.2 h1:+/TMaTYc4QFitKJxsQ7Yye35DkWvkdLcvGKqM+x0Ufc=
