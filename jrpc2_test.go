@@ -19,6 +19,7 @@ import (
 	"github.com/creachadair/jrpc2/handler"
 	"github.com/creachadair/jrpc2/jctx"
 	"github.com/creachadair/jrpc2/server"
+	"github.com/fortytw2/leaktest"
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -115,6 +116,8 @@ var callTests = []struct {
 }
 
 func TestServerInfo_methodNames(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	loc := server.NewLocal(handler.ServiceMap{
 		"Test": testService,
 	}, nil)
@@ -131,6 +134,8 @@ func TestServerInfo_methodNames(t *testing.T) {
 }
 
 func TestClient_Call(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	loc := server.NewLocal(handler.ServiceMap{
 		"Test": testService,
 	}, &server.LocalOptions{
@@ -162,6 +167,8 @@ func TestClient_Call(t *testing.T) {
 }
 
 func TestClient_CallResult(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	loc := server.NewLocal(handler.ServiceMap{
 		"Test": testService,
 	}, &server.LocalOptions{
@@ -185,6 +192,8 @@ func TestClient_CallResult(t *testing.T) {
 }
 
 func TestClient_Batch(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	loc := server.NewLocal(handler.ServiceMap{
 		"Test": testService,
 	}, &server.LocalOptions{
@@ -233,6 +242,8 @@ func TestClient_Batch(t *testing.T) {
 
 // Verify that notifications respect order of arrival.
 func TestServer_notificationOrder(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	var last int32
 
 	loc := server.NewLocal(handler.Map{
@@ -264,6 +275,8 @@ func TestServer_notificationOrder(t *testing.T) {
 // Verify that a method that returns only an error (no result payload) is set
 // up and handled correctly.
 func TestHandler_errorOnly(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	const errMessage = "not enough strings"
 	loc := server.NewLocal(handler.Map{
 		"ErrorOnly": handler.New(func(_ context.Context, ss []string) error {
@@ -307,6 +320,8 @@ func TestHandler_errorOnly(t *testing.T) {
 // Verify that a timeout set on the context is respected by the server and
 // propagates back to the client as an error.
 func TestServer_contextTimeout(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	loc := server.NewLocal(handler.Map{
 		"Stall": handler.New(func(ctx context.Context) (bool, error) {
 			t.Log("Stalling...")
@@ -338,6 +353,8 @@ func TestServer_contextTimeout(t *testing.T) {
 
 // Verify that stopping the server terminates in-flight requests.
 func TestServer_stopCancelsHandlers(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	started := make(chan struct{})
 	stopped := make(chan error, 1)
 	loc := server.NewLocal(handler.Map{
@@ -374,6 +391,8 @@ func TestServer_stopCancelsHandlers(t *testing.T) {
 
 // Test that a handler can cancel an in-flight request.
 func TestServer_CancelRequest(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	ready := make(chan struct{})
 	loc := server.NewLocal(handler.Map{
 		"Stall": handler.New(func(ctx context.Context) error {
@@ -425,6 +444,8 @@ func TestServer_CancelRequest(t *testing.T) {
 // Test that an error with data attached to it is correctly propagated back
 // from the server to the client, in a value of concrete type *Error.
 func TestError_withData(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	const errCode = -32000
 	const errData = `{"caroline":452}`
 	const errMessage = "error thingy"
@@ -477,6 +498,8 @@ func TestError_withData(t *testing.T) {
 
 // Test that a client correctly reports bad parameters.
 func TestClient_badCallParams(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	loc := server.NewLocal(handler.Map{
 		"Test": handler.New(func(_ context.Context, v interface{}) error {
 			return jrpc2.Errorf(129, "this should not be reached")
@@ -494,6 +517,8 @@ func TestClient_badCallParams(t *testing.T) {
 
 // Verify that metrics are correctly propagated to server info.
 func TestServer_serverInfoMetrics(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	loc := server.NewLocal(handler.Map{
 		"Metricize": handler.New(func(ctx context.Context) (bool, error) {
 			m := jrpc2.ServerFromContext(ctx).Metrics()
@@ -557,6 +582,8 @@ func TestServer_serverInfoMetrics(t *testing.T) {
 // elicit a correct response from the server. Here we simulate a "different"
 // client by writing requests directly into the channel.
 func TestServer_nonLibraryClient(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	srv, cli := channel.Direct()
 	s := jrpc2.NewServer(handler.Map{
 		"X": testOK,
@@ -672,6 +699,8 @@ func TestServer_nonLibraryClient(t *testing.T) {
 
 // Verify that server-side push notifications work.
 func TestServer_Notify(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	// Set up a server and client with server-side notification support.  Here
 	// we're just capturing the name of the notification method, as a sign we
 	// got the right thing.
@@ -723,6 +752,8 @@ func TestServer_Notify(t *testing.T) {
 
 // Verify that server-side callbacks can time out.
 func TestServer_callbackTimeout(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	loc := server.NewLocal(handler.Map{
 		"Test": handler.New(func(ctx context.Context) error {
 			tctx, cancel := context.WithTimeout(ctx, 5*time.Millisecond)
@@ -752,6 +783,8 @@ func TestServer_callbackTimeout(t *testing.T) {
 
 // Verify that server-side callbacks work.
 func TestServer_Callback(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	loc := server.NewLocal(handler.Map{
 		"CallMeMaybe": handler.New(func(ctx context.Context) error {
 			if _, err := jrpc2.ServerFromContext(ctx).Callback(ctx, "succeed", nil); err != nil {
@@ -794,6 +827,8 @@ func TestServer_Callback(t *testing.T) {
 
 // Verify that a server push after the client closes does not trigger a panic.
 func TestServer_pushAfterClose(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	loc := server.NewLocal(make(handler.Map), &server.LocalOptions{
 		Server: &jrpc2.ServerOptions{AllowPush: true},
 	})
@@ -809,6 +844,8 @@ func TestServer_pushAfterClose(t *testing.T) {
 
 // Verify that an OnCancel hook is called when expected.
 func TestClient_onCancelHook(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	hooked := make(chan struct{}) // closed when hook notification is finished
 
 	loc := server.NewLocal(handler.Map{
@@ -867,6 +904,8 @@ func TestClient_onCancelHook(t *testing.T) {
 
 // Verify that client callback handlers are cancelled when the client stops.
 func TestClient_closeEndsCallbacks(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	ready := make(chan struct{})
 	loc := server.NewLocal(handler.Map{
 		"Test": handler.New(func(ctx context.Context) error {
@@ -906,6 +945,8 @@ func TestClient_closeEndsCallbacks(t *testing.T) {
 // Verify that it is possible for multiple callback handlers to execute
 // concurrently.
 func TestClient_concurrentCallbacks(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	ready1 := make(chan struct{})
 	ready2 := make(chan struct{})
 	release := make(chan struct{})
@@ -963,6 +1004,7 @@ func TestClient_concurrentCallbacks(t *testing.T) {
 			}),
 		},
 	})
+	defer loc.Close()
 
 	var got []string
 	if err := loc.Client.CallResult(context.Background(), "Test", nil, &got); err != nil {
@@ -976,6 +1018,8 @@ func TestClient_concurrentCallbacks(t *testing.T) {
 
 // Verify that a callback can successfully call "up" into the server.
 func TestClient_callbackUpCall(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	const pingMessage = "kittens!"
 
 	var probe string
@@ -1012,6 +1056,8 @@ func TestClient_callbackUpCall(t *testing.T) {
 
 // Verify that the context encoding/decoding hooks work.
 func TestContextPlumbing(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	want := time.Now().Add(10 * time.Second)
 	ctx, cancel := context.WithDeadline(context.Background(), want)
 	defer cancel()
@@ -1041,6 +1087,8 @@ func TestContextPlumbing(t *testing.T) {
 // Verify that calling a wrapped method which takes no parameters, but in which
 // the caller provided parameters, will correctly report an error.
 func TestHandler_noParams(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	loc := server.NewLocal(handler.Map{"Test": testOK}, nil)
 	defer loc.Close()
 
@@ -1054,6 +1102,8 @@ func TestHandler_noParams(t *testing.T) {
 
 // Verify that the rpc.serverInfo handler and client wrapper work together.
 func TestRPCServerInfo(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	loc := server.NewLocal(handler.Map{"Test": testOK}, nil)
 	defer loc.Close()
 
@@ -1101,6 +1151,8 @@ func TestNetwork(t *testing.T) {
 
 // Verify that the context passed to an assigner has the correct structure.
 func TestHandler_assignContext(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	loc := server.NewLocal(assignFunc(func(ctx context.Context, method string) jrpc2.Handler {
 		req := jrpc2.InboundRequest(ctx)
 		if req == nil {
@@ -1129,6 +1181,8 @@ func (a assignFunc) Assign(ctx context.Context, m string) jrpc2.Handler { return
 func (assignFunc) Names() []string                                      { return nil }
 
 func TestServer_WaitStatus(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	check := func(t *testing.T, stat jrpc2.ServerStatus, closed, stopped bool, wantErr error) {
 		t.Helper()
 		if got, want := stat.Success(), wantErr == nil; got != want {
@@ -1174,6 +1228,8 @@ func (b buggyChannel) Recv() ([]byte, error) { return []byte(b.data), b.err }
 func (buggyChannel) Close() error            { return nil }
 
 func TestRequest_strictFields(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	type other struct {
 		C bool `json:"charlie"`
 	}
@@ -1232,6 +1288,8 @@ func TestRequest_strictFields(t *testing.T) {
 }
 
 func TestServerFromContext(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	var got *jrpc2.Server
 	loc := server.NewLocal(handler.Map{
 		"Test": handler.New(func(ctx context.Context) error {
@@ -1251,6 +1309,8 @@ func TestServerFromContext(t *testing.T) {
 }
 
 func TestServer_newContext(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	// Prepare a context with a test value attached to it, that the handler can
 	// extract to verify that the base context was plumbed in correctly.
 	type ctxKey string
