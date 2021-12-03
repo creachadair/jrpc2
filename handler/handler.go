@@ -260,15 +260,16 @@ func (fi *FuncInfo) Wrap() Func {
 // Note that the JSON-RPC standard restricts encoded parameter values to arrays
 // and objects.  Check will accept argument types that do not encode to arrays
 // or objects, but the wrapper will report an error when decoding the request.
-//
 // The recommended solution is to define a struct type for your parameters.
-// For arbitrary single value types, however, another approach is to wrap it in
-// a 1-element array, for example:
+//
+// For a single arbitrary type, another approach is to use a 1-element array:
 //
 //   func(ctx context.Context, sp [1]string) error {
 //      s := sp[0] // pull the actual argument out of the array
 //      // ...
 //   }
+//
+// For more complex positional signatures, see also handler.Positional.
 //
 func Check(fn interface{}) (*FuncInfo, error) {
 	if fn == nil {
