@@ -1,6 +1,3 @@
-//go:build oldbench
-// +build oldbench
-
 package jrpc2
 
 import (

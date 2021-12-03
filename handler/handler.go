@@ -116,6 +116,7 @@ type FuncInfo struct {
 	Result       reflect.Type // the non-error result type, or nil
 	ReportsError bool         // true if the function reports an error
 	strictFields bool         // enforce strict field checking
+	posNames     []string     // positional field names (requires strictFields)
 
 	fn interface{} // the original function value
 }
@@ -151,16 +152,20 @@ func (fi *FuncInfo) Wrap() Func {
 	}
 
 	// If strict field checking is desired, ensure arguments are wrapped.
+	arg := fi.Argument
 	wrapArg := func(v reflect.Value) interface{} { return v.Interface() }
-	if fi.strictFields && fi.Argument != nil && !fi.Argument.Implements(strictType) {
-		wrapArg = func(v reflect.Value) interface{} { return &strict{v.Interface()} }
+	if fi.strictFields && arg != nil && !arg.Implements(strictType) {
+		names := fi.posNames
+		wrapArg = func(v reflect.Value) interface{} {
+			return &strict{v: v.Interface(), posNames: names}
+		}
 	}
 
 	// Construct a function to unpack the parameters from the request message,
 	// based on the signature of the user's callback.
 	var newInput func(ctx reflect.Value, req *jrpc2.Request) ([]reflect.Value, error)
 
-	if fi.Argument == nil {
+	if arg == nil {
 		// Case 1: The function does not want any request parameters.
 		// Nothing needs to be decoded, but verify no parameters were passed.
 		newInput = func(ctx reflect.Value, req *jrpc2.Request) ([]reflect.Value, error) {
@@ -170,16 +175,16 @@ func (fi *FuncInfo) Wrap() Func {
 			return []reflect.Value{ctx}, nil
 		}
 
-	} else if fi.Argument == reqType {
+	} else if arg == reqType {
 		// Case 2: The function wants the underlying *jrpc2.Request value.
 		newInput = func(ctx reflect.Value, req *jrpc2.Request) ([]reflect.Value, error) {
 			return []reflect.Value{ctx, reflect.ValueOf(req)}, nil
 		}
 
-	} else if fi.Argument.Kind() == reflect.Ptr {
+	} else if arg.Kind() == reflect.Ptr {
 		// Case 3a: The function wants a pointer to its argument value.
 		newInput = func(ctx reflect.Value, req *jrpc2.Request) ([]reflect.Value, error) {
-			in := reflect.New(fi.Argument.Elem())
+			in := reflect.New(arg.Elem())
 			if err := req.UnmarshalParams(wrapArg(in)); err != nil {
 				return nil, jrpc2.Errorf(code.InvalidParams, "invalid parameters: %v", err)
 			}
@@ -188,7 +193,7 @@ func (fi *FuncInfo) Wrap() Func {
 	} else {
 		// Case 3b: The function wants a bare argument value.
 		newInput = func(ctx reflect.Value, req *jrpc2.Request) ([]reflect.Value, error) {
-			in := reflect.New(fi.Argument) // we still need a pointer to unmarshal
+			in := reflect.New(arg) // we still need a pointer to unmarshal
 			if err := req.UnmarshalParams(wrapArg(in)); err != nil {
 				return nil, jrpc2.Errorf(code.InvalidParams, "invalid parameters: %v", err)
 			}
@@ -385,11 +390,47 @@ func filterJSONError(tag, want string, err error) error {
 }
 
 // strict is a wrapper for an arbitrary value that enforces strict field
-// checking when unmarshaling from JSON.
-type strict struct{ v interface{} }
+// checking when unmarshaling from JSON, and handles translation of array
+// format into object format.
+type strict struct {
+	v        interface{}
+	posNames []string
+}
+
+// translate translates the raw JSON data into the correct format for
+// unmarshaling into s.v.
+//
+// If s.posNames is set and data encodes an array, the array is rewritten to an
+// equivalent object with field names assigned by the positional names.
+// Otherwise, data is returned as-is without error.
+func (s *strict) translate(data []byte) ([]byte, error) {
+	if len(s.posNames) == 0 || len(data) == 0 || data[0] != '[' {
+		return data, nil // no names, or not an array
+	}
+
+	// Decode the array wrapper and verify it has the correct length.
+	var arr []json.RawMessage
+	if err := json.Unmarshal(data, &arr); err != nil {
+		return nil, err
+	} else if len(arr) != len(s.posNames) {
+		return nil, jrpc2.Errorf(code.InvalidParams, "got %d parameters, want %d",
+			len(arr), len(s.posNames))
+	}
+
+	// Rewrite the array into an object.
+	obj := make(map[string]json.RawMessage, len(s.posNames))
+	for i, name := range s.posNames {
+		obj[name] = arr[i]
+	}
+	return json.Marshal(obj)
+}
 
 func (s *strict) UnmarshalJSON(data []byte) error {
-	dec := json.NewDecoder(bytes.NewReader(data))
+	actual, err := s.translate(data)
+	if err != nil {
+		return err
+	}
+	dec := json.NewDecoder(bytes.NewReader(actual))
 	dec.DisallowUnknownFields()
 	return dec.Decode(s.v)
 }
