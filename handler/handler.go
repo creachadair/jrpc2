@@ -152,10 +152,12 @@ func (fi *FuncInfo) Wrap() Func {
 	}
 
 	// If strict field checking is desired, ensure arguments are wrapped.
+	arg := fi.Argument
 	wrapArg := func(v reflect.Value) interface{} { return v.Interface() }
-	if fi.strictFields && fi.Argument != nil && !fi.Argument.Implements(strictType) {
+	if fi.strictFields && arg != nil && !arg.Implements(strictType) {
+		names := fi.posNames
 		wrapArg = func(v reflect.Value) interface{} {
-			return &strict{v: v.Interface(), posNames: fi.posNames}
+			return &strict{v: v.Interface(), posNames: names}
 		}
 	}
 
@@ -163,7 +165,7 @@ func (fi *FuncInfo) Wrap() Func {
 	// based on the signature of the user's callback.
 	var newInput func(ctx reflect.Value, req *jrpc2.Request) ([]reflect.Value, error)
 
-	if fi.Argument == nil {
+	if arg == nil {
 		// Case 1: The function does not want any request parameters.
 		// Nothing needs to be decoded, but verify no parameters were passed.
 		newInput = func(ctx reflect.Value, req *jrpc2.Request) ([]reflect.Value, error) {
@@ -173,16 +175,16 @@ func (fi *FuncInfo) Wrap() Func {
 			return []reflect.Value{ctx}, nil
 		}
 
-	} else if fi.Argument == reqType {
+	} else if arg == reqType {
 		// Case 2: The function wants the underlying *jrpc2.Request value.
 		newInput = func(ctx reflect.Value, req *jrpc2.Request) ([]reflect.Value, error) {
 			return []reflect.Value{ctx, reflect.ValueOf(req)}, nil
 		}
 
-	} else if fi.Argument.Kind() == reflect.Ptr {
+	} else if arg.Kind() == reflect.Ptr {
 		// Case 3a: The function wants a pointer to its argument value.
 		newInput = func(ctx reflect.Value, req *jrpc2.Request) ([]reflect.Value, error) {
-			in := reflect.New(fi.Argument.Elem())
+			in := reflect.New(arg.Elem())
 			if err := req.UnmarshalParams(wrapArg(in)); err != nil {
 				return nil, jrpc2.Errorf(code.InvalidParams, "invalid parameters: %v", err)
 			}
@@ -191,7 +193,7 @@ func (fi *FuncInfo) Wrap() Func {
 	} else {
 		// Case 3b: The function wants a bare argument value.
 		newInput = func(ctx reflect.Value, req *jrpc2.Request) ([]reflect.Value, error) {
-			in := reflect.New(fi.Argument) // we still need a pointer to unmarshal
+			in := reflect.New(arg) // we still need a pointer to unmarshal
 			if err := req.UnmarshalParams(wrapArg(in)); err != nil {
 				return nil, jrpc2.Errorf(code.InvalidParams, "invalid parameters: %v", err)
 			}
