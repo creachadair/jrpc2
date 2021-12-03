@@ -13,6 +13,7 @@ import (
 	"github.com/creachadair/jrpc2"
 	"github.com/creachadair/jrpc2/channel"
 	"github.com/creachadair/jrpc2/handler"
+	"github.com/fortytw2/leaktest"
 )
 
 var newChan = channel.Line
@@ -101,6 +102,8 @@ func mustServe(t *testing.T, lst net.Listener, newService func() Service) <-chan
 
 // Test that sequential clients against the same server work sanely.
 func TestSeq(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	lst := mustListen(t)
 	addr := lst.Addr().String()
 	sc := mustServe(t, lst, testService)
@@ -121,6 +124,8 @@ func TestSeq(t *testing.T) {
 
 // Test that concurrent clients against the same server work sanely.
 func TestLoop(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	tests := []struct {
 		desc string
 		cons func() Service

@@ -16,6 +16,7 @@ import (
 	"github.com/creachadair/jrpc2"
 	"github.com/creachadair/jrpc2/handler"
 	"github.com/creachadair/jrpc2/jhttp"
+	"github.com/fortytw2/leaktest"
 )
 
 var testService = handler.Map{
@@ -35,6 +36,8 @@ func checkContext(ctx context.Context, _ string, p json.RawMessage) (json.RawMes
 }
 
 func TestBridge(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	// Set up a bridge with the test configuration.
 	b := jhttp.NewBridge(testService, &jhttp.BridgeOptions{
 		Client: &jrpc2.ClientOptions{EncodeContext: checkContext},
@@ -163,6 +166,8 @@ func TestBridge(t *testing.T) {
 
 // Verify that the content-type check hook works.
 func TestBridge_contentTypeCheck(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	b := jhttp.NewBridge(testService, &jhttp.BridgeOptions{
 		CheckContentType: func(ctype string) bool {
 			return ctype == "application/octet-stream"
@@ -197,6 +202,8 @@ func TestBridge_contentTypeCheck(t *testing.T) {
 
 // Verify that the content-type check hook works.
 func TestBridge_requestCheck(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	b := jhttp.NewBridge(testService, &jhttp.BridgeOptions{
 		CheckRequest: func(req *http.Request) error {
 			if req.Header.Get("x-test-header") == "fail" {
@@ -245,6 +252,8 @@ func TestBridge_requestCheck(t *testing.T) {
 }
 
 func TestChannel(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	b := jhttp.NewBridge(testService, nil)
 	defer checkClose(t, b)
 	hsrv := httptest.NewServer(b)
