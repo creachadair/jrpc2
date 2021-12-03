@@ -37,6 +37,7 @@ import (
 type Bridge struct {
 	local     server.Local
 	checkType func(string) bool
+	checkReq  func(*http.Request) error
 }
 
 // ServeHTTP implements the required method of http.Handler.
@@ -47,6 +48,11 @@ func (b Bridge) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 	if !b.checkType(req.Header.Get("Content-Type")) {
 		w.WriteHeader(http.StatusUnsupportedMediaType)
+		return
+	}
+	if err := b.checkReq(req); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintln(w, err.Error())
 		return
 	}
 	if err := b.serveInternal(w, req); err != nil {
@@ -157,6 +163,7 @@ func NewBridge(mux jrpc2.Assigner, opts *BridgeOptions) Bridge {
 			Server: opts.serverOptions(),
 		}),
 		checkType: opts.checkContentType(),
+		checkReq:  opts.checkRequest(),
 	}
 }
 
@@ -174,6 +181,10 @@ type BridgeOptions struct {
 	// request is rejected. If nil, the default check requires a content type of
 	// "application/json".
 	CheckContentType func(contentType string) bool
+
+	// If non-nil, this function is called to check the HTTP request.  If this
+	// function reports an error, the request is rejected.
+	CheckRequest func(*http.Request) error
 }
 
 func (o *BridgeOptions) clientOptions() *jrpc2.ClientOptions {
@@ -195,6 +206,13 @@ func (o *BridgeOptions) checkContentType() func(string) bool {
 		return func(ctype string) bool { return ctype == "application/json" }
 	}
 	return o.CheckContentType
+}
+
+func (o *BridgeOptions) checkRequest() func(*http.Request) error {
+	if o == nil || o.CheckRequest == nil {
+		return func(*http.Request) error { return nil }
+	}
+	return o.CheckRequest
 }
 
 type httpReqKey struct{}

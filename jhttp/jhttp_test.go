@@ -195,6 +195,55 @@ func TestBridge_contentTypeCheck(t *testing.T) {
 	})
 }
 
+// Verify that the content-type check hook works.
+func TestBridge_requestCheck(t *testing.T) {
+	b := jhttp.NewBridge(testService, &jhttp.BridgeOptions{
+		CheckRequest: func(req *http.Request) error {
+			if req.Header.Get("x-test-header") == "fail" {
+				return errors.New("request rejected")
+			}
+			return nil
+		},
+	})
+	defer checkClose(t, b)
+
+	hsrv := httptest.NewServer(b)
+	defer hsrv.Close()
+
+	const reqBody = `{"jsonrpc":"2.0","id":1,"method":"Test1","params":["a","b","c"]}`
+	t.Run("RequestOK", func(t *testing.T) {
+		req, err := http.NewRequest("POST", hsrv.URL, strings.NewReader(reqBody))
+		if err != nil {
+			t.Fatalf("NewRequest: %v", err)
+		}
+		req.Header.Set("X-Test-Header", "succeed")
+		req.Header.Set("Content-Type", "application/json")
+
+		rsp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatalf("POST request failed: %v", err)
+		} else if got, want := rsp.StatusCode, http.StatusOK; got != want {
+			t.Errorf("POST response code: got %v, want %v", got, want)
+		}
+	})
+
+	t.Run("RequestBad", func(t *testing.T) {
+		req, err := http.NewRequest("POST", hsrv.URL, strings.NewReader(reqBody))
+		if err != nil {
+			t.Fatalf("NewRequest: %v", err)
+		}
+		req.Header.Set("X-Test-Header", "fail")
+		req.Header.Set("Content-Type", "application/json")
+
+		rsp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatalf("POST request failed: %v", err)
+		} else if got, want := rsp.StatusCode, http.StatusInternalServerError; got != want {
+			t.Errorf("POST response code: got %v, want %v", got, want)
+		}
+	})
+}
+
 func TestChannel(t *testing.T) {
 	b := jhttp.NewBridge(testService, nil)
 	defer checkClose(t, b)
