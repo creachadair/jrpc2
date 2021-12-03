@@ -192,10 +192,10 @@ func TestPositional_decode(t *testing.T) {
 		{`{"jsonrpc":"2.0","id":7,"method":"add"}`, 0, false},
 
 		{`{"jsonrpc":"2.0","id":10,"method":"add","params":["wrong", "type"]}`, 0, true},
-		{`{"jsonrpc":"2.0","id":11,"method":"add","params":["wrong", "type"]}`, 0, true},
-		{`{"jsonrpc":"2.0","id":12,"method":"add","params":{"unknown":"field"}}`, 0, true},
-		{`{"jsonrpc":"2.0","id":13,"method":"add","params":[1]}`, 0, true},
-		{`{"jsonrpc":"2.0","id":14,"method":"add","params":[1,2,3]}`, 0, true},
+		{`{"jsonrpc":"2.0","id":12,"method":"add","params":[15, "wrong-type"]}`, 0, true},
+		{`{"jsonrpc":"2.0","id":13,"method":"add","params":{"unknown":"field"}}`, 0, true},
+		{`{"jsonrpc":"2.0","id":14,"method":"add","params":[1]}`, 0, true},     // too few
+		{`{"jsonrpc":"2.0","id":15,"method":"add","params":[1,2,3]}`, 0, true}, // too many
 	}
 	for _, test := range tests {
 		req := mustParseRequest(t, test.input)
