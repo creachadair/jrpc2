@@ -184,14 +184,18 @@ func TestPositional_decode(t *testing.T) {
 		bad   bool
 	}{
 		{`{"jsonrpc":"2.0","id":1,"method":"add","params":{"first":5,"second":3}}`, 8, false},
-		{`{"jsonrpc":"2.0","id":2,"method":"add","params":{"first":5}}`, 5, false},
-		{`{"jsonrpc":"2.0","id":3,"method":"add","params":{"second":3}}`, 3, false},
-		{`{"jsonrpc":"2.0","id":4,"method":"add","params":{}}`, 0, false},
-		{`{"jsonrpc":"2.0","id":5,"method":"add","params":null}`, 0, false},
-		{`{"jsonrpc":"2.0","id":6,"method":"add"}`, 0, false},
+		{`{"jsonrpc":"2.0","id":2,"method":"add","params":[5,3]}`, 8, false},
+		{`{"jsonrpc":"2.0","id":3,"method":"add","params":{"first":5}}`, 5, false},
+		{`{"jsonrpc":"2.0","id":4,"method":"add","params":{"second":3}}`, 3, false},
+		{`{"jsonrpc":"2.0","id":5,"method":"add","params":{}}`, 0, false},
+		{`{"jsonrpc":"2.0","id":6,"method":"add","params":null}`, 0, false},
+		{`{"jsonrpc":"2.0","id":7,"method":"add"}`, 0, false},
 
-		{`{"jsonrpc":"2.0","id":6,"method":"add","params":["wrong", "type"]}`, 0, true},
-		{`{"jsonrpc":"2.0","id":6,"method":"add","params":{"unknown":"field"}}`, 0, true},
+		{`{"jsonrpc":"2.0","id":10,"method":"add","params":["wrong", "type"]}`, 0, true},
+		{`{"jsonrpc":"2.0","id":11,"method":"add","params":["wrong", "type"]}`, 0, true},
+		{`{"jsonrpc":"2.0","id":12,"method":"add","params":{"unknown":"field"}}`, 0, true},
+		{`{"jsonrpc":"2.0","id":13,"method":"add","params":[1]}`, 0, true},
+		{`{"jsonrpc":"2.0","id":14,"method":"add","params":[1,2,3]}`, 0, true},
 	}
 	for _, test := range tests {
 		req := mustParseRequest(t, test.input)

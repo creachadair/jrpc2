@@ -56,6 +56,13 @@ func NewPos(fn interface{}, names ...string) Func {
 // field keys generate an error. The field names are not required to match the
 // parameter names declared by the function; it is the names assigned here that
 // determine which object keys are accepted.
+//
+// The wrapped function will also accept a JSON array with with (exactly) the
+// same number of elements as the positional parameters:
+//
+//   [17, 23]
+//
+// Unlike the object format, no arguments can be omitted in this format.
 func Positional(fn interface{}, names ...string) (*FuncInfo, error) {
 	if fn == nil {
 		return nil, errors.New("nil function")
@@ -85,6 +92,7 @@ func Positional(fn interface{}, names ...string) (*FuncInfo, error) {
 	fi, err := Check(makeCaller(ft, fv, atype))
 	if err == nil {
 		fi.strictFields = true
+		fi.posNames = names
 	}
 	return fi, err
 }

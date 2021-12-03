@@ -116,6 +116,7 @@ type FuncInfo struct {
 	Result       reflect.Type // the non-error result type, or nil
 	ReportsError bool         // true if the function reports an error
 	strictFields bool         // enforce strict field checking
+	posNames     []string     // positional field names (requires strictFields)
 
 	fn interface{} // the original function value
 }
@@ -153,7 +154,9 @@ func (fi *FuncInfo) Wrap() Func {
 	// If strict field checking is desired, ensure arguments are wrapped.
 	wrapArg := func(v reflect.Value) interface{} { return v.Interface() }
 	if fi.strictFields && fi.Argument != nil && !fi.Argument.Implements(strictType) {
-		wrapArg = func(v reflect.Value) interface{} { return &strict{v.Interface()} }
+		wrapArg = func(v reflect.Value) interface{} {
+			return &strict{v: v.Interface(), posNames: fi.posNames}
+		}
 	}
 
 	// Construct a function to unpack the parameters from the request message,
@@ -385,11 +388,47 @@ func filterJSONError(tag, want string, err error) error {
 }
 
 // strict is a wrapper for an arbitrary value that enforces strict field
-// checking when unmarshaling from JSON.
-type strict struct{ v interface{} }
+// checking when unmarshaling from JSON, and handles translation of array
+// format into object format.
+type strict struct {
+	v        interface{}
+	posNames []string
+}
+
+// translate translates the raw JSON data into the correct format for
+// unmarshaling into s.v.
+//
+// If s.posNames is set and data encodes an array, the array is rewritten to an
+// equivalent object with field names assigned by the positional names.
+// Otherwise, data is returned as-is without error.
+func (s *strict) translate(data []byte) ([]byte, error) {
+	if len(s.posNames) == 0 || len(data) == 0 || data[0] != '[' {
+		return data, nil // no names, or not an array
+	}
+
+	// Decode the array wrapper and verify it has the correct length.
+	var arr []json.RawMessage
+	if err := json.Unmarshal(data, &arr); err != nil {
+		return nil, err
+	} else if len(arr) != len(s.posNames) {
+		return nil, jrpc2.Errorf(code.InvalidParams, "got %d parameters, want %d",
+			len(arr), len(s.posNames))
+	}
+
+	// Rewrite the array into an object.
+	obj := make(map[string]json.RawMessage, len(s.posNames))
+	for i, name := range s.posNames {
+		obj[name] = arr[i]
+	}
+	return json.Marshal(obj)
+}
 
 func (s *strict) UnmarshalJSON(data []byte) error {
-	dec := json.NewDecoder(bytes.NewReader(data))
+	actual, err := s.translate(data)
+	if err != nil {
+		return err
+	}
+	dec := json.NewDecoder(bytes.NewReader(actual))
 	dec.DisallowUnknownFields()
 	return dec.Decode(s.v)
 }
