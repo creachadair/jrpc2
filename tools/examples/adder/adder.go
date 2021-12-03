@@ -1,3 +1,5 @@
+// Copyright (C) 2017 Michael J. Fromberger. All Rights Reserved.
+
 // Program adder demonstrates a trivial JSON-RPC server that communicates over
 // the process's stdin and stdout.
 //

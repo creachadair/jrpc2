@@ -1,3 +1,5 @@
+// Copyright (C) 2017 Michael J. Fromberger. All Rights Reserved.
+
 // Package jctx implements an encoder and decoder for request context values,
 // allowing context metadata to be propagated through JSON-RPC.
 //

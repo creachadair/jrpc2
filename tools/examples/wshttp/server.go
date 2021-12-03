@@ -1,3 +1,5 @@
+// Copyright (C) 2017 Michael J. Fromberger. All Rights Reserved.
+
 // Program wshttp demonstrates how to set up a JSON-RPC 20 server using
 // the github.com/creachadair/jrpc2 package with a Websocket transport.
 //

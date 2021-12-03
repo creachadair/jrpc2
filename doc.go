@@ -1,3 +1,5 @@
+// Copyright (C) 2017 Michael J. Fromberger. All Rights Reserved.
+
 /*
 Package jrpc2 implements a server and a client for the JSON-RPC 2.0 protocol
 defined by http://www.jsonrpc.org/specification.

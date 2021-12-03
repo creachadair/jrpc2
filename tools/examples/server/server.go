@@ -1,3 +1,5 @@
+// Copyright (C) 2017 Michael J. Fromberger. All Rights Reserved.
+
 // Program server demonstrates how to set up a JSON-RPC 2.0 server using the
 // github.com/creachadair/jrpc2 package.
 //

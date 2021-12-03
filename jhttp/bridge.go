@@ -1,3 +1,5 @@
+// Copyright (C) 2017 Michael J. Fromberger. All Rights Reserved.
+
 // Package jhttp implements a bridge from HTTP to JSON-RPC.  This permits
 // requests to be submitted to a JSON-RPC server using HTTP as a transport.
 package jhttp

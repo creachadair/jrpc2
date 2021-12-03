@@ -1,3 +1,5 @@
+// Copyright (C) 2017 Michael J. Fromberger. All Rights Reserved.
+
 // Package channel defines a basic communications channel.
 //
 // A Channel encodes/transmits and decodes/receives data records over an
