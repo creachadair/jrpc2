@@ -22,16 +22,16 @@ import (
 // JSON-RPC request message in the body, with Content-Type application/json.
 // Either a single request object or a list of request objects is supported.
 //
+// If the HTTP request method is not "POST", the bridge reports 405 (Method Not
+// Allowed). If the Content-Type is not application/json, the bridge reports
+// 415 (Unsupported Media Type).
+//
 // If either a CheckRequest or ParseRequest hook is set, these requirements are
 // disabled, and the hooks are responsible for checking request structure.
 //
 // If the request completes, whether or not there is an error, the HTTP
 // response is 200 (OK) for ordinary requests or 204 (No Response) for
 // notifications, and the response body contains the JSON-RPC response.
-//
-// If the HTTP request method is not "POST", the bridge reports 405 (Method Not
-// Allowed). If the Content-Type is not application/json, the bridge reports
-// 415 (Unsupported Media Type).
 //
 // The bridge attaches the inbound HTTP request to the context passed to the
 // client, allowing an EncodeContext callback to retrieve state from the HTTP
