@@ -69,30 +69,56 @@ func ExampleObj_unmarshal() {
 	// uid=501, name="P. T. Barnum"
 }
 
-func ExamplePositional() {
+func ExamplePositional_object() {
 	fn := func(ctx context.Context, name string, age int, isOld bool) error {
 		fmt.Printf("%s is %d (is old: %v)\n", name, age, isOld)
 		return nil
 	}
 	call := handler.NewPos(fn, "name", "age", "isOld")
 
-	req, err := jrpc2.ParseRequests([]byte(`
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "method": "foo",
-  "params": {
-    "name": "Dennis",
-    "age": 37,
-    "isOld": false
-  }
-}`))
-	if err != nil {
-		log.Fatalf("Parse: %v", err)
-	}
-	if _, err := call(context.Background(), req[0]); err != nil {
+	req := mustParseReq(`{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "method": "foo",
+	  "params": {
+	    "name":  "Dennis",
+	    "age":   37,
+	    "isOld": false
+	  }
+	}`)
+	if _, err := call(context.Background(), req); err != nil {
 		log.Fatalf("Call: %v", err)
 	}
 	// Output:
 	// Dennis is 37 (is old: false)
+}
+
+func ExamplePositional_array() {
+	fn := func(ctx context.Context, name string, age int, isOld bool) error {
+		fmt.Printf("%s is %d (is old: %v)\n", name, age, isOld)
+		return nil
+	}
+	call := handler.NewPos(fn, "name", "age", "isOld")
+
+	req := mustParseReq(`{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "method": "foo",
+	  "params": ["Marvin", 973000, true]
+	}`)
+	if _, err := call(context.Background(), req); err != nil {
+		log.Fatalf("Call: %v", err)
+	}
+	// Output:
+	// Marvin is 973000 (is old: true)
+}
+
+func mustParseReq(s string) *jrpc2.Request {
+	reqs, err := jrpc2.ParseRequests([]byte(s))
+	if err != nil {
+		log.Fatalf("ParseRequests: %v", err)
+	} else if len(reqs) == 0 {
+		log.Fatal("ParseRequests: empty result")
+	}
+	return reqs[0]
 }
