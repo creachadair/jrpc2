@@ -225,6 +225,7 @@ func TestBridge_parseRequest(t *testing.T) {
 
 	const reqMessage = `{"jsonrpc":"2.0", "method": "Test2", "id": 100, "params":null}`
 	const wantReply = `{"jsonrpc":"2.0","id":100,"result":0}`
+
 	b := jhttp.NewBridge(testService, &jhttp.BridgeOptions{
 		ParseRequest: func(req *http.Request) ([]*jrpc2.Request, error) {
 			action := req.Header.Get("x-test-header")
