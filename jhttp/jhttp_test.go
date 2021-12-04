@@ -6,7 +6,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -51,12 +50,12 @@ func TestBridge(t *testing.T) {
 	// Verify that a valid POST request succeeds.
 	t.Run("PostOK", func(t *testing.T) {
 		rsp, err := http.Post(hsrv.URL, "application/json", strings.NewReader(`{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "method": "Test1",
-  "params": ["a", "foolish", "consistency", "is", "the", "hobgoblin"]
-}
-`))
+		  "jsonrpc": "2.0",
+		  "id": 1,
+		  "method": "Test1",
+		  "params": ["a", "foolish", "consistency", "is", "the", "hobgoblin"]
+		}
+		`))
 		if err != nil {
 			t.Fatalf("POST request failed: %v", err)
 		} else if got, want := rsp.StatusCode, http.StatusOK; got != want {
@@ -76,10 +75,10 @@ func TestBridge(t *testing.T) {
 	// Verify that the bridge will accept a batch.
 	t.Run("PostBatchOK", func(t *testing.T) {
 		rsp, err := http.Post(hsrv.URL, "application/json", strings.NewReader(`[
-  {"jsonrpc":"2.0", "id": 3, "method": "Test1", "params": ["first"]},
-  {"jsonrpc":"2.0", "id": 7, "method": "Test1", "params": ["among", "equals"]}
-]
-`))
+		  {"jsonrpc":"2.0", "id": 3, "method": "Test1", "params": ["first"]},
+		  {"jsonrpc":"2.0", "id": 7, "method": "Test1", "params": ["among", "equals"]}
+		]
+		`))
 		if err != nil {
 			t.Fatalf("POST request failed: %v", err)
 		} else if got, want := rsp.StatusCode, http.StatusOK; got != want {
@@ -122,10 +121,10 @@ func TestBridge(t *testing.T) {
 	// Verify that a POST that generates a JSON-RPC error succeeds.
 	t.Run("PostErrorReply", func(t *testing.T) {
 		rsp, err := http.Post(hsrv.URL, "application/json", strings.NewReader(`{
-  "id": 1,
-  "jsonrpc": "2.0"
-}
-`))
+		  "id": 1,
+		  "jsonrpc": "2.0"
+		}
+		`))
 		if err != nil {
 			t.Fatalf("POST request failed: %v", err)
 		} else if got, want := rsp.StatusCode, http.StatusOK; got != want {
@@ -145,10 +144,10 @@ func TestBridge(t *testing.T) {
 	// Verify that a notification returns an empty success.
 	t.Run("PostNotification", func(t *testing.T) {
 		rsp, err := http.Post(hsrv.URL, "application/json", strings.NewReader(`{
-  "jsonrpc": "2.0",
-  "method": "TakeNotice",
-  "params": []
-}`))
+		  "jsonrpc": "2.0",
+		  "method": "TakeNotice",
+		  "params": []
+		}`))
 		if err != nil {
 			t.Fatalf("POST request failed: %v", err)
 		} else if got, want := rsp.StatusCode, http.StatusNoContent; got != want {
@@ -160,42 +159,6 @@ func TestBridge(t *testing.T) {
 		}
 		if got := string(body); got != "" {
 			t.Errorf("POST body: got %q, want empty", got)
-		}
-	})
-}
-
-// Verify that the content-type check hook works.
-func TestBridge_contentTypeCheck(t *testing.T) {
-	defer leaktest.Check(t)()
-
-	b := jhttp.NewBridge(testService, &jhttp.BridgeOptions{
-		CheckContentType: func(ctype string) bool {
-			return ctype == "application/octet-stream"
-		},
-	})
-	defer checkClose(t, b)
-
-	hsrv := httptest.NewServer(b)
-	defer hsrv.Close()
-
-	const reqTemplate = `{"jsonrpc":"2.0","id":%q,"method":"Test1","params":["a","b","c"]}`
-	t.Run("ContentTypeOK", func(t *testing.T) {
-		rsp, err := http.Post(hsrv.URL, "application/octet-stream",
-			strings.NewReader(fmt.Sprintf(reqTemplate, "ok")))
-		if err != nil {
-			t.Fatalf("POST request failed: %v", err)
-		} else if got, want := rsp.StatusCode, http.StatusOK; got != want {
-			t.Errorf("POST response code: got %v, want %v", got, want)
-		}
-	})
-
-	t.Run("ContentTypeBad", func(t *testing.T) {
-		rsp, err := http.Post(hsrv.URL, "text/plain",
-			strings.NewReader(fmt.Sprintf(reqTemplate, "bad")))
-		if err != nil {
-			t.Fatalf("POST request failed: %v", err)
-		} else if got, want := rsp.StatusCode, http.StatusUnsupportedMediaType; got != want {
-			t.Errorf("POST response code: got %v, want %v", got, want)
 		}
 	})
 }
@@ -218,29 +181,92 @@ func TestBridge_requestCheck(t *testing.T) {
 	defer hsrv.Close()
 
 	const reqBody = `{"jsonrpc":"2.0","id":1,"method":"Test1","params":["a","b","c"]}`
-	t.Run("RequestOK", func(t *testing.T) {
-		req, err := http.NewRequest("POST", hsrv.URL, strings.NewReader(reqBody))
+	const wantReply = `{"jsonrpc":"2.0","id":1,"result":3}`
+
+	t.Run("Succeed", func(t *testing.T) {
+		// With a check hook set, the method and content-type checks should not happen.
+		req, err := http.NewRequest("GET", hsrv.URL, strings.NewReader(reqBody))
 		if err != nil {
 			t.Fatalf("NewRequest: %v", err)
 		}
-		req.Header.Set("X-Test-Header", "succeed")
-		req.Header.Set("Content-Type", "application/json")
 
 		rsp, err := http.DefaultClient.Do(req)
 		if err != nil {
-			t.Fatalf("POST request failed: %v", err)
+			t.Fatalf("GET request failed: %v", err)
 		} else if got, want := rsp.StatusCode, http.StatusOK; got != want {
-			t.Errorf("POST response code: got %v, want %v", got, want)
+			t.Errorf("GET response code: got %v, want %v", got, want)
+		}
+		body, _ := io.ReadAll(rsp.Body)
+		rsp.Body.Close()
+		if got := string(body); got != wantReply {
+			t.Errorf("Response: got %#q, want %#q", got, wantReply)
 		}
 	})
 
-	t.Run("RequestBad", func(t *testing.T) {
+	t.Run("CheckFailed", func(t *testing.T) {
 		req, err := http.NewRequest("POST", hsrv.URL, strings.NewReader(reqBody))
 		if err != nil {
 			t.Fatalf("NewRequest: %v", err)
 		}
 		req.Header.Set("X-Test-Header", "fail")
-		req.Header.Set("Content-Type", "application/json")
+
+		rsp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatalf("POST request failed: %v", err)
+		} else if got, want := rsp.StatusCode, http.StatusInternalServerError; got != want {
+			t.Errorf("POST response code: got %v, want %v", got, want)
+		}
+	})
+}
+
+// Verify that the request-parsing hook works.
+func TestBridge_parseRequest(t *testing.T) {
+	defer leaktest.Check(t)()
+
+	const reqMessage = `{"jsonrpc":"2.0", "method": "Test2", "id": 100, "params":null}`
+	const wantReply = `{"jsonrpc":"2.0","id":100,"result":0}`
+
+	b := jhttp.NewBridge(testService, &jhttp.BridgeOptions{
+		ParseRequest: func(req *http.Request) ([]*jrpc2.Request, error) {
+			action := req.Header.Get("x-test-header")
+			if action == "fail" {
+				return nil, errors.New("parse hook reporting failure")
+			}
+			return jrpc2.ParseRequests([]byte(reqMessage))
+		},
+	})
+	defer checkClose(t, b)
+
+	hsrv := httptest.NewServer(b)
+	defer hsrv.Close()
+
+	t.Run("Succeed", func(t *testing.T) {
+		// Since a parse hook is set, the method and content-type checks should not occur.
+		// We send an empty body to be sure the request comes from the hook.
+		req, err := http.NewRequest("GET", hsrv.URL, strings.NewReader(""))
+		if err != nil {
+			t.Fatalf("NewRequest: %v", err)
+		}
+
+		rsp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatalf("GET request failed: %v", err)
+		} else if got, want := rsp.StatusCode, http.StatusOK; got != want {
+			t.Errorf("GET response code: got %v, want %v", got, want)
+		}
+		body, _ := io.ReadAll(rsp.Body)
+		rsp.Body.Close()
+		if got := string(body); got != wantReply {
+			t.Errorf("Response: got %#q, want %#q", got, wantReply)
+		}
+	})
+
+	t.Run("Fail", func(t *testing.T) {
+		req, err := http.NewRequest("POST", hsrv.URL, strings.NewReader(""))
+		if err != nil {
+			t.Fatalf("NewRequest: %v", err)
+		}
+		req.Header.Set("X-Test-Header", "fail")
 
 		rsp, err := http.DefaultClient.Do(req)
 		if err != nil {
