@@ -232,14 +232,14 @@ func (o *BridgeOptions) serverOptions() *jrpc2.ServerOptions {
 }
 
 func (o *BridgeOptions) checkRequest() func(*http.Request) error {
-	if o == nil || o.CheckRequest == nil {
+	if o == nil {
 		return nil
 	}
 	return o.CheckRequest
 }
 
 func (o *BridgeOptions) parseRequest() func(*http.Request) ([]*jrpc2.Request, error) {
-	if o == nil || o.ParseRequest == nil {
+	if o == nil {
 		return nil
 	}
 	return o.ParseRequest
