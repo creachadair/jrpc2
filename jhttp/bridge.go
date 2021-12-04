@@ -202,16 +202,18 @@ type BridgeOptions struct {
 	Server *jrpc2.ServerOptions
 
 	// If non-nil, this function is called to check the HTTP request.  If this
-	// function reports an error, the request is rejected. Setting this hook
-	// disables the requirement that the content-type be application/json.
+	// function reports an error, the request is rejected.
+	//
+	// Setting this hook disables the default requirement that the request
+	// method be POST and the content-type be application/json.
 	CheckRequest func(*http.Request) error
 
 	// If non-nil, this function is called to parse JSON-RPC requests from the
 	// HTTP request. If this function reports an error, the request fails.  By
 	// default, the bridge uses jrpc2.ParseRequests on the HTTP request body.
 	//
-	// Setting this hook disables the requirements that the request method be
-	// POST and the content-type be application/json.
+	// Setting this hook disables the default requirement that the request
+	// method be POST and the content-type be application/json.
 	ParseRequest func(*http.Request) ([]*jrpc2.Request, error)
 }
 
