@@ -94,7 +94,7 @@ func mustServe(t *testing.T, ctx context.Context, lst net.Listener, newService f
 		defer close(errc)
 		// Start a server loop to accept connections from the clients. This should
 		// exit cleanly once all the clients have finished and the listener closes.
-		errc <- server.LoopContext(ctx, acc, newService, nil)
+		errc <- server.Loop(ctx, acc, newService, nil)
 	}()
 	return errc
 }
@@ -124,7 +124,7 @@ func TestSeq(t *testing.T) {
 }
 
 // Test that context plumbing works properly.
-func TestLoopContext_cancellation(t *testing.T) {
+func TestLoop_cancellation(t *testing.T) {
 	defer leaktest.Check(t)()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -133,7 +133,7 @@ func TestLoopContext_cancellation(t *testing.T) {
 	errc := make(chan error, 1)
 	go func() {
 		defer close(errc)
-		errc <- server.LoopContext(ctx, lst, testStatic, nil)
+		errc <- server.Loop(ctx, lst, testStatic, nil)
 	}()
 
 	time.AfterFunc(50*time.Millisecond, cancel)

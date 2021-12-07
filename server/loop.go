@@ -77,19 +77,13 @@ func (n netAccepter) Accept(ctx context.Context) (channel.Channel, error) {
 	return n.newChannel(conn, conn), nil
 }
 
-// Loop calls LoopContext with the given arguments and a background context.
-// See LoopContext for details.
-func Loop(lst Accepter, newService func() Service, opts *LoopOptions) error {
-	return LoopContext(context.Background(), lst, newService, opts)
-}
-
-// LoopContext obtains connections from lst and starts a server for each using
-// a service instance returned by newService and the given options. Each server
+// Loop obtains connections from lst and starts a server for each using a
+// service instance returned by newService and the given options. Each server
 // runs in a new goroutine.
 //
 // If lst reports an error, the loop will terminate and that error will be
 // reported to the caller of Loop once any active servers have returned.
-func LoopContext(ctx context.Context, lst Accepter, newService func() Service, opts *LoopOptions) error {
+func Loop(ctx context.Context, lst Accepter, newService func() Service, opts *LoopOptions) error {
 	serverOpts := opts.serverOpts()
 	log := func(string, ...interface{}) {}
 	if serverOpts != nil && serverOpts.Logger != nil {
