@@ -626,9 +626,11 @@ func TestServer_nonLibraryClient(t *testing.T) {
 		{`{"jsonrpc": "2.0", "id": 6, "method": "X", "params": null}`,
 			`{"jsonrpc":"2.0","id":6,"result":"OK"}`},
 
-		// Correct requests, one with a non-null response, one with a null response.
+		// Correct requests.
 		{`{"jsonrpc":"2.0","id": 5, "method": "X"}`, `{"jsonrpc":"2.0","id":5,"result":"OK"}`},
 		{`{"jsonrpc":"2.0","id":21,"method":"Y"}`, `{"jsonrpc":"2.0","id":21,"result":null}`},
+		{`{"jsonrpc":"2.0","id":-1,"method":"X"}`, `{"jsonrpc":"2.0","id":-1,"result":"OK"}`},
+		{`{"jsonrpc":"2.0","id":-600,"method":"Y"}`, `{"jsonrpc":"2.0","id":-600,"result":null}`},
 
 		// A batch of correct requests.
 		{`[{"jsonrpc":"2.0", "id":"a1", "method":"X"}, {"jsonrpc":"2.0", "id":"a2", "method": "X"}]`,
