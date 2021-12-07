@@ -4,6 +4,7 @@
 package server
 
 import (
+	"context"
 	"net"
 	"sync"
 
@@ -39,8 +40,9 @@ func (static) Finish(jrpc2.Assigner, jrpc2.ServerStatus) {}
 // An Accepter obtains client connections from an external source and
 // constructs channels from them.
 type Accepter interface {
-	// Accept accepts a connection and returns a new channel for it.
-	Accept() (channel.Channel, error)
+	// Accept blocks until a connection is available, or until ctx ends.
+	// If a connection is found, Accept  returns a new channel for it.
+	Accept(ctx context.Context) (channel.Channel, error)
 }
 
 // NetAccepter adapts a net.Listener to the Accepter interface, using f as the
@@ -54,7 +56,20 @@ type netAccepter struct {
 	newChannel channel.Framing
 }
 
-func (n netAccepter) Accept() (channel.Channel, error) {
+func (n netAccepter) Accept(ctx context.Context) (channel.Channel, error) {
+	// A net.Listener does not obey a context, so simulate it by closing the
+	// listener if ctx ends.
+	ok := make(chan struct{})
+	defer close(ok)
+	go func() {
+		select {
+		case <-ctx.Done():
+			n.Listener.Close()
+		case <-ok:
+			return
+		}
+	}()
+
 	conn, err := n.Listener.Accept()
 	if err != nil {
 		return nil, err
@@ -62,14 +77,19 @@ func (n netAccepter) Accept() (channel.Channel, error) {
 	return n.newChannel(conn, conn), nil
 }
 
-// Loop obtains connections from lst and starts a server for each using a
-// service instance returned by newService and the given options. Each server
+// Loop calls LoopContext with the given arguments and a background context.
+// See LoopContext for details.
+func Loop(lst Accepter, newService func() Service, opts *LoopOptions) error {
+	return LoopContext(context.Background(), lst, newService, opts)
+}
+
+// LoopContext obtains connections from lst and starts a server for each using
+// a service instance returned by newService and the given options. Each server
 // runs in a new goroutine.
 //
-// If the listener reports an error, the loop will terminate and that error
-// will be reported to the caller of Loop once any active servers have
-// returned.
-func Loop(lst Accepter, newService func() Service, opts *LoopOptions) error {
+// If lst reports an error, the loop will terminate and that error will be
+// reported to the caller of Loop once any active servers have returned.
+func LoopContext(ctx context.Context, lst Accepter, newService func() Service, opts *LoopOptions) error {
 	serverOpts := opts.serverOpts()
 	log := func(string, ...interface{}) {}
 	if serverOpts != nil && serverOpts.Logger != nil {
@@ -78,7 +98,7 @@ func Loop(lst Accepter, newService func() Service, opts *LoopOptions) error {
 
 	var wg sync.WaitGroup
 	for {
-		ch, err := lst.Accept()
+		ch, err := lst.Accept(ctx)
 		if err != nil {
 			if channel.IsErrClosing(err) {
 				err = nil
