@@ -36,19 +36,18 @@ func main() {
 	http.Handle("/rpc", lst)
 	go hs.ListenAndServe()
 
-	acc := accepter{
-		Listener: lst,
-		ctx:      context.Background(),
-	}
-	svc := handler.Map{"Reverse": handler.New(reverse)}
+	svc := server.Static(handler.Map{
+		"Reverse": handler.New(reverse),
+	})
 
 	log.Printf("Listing at ws://%s/rpc", *listenAddr)
-	err := server.Loop(acc, server.Static(svc), &server.LoopOptions{
+	ctx := context.Background()
+	err := server.Loop(ctx, accepter{lst}, svc, &server.LoopOptions{
 		ServerOptions: &jrpc2.ServerOptions{
 			Logger: jrpc2.StdLogger(nil),
 		},
 	})
-	hs.Shutdown(acc.ctx)
+	hs.Shutdown(ctx)
 	if err != nil {
 		log.Fatalf("Loop exited: %v", err)
 	}
@@ -62,11 +61,8 @@ func reverse(_ context.Context, ss []string) []string {
 	return ss
 }
 
-type accepter struct {
-	*wschannel.Listener
-	ctx context.Context
-}
+type accepter struct{ *wschannel.Listener }
 
-func (a accepter) Accept() (channel.Channel, error) {
-	return a.Listener.Accept(a.ctx)
+func (a accepter) Accept(ctx context.Context) (channel.Channel, error) {
+	return a.Listener.Accept(ctx)
 }
