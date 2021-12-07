@@ -81,8 +81,9 @@ func (n netAccepter) Accept(ctx context.Context) (channel.Channel, error) {
 // service instance returned by newService and the given options. Each server
 // runs in a new goroutine.
 //
-// If lst reports an error, the loop will terminate and that error will be
-// reported to the caller of Loop once any active servers have returned.
+// If lst is closed or otherwise reports an error, the loop will terminate.
+// The error will be reported to the caller of Loop once any active servers
+// have returned. In addition, if ctx ends, any active servers will be stopped.
 func Loop(ctx context.Context, lst Accepter, newService func() Service, opts *LoopOptions) error {
 	serverOpts := opts.serverOpts()
 	log := func(string, ...interface{}) {}
@@ -105,13 +106,20 @@ func Loop(ctx context.Context, lst Accepter, newService func() Service, opts *Lo
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+
 			svc := newService()
 			assigner, err := svc.Assigner()
 			if err != nil {
 				log("Service initialization failed: %v", err)
 				return
 			}
+
+			sctx, cancel := context.WithCancel(ctx)
+			defer cancel()
+
 			srv := jrpc2.NewServer(assigner, serverOpts).Start(ch)
+			go func() { <-sctx.Done(); srv.Stop() }()
+
 			stat := srv.WaitStatus()
 			svc.Finish(assigner, stat)
 			if stat.Err != nil {

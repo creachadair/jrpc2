@@ -124,17 +124,15 @@ func TestSeq(t *testing.T) {
 }
 
 // Test that context plumbing works properly.
-func TestLoop_cancellation(t *testing.T) {
+func TestLoop_cancelContext(t *testing.T) {
 	defer leaktest.Check(t)()
 
 	ctx, cancel := context.WithCancel(context.Background())
-	lst := server.NetAccepter(mustListen(t), channel.Line)
+	defer cancel()
 
-	errc := make(chan error, 1)
-	go func() {
-		defer close(errc)
-		errc <- server.Loop(ctx, lst, testStatic, nil)
-	}()
+	lst := mustListen(t)
+	defer lst.Close()
+	errc := mustServe(t, ctx, lst, testStatic)
 
 	time.AfterFunc(50*time.Millisecond, cancel)
 	select {
@@ -144,6 +142,46 @@ func TestLoop_cancellation(t *testing.T) {
 		}
 	case <-time.After(1 * time.Second):
 		t.Fatalf("Loop did not exit in a timely manner after cancellation")
+	}
+}
+
+// Test that cancelling a loop stops its servers.
+func TestLoop_cancelServers(t *testing.T) {
+	defer leaktest.Check(t)()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	ready := make(chan struct{})
+
+	lst := mustListen(t)
+	errc := mustServe(t, ctx, lst, server.Static(handler.Map{
+		"Test": handler.New(func(ctx context.Context) error {
+			// Signal readiness then block until cancelled.
+			// The server will cancel this method when stopped.
+			close(ready)
+			<-ctx.Done()
+			return ctx.Err()
+		}),
+	}))
+	cli := mustDial(t, lst.Addr().String())
+	defer cli.Close()
+
+	// Issue a call to the server that will block until the server cancels the
+	// handler at shutdown. If the server blocks after cancellation, it means it
+	// is not correctly stopping its active servers.
+	go cli.Call(context.Background(), "Test", nil)
+
+	<-ready
+	cancel() // this should stop the loop and the server
+
+	select {
+	case err := <-errc:
+		if err != nil {
+			t.Errorf("Loop result: %v", err)
+		}
+	case <-time.After(1 * time.Second):
+		t.Error("Loop did not exit in a timely manner after cancellation")
 	}
 }
 
