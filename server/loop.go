@@ -56,7 +56,20 @@ type netAccepter struct {
 	newChannel channel.Framing
 }
 
-func (n netAccepter) Accept(context.Context) (channel.Channel, error) {
+func (n netAccepter) Accept(ctx context.Context) (channel.Channel, error) {
+	// A net.Listener does not obey a context, so simulate it by closing the
+	// listener if ctx ends.
+	ok := make(chan struct{})
+	defer close(ok)
+	go func() {
+		select {
+		case <-ctx.Done():
+			n.Listener.Close()
+		case <-ok:
+			return
+		}
+	}()
+
 	conn, err := n.Listener.Accept()
 	if err != nil {
 		return nil, err
