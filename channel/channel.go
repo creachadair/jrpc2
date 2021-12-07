@@ -63,10 +63,15 @@ type Channel interface {
 	Close() error
 }
 
-// IsErrClosing reports whether err is the internal error returned by a read
-// from a pipe or socket that is closed. This is false for err == nil.
+// ErrClosed is a sentinel error that can be returned to indicate an operation
+// failed because the channel was closed.
+var ErrClosed = errors.New("channel is closed")
+
+// IsErrClosing reports whether err is a channel-closed error.  This is true
+// for the internal error returned by a read from a pipe or socket that is
+// closed, or an error that wraps ErrClosed. It is false if err == nil.
 func IsErrClosing(err error) bool {
-	return err != nil && errors.Is(err, net.ErrClosed)
+	return err != nil && (errors.Is(err, ErrClosed) || errors.Is(err, net.ErrClosed))
 }
 
 // A Framing converts a reader and a writer into a Channel with a particular
