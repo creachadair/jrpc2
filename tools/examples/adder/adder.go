@@ -24,7 +24,7 @@ import (
 )
 
 // Add will be exported as a method named "Add".
-func Add(ctx context.Context, vs ...int) int {
+func Add(ctx context.Context, vs []int) int {
 	sum := 0
 	for _, v := range vs {
 		sum += v
