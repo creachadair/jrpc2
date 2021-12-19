@@ -19,9 +19,12 @@ type Assigner interface {
 	// The implementation can obtain the complete request from ctx using the
 	// jrpc2.InboundRequest function.
 	Assign(ctx context.Context, method string) Handler
+}
 
-	// Names returns a slice of all known method names for the assigner.  The
-	// resulting slice is ordered lexicographically and contains no duplicates.
+// Namer is an optional interface that an Assigner may implement to expose the
+// names of its methods to the ServerInfo method.
+type Namer interface {
+	// Names returns all known method names in lexicographic order.
 	Names() []string
 }
 

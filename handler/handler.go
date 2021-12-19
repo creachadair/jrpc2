@@ -32,7 +32,7 @@ type Map map[string]jrpc2.Handler
 // Assign implements part of the jrpc2.Assigner interface.
 func (m Map) Assign(_ context.Context, method string) jrpc2.Handler { return m[method] }
 
-// Names implements part of the jrpc2.Assigner interface.
+// Names implements the optional jrpc2.Namer extension interface.
 func (m Map) Names() []string {
 	var names []string
 	for name := range m {
@@ -65,7 +65,12 @@ func (m ServiceMap) Assign(ctx context.Context, method string) jrpc2.Handler {
 func (m ServiceMap) Names() []string {
 	var all []string
 	for svc, assigner := range m {
-		for _, name := range assigner.Names() {
+		namer, ok := assigner.(jrpc2.Namer)
+		if !ok {
+			all = append(all, svc+".*")
+			continue
+		}
+		for _, name := range namer.Names() {
 			all = append(all, svc+"."+name)
 		}
 	}

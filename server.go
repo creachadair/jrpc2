@@ -350,11 +350,14 @@ func (s *Server) invoke(base context.Context, h Handler, req *Request) (json.Raw
 // ServerInfo returns an atomic snapshot of the current server info for s.
 func (s *Server) ServerInfo() *ServerInfo {
 	info := &ServerInfo{
-		Methods:   s.mux.Names(),
+		Methods:   []string{"*"},
 		StartTime: s.start,
 		Counter:   make(map[string]int64),
 		MaxValue:  make(map[string]int64),
 		Label:     make(map[string]interface{}),
+	}
+	if n, ok := s.mux.(Namer); ok {
+		info.Methods = n.Names()
 	}
 	s.metrics.Snapshot(metrics.Snapshot{
 		Counter:  info.Counter,
