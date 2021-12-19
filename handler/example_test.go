@@ -69,12 +69,13 @@ func ExampleObj_unmarshal() {
 	// uid=501, name="P. T. Barnum"
 }
 
+func describe(_ context.Context, name string, age int, isOld bool) error {
+	fmt.Printf("%s is %d (old: %v)\n", name, age, isOld)
+	return nil
+}
+
 func ExamplePositional_object() {
-	fn := func(ctx context.Context, name string, age int, isOld bool) error {
-		fmt.Printf("%s is %d (is old: %v)\n", name, age, isOld)
-		return nil
-	}
-	call := handler.NewPos(fn, "name", "age", "isOld")
+	call := handler.NewPos(describe, "name", "age", "isOld")
 
 	req := mustParseReq(`{
 	  "jsonrpc": "2.0",
@@ -90,15 +91,11 @@ func ExamplePositional_object() {
 		log.Fatalf("Call: %v", err)
 	}
 	// Output:
-	// Dennis is 37 (is old: false)
+	// Dennis is 37 (old: false)
 }
 
 func ExamplePositional_array() {
-	fn := func(ctx context.Context, name string, age int, isOld bool) error {
-		fmt.Printf("%s is %d (is old: %v)\n", name, age, isOld)
-		return nil
-	}
-	call := handler.NewPos(fn, "name", "age", "isOld")
+	call := handler.NewPos(describe, "name", "age", "isOld")
 
 	req := mustParseReq(`{
 	  "jsonrpc": "2.0",
@@ -110,7 +107,7 @@ func ExamplePositional_array() {
 		log.Fatalf("Call: %v", err)
 	}
 	// Output:
-	// Marvin is 973000 (is old: true)
+	// Marvin is 973000 (old: true)
 }
 
 func mustParseReq(s string) *jrpc2.Request {
