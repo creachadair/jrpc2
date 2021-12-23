@@ -163,62 +163,6 @@ func TestBridge(t *testing.T) {
 	})
 }
 
-// Verify that the content-type check hook works.
-func TestBridge_requestCheck(t *testing.T) {
-	defer leaktest.Check(t)()
-
-	b := jhttp.NewBridge(testService, &jhttp.BridgeOptions{
-		CheckRequest: func(req *http.Request) error {
-			if req.Header.Get("x-test-header") == "fail" {
-				return errors.New("request rejected")
-			}
-			return nil
-		},
-	})
-	defer checkClose(t, b)
-
-	hsrv := httptest.NewServer(b)
-	defer hsrv.Close()
-
-	const reqBody = `{"jsonrpc":"2.0","id":1,"method":"Test1","params":["a","b","c"]}`
-	const wantReply = `{"jsonrpc":"2.0","id":1,"result":3}`
-
-	t.Run("Succeed", func(t *testing.T) {
-		// With a check hook set, the method and content-type checks should not happen.
-		req, err := http.NewRequest("GET", hsrv.URL, strings.NewReader(reqBody))
-		if err != nil {
-			t.Fatalf("NewRequest: %v", err)
-		}
-
-		rsp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			t.Fatalf("GET request failed: %v", err)
-		} else if got, want := rsp.StatusCode, http.StatusOK; got != want {
-			t.Errorf("GET response code: got %v, want %v", got, want)
-		}
-		body, _ := io.ReadAll(rsp.Body)
-		rsp.Body.Close()
-		if got := string(body); got != wantReply {
-			t.Errorf("Response: got %#q, want %#q", got, wantReply)
-		}
-	})
-
-	t.Run("CheckFailed", func(t *testing.T) {
-		req, err := http.NewRequest("POST", hsrv.URL, strings.NewReader(reqBody))
-		if err != nil {
-			t.Fatalf("NewRequest: %v", err)
-		}
-		req.Header.Set("X-Test-Header", "fail")
-
-		rsp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			t.Fatalf("POST request failed: %v", err)
-		} else if got, want := rsp.StatusCode, http.StatusInternalServerError; got != want {
-			t.Errorf("POST response code: got %v, want %v", got, want)
-		}
-	})
-}
-
 // Verify that the request-parsing hook works.
 func TestBridge_parseRequest(t *testing.T) {
 	defer leaktest.Check(t)()

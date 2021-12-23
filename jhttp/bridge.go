@@ -26,8 +26,8 @@ import (
 // Allowed). If the Content-Type is not application/json, the bridge reports
 // 415 (Unsupported Media Type).
 //
-// If either a CheckRequest or ParseRequest hook is set, these requirements are
-// disabled, and the hooks are responsible for checking request structure.
+// If a ParseRequest hook is set, these requirements are disabled, and the hook
+// is entirely responsible for checking request structure.
 //
 // If the request completes, whether or not there is an error, the HTTP
 // response is 200 (OK) for ordinary requests or 204 (No Response) for
@@ -38,16 +38,14 @@ import (
 // headers. Use jhttp.HTTPRequest to retrieve the request from the context.
 type Bridge struct {
 	local    server.Local
-	checkReq func(*http.Request) error
 	parseReq func(*http.Request) ([]*jrpc2.Request, error)
 }
 
 // ServeHTTP implements the required method of http.Handler.
 func (b Bridge) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	// If neither a check hook nor a parse hook are defined, insist that the
-	// method is POST and the content-type is application/json.  Setting either
-	// hook disables these checks.
-	if b.checkReq == nil && b.parseReq == nil {
+	// If no parse hook is defined, insist that the method is POST and the
+	// content-type is application/json.  Setting a hook disables these checks.
+	if b.parseReq == nil {
 		if req.Method != "POST" {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
@@ -56,11 +54,6 @@ func (b Bridge) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			w.WriteHeader(http.StatusUnsupportedMediaType)
 			return
 		}
-	}
-	if err := b.checkHTTPRequest(req); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintln(w, err.Error())
-		return
 	}
 	if err := b.serveInternal(w, req); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -128,33 +121,7 @@ func (b Bridge) serveInternal(w http.ResponseWriter, req *http.Request) error {
 		rsp.SetID(inboundID[i])
 	}
 
-	// If there is only a single reply, send it alone; otherwise encode a batch.
-	// Per the spec (https://www.jsonrpc.org/specification#batch), this is OK;
-	// we are not required to respond to a batch with an array:
-	//
-	//   The Server SHOULD respond with an Array containing the corresponding
-	//   Response objects
-	//
-	var reply []byte
-	if len(rsps) == 1 {
-		reply, err = json.Marshal(rsps[0])
-	} else {
-		reply, err = json.Marshal(rsps)
-	}
-	if err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Content-Length", strconv.Itoa(len(reply)))
-	w.Write(reply)
-	return nil
-}
-
-func (b Bridge) checkHTTPRequest(req *http.Request) error {
-	if b.checkReq != nil {
-		return b.checkReq(req)
-	}
-	return nil
+	return b.encodeResponses(rsps, w)
 }
 
 func (b Bridge) parseHTTPRequest(req *http.Request) ([]*jrpc2.Request, error) {
@@ -166,6 +133,24 @@ func (b Bridge) parseHTTPRequest(req *http.Request) ([]*jrpc2.Request, error) {
 		return nil, err
 	}
 	return jrpc2.ParseRequests(body)
+}
+
+func (b Bridge) encodeResponses(rsps []*jrpc2.Response, w http.ResponseWriter) error {
+	// If there is only a single reply, send it alone; otherwise encode a batch.
+	// Per the spec (https://www.jsonrpc.org/specification#batch), this is OK;
+	// we are not required to respond to a batch with an array:
+	//
+	//   The Server SHOULD respond with an Array containing the corresponding
+	//   Response objects
+	//
+	data, err := marshalResponses(rsps)
+	if err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Length", strconv.Itoa(len(data)))
+	_, err = w.Write(data)
+	return err
 }
 
 // Close closes the channel to the server, waits for the server to exit, and
@@ -187,7 +172,6 @@ func NewBridge(mux jrpc2.Assigner, opts *BridgeOptions) Bridge {
 			Client: opts.clientOptions(),
 			Server: opts.serverOptions(),
 		}),
-		checkReq: opts.checkRequest(),
 		parseReq: opts.parseRequest(),
 	}
 }
@@ -200,13 +184,6 @@ type BridgeOptions struct {
 
 	// Options for the bridge server (default nil).
 	Server *jrpc2.ServerOptions
-
-	// If non-nil, this function is called to check the HTTP request.  If this
-	// function reports an error, the request is rejected.
-	//
-	// Setting this hook disables the default requirement that the request
-	// method be POST and the content-type be application/json.
-	CheckRequest func(*http.Request) error
 
 	// If non-nil, this function is called to parse JSON-RPC requests from the
 	// HTTP request. If this function reports an error, the request fails.  By
@@ -231,13 +208,6 @@ func (o *BridgeOptions) serverOptions() *jrpc2.ServerOptions {
 	return o.Server
 }
 
-func (o *BridgeOptions) checkRequest() func(*http.Request) error {
-	if o == nil {
-		return nil
-	}
-	return o.CheckRequest
-}
-
 func (o *BridgeOptions) parseRequest() func(*http.Request) ([]*jrpc2.Request, error) {
 	if o == nil {
 		return nil
@@ -255,4 +225,12 @@ func HTTPRequest(ctx context.Context) *http.Request {
 		return req
 	}
 	return nil
+}
+
+// marshalResponses encodes a batch of JSON-RPC responses into JSON.
+func marshalResponses(rsps []*jrpc2.Response) ([]byte, error) {
+	if len(rsps) == 1 {
+		return json.Marshal(rsps[0])
+	}
+	return json.Marshal(rsps)
 }
