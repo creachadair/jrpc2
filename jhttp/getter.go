@@ -1,3 +1,5 @@
+// Copyright (C) 2021 Michael J. Fromberger. All Rights Reserved.
+
 package jhttp
 
 import (
