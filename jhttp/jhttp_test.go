@@ -49,49 +49,29 @@ func TestBridge(t *testing.T) {
 
 	// Verify that a valid POST request succeeds.
 	t.Run("PostOK", func(t *testing.T) {
-		rsp, err := http.Post(hsrv.URL, "application/json", strings.NewReader(`{
+		got := mustPost(t, hsrv.URL, `{
 		  "jsonrpc": "2.0",
 		  "id": 1,
 		  "method": "Test1",
 		  "params": ["a", "foolish", "consistency", "is", "the", "hobgoblin"]
-		}
-		`))
-		if err != nil {
-			t.Fatalf("POST request failed: %v", err)
-		} else if got, want := rsp.StatusCode, http.StatusOK; got != want {
-			t.Errorf("POST response code: got %v, want %v", got, want)
-		}
-		body, err := io.ReadAll(rsp.Body)
-		if err != nil {
-			t.Errorf("Reading POST body: %v", err)
-		}
+		}`, http.StatusOK)
 
 		const want = `{"jsonrpc":"2.0","id":1,"result":6}`
-		if got := string(body); got != want {
+		if got != want {
 			t.Errorf("POST body: got %#q, want %#q", got, want)
 		}
 	})
 
 	// Verify that the bridge will accept a batch.
 	t.Run("PostBatchOK", func(t *testing.T) {
-		rsp, err := http.Post(hsrv.URL, "application/json", strings.NewReader(`[
+		got := mustPost(t, hsrv.URL, `[
 		  {"jsonrpc":"2.0", "id": 3, "method": "Test1", "params": ["first"]},
 		  {"jsonrpc":"2.0", "id": 7, "method": "Test1", "params": ["among", "equals"]}
-		]
-		`))
-		if err != nil {
-			t.Fatalf("POST request failed: %v", err)
-		} else if got, want := rsp.StatusCode, http.StatusOK; got != want {
-			t.Errorf("POST response code: got %v, want %v", got, want)
-		}
-		body, err := io.ReadAll(rsp.Body)
-		if err != nil {
-			t.Errorf("Reading POST body: %v", err)
-		}
+		]`, http.StatusOK)
 
 		const want = `[{"jsonrpc":"2.0","id":3,"result":1},` +
 			`{"jsonrpc":"2.0","id":7,"result":2}]`
-		if got := string(body); got != want {
+		if got != want {
 			t.Errorf("POST body: got %#q, want %#q", got, want)
 		}
 	})
@@ -112,52 +92,32 @@ func TestBridge(t *testing.T) {
 		rsp, err := http.Post(hsrv.URL, "text/plain", strings.NewReader(`{}`))
 		if err != nil {
 			t.Fatalf("POST request failed: %v", err)
-		}
-		if got, want := rsp.StatusCode, http.StatusUnsupportedMediaType; got != want {
-			t.Errorf("POST status: got %v, want %v", got, want)
+		} else if got, want := rsp.StatusCode, http.StatusUnsupportedMediaType; got != want {
+			t.Errorf("POST response code: got %v, want %v", got, want)
 		}
 	})
 
 	// Verify that a POST that generates a JSON-RPC error succeeds.
 	t.Run("PostErrorReply", func(t *testing.T) {
-		rsp, err := http.Post(hsrv.URL, "application/json", strings.NewReader(`{
+		got := mustPost(t, hsrv.URL, `{
 		  "id": 1,
 		  "jsonrpc": "2.0"
-		}
-		`))
-		if err != nil {
-			t.Fatalf("POST request failed: %v", err)
-		} else if got, want := rsp.StatusCode, http.StatusOK; got != want {
-			t.Errorf("POST status: got %v, want %v", got, want)
-		}
-		body, err := io.ReadAll(rsp.Body)
-		if err != nil {
-			t.Errorf("Reading POST body: %v", err)
-		}
+		}`, http.StatusOK)
 
 		const exp = `{"jsonrpc":"2.0","id":1,"error":{"code":-32600,"message":"empty method name"}}`
-		if got := string(body); got != exp {
+		if got != exp {
 			t.Errorf("POST body: got %#q, want %#q", got, exp)
 		}
 	})
 
 	// Verify that a notification returns an empty success.
 	t.Run("PostNotification", func(t *testing.T) {
-		rsp, err := http.Post(hsrv.URL, "application/json", strings.NewReader(`{
+		got := mustPost(t, hsrv.URL, `{
 		  "jsonrpc": "2.0",
 		  "method": "TakeNotice",
 		  "params": []
-		}`))
-		if err != nil {
-			t.Fatalf("POST request failed: %v", err)
-		} else if got, want := rsp.StatusCode, http.StatusNoContent; got != want {
-			t.Errorf("POST status: got %v, want %v", got, want)
-		}
-		body, err := io.ReadAll(rsp.Body)
-		if err != nil {
-			t.Errorf("Reading POST body: %v", err)
-		}
-		if got := string(body); got != "" {
+		}`, http.StatusNoContent)
+		if got != "" {
 			t.Errorf("POST body: got %q, want empty", got)
 		}
 	})
@@ -219,6 +179,21 @@ func TestBridge_parseRequest(t *testing.T) {
 			t.Errorf("POST response code: got %v, want %v", got, want)
 		}
 	})
+}
+
+func mustPost(t *testing.T, url, req string, code int) string {
+	t.Helper()
+	rsp, err := http.Post(url, "application/json", strings.NewReader(req))
+	if err != nil {
+		t.Fatalf("POST request failed: %v", err)
+	} else if got := rsp.StatusCode; got != code {
+		t.Errorf("POST response code: got %v, want %v", got, code)
+	}
+	body, err := io.ReadAll(rsp.Body)
+	if err != nil {
+		t.Errorf("Reading POST body: %v", err)
+	}
+	return string(body)
 }
 
 func TestChannel(t *testing.T) {
