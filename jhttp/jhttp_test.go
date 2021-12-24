@@ -181,21 +181,6 @@ func TestBridge_parseRequest(t *testing.T) {
 	})
 }
 
-func mustPost(t *testing.T, url, req string, code int) string {
-	t.Helper()
-	rsp, err := http.Post(url, "application/json", strings.NewReader(req))
-	if err != nil {
-		t.Fatalf("POST request failed: %v", err)
-	} else if got := rsp.StatusCode; got != code {
-		t.Errorf("POST response code: got %v, want %v", got, code)
-	}
-	body, err := io.ReadAll(rsp.Body)
-	if err != nil {
-		t.Errorf("Reading POST body: %v", err)
-	}
-	return string(body)
-}
-
 func TestChannel(t *testing.T) {
 	defer leaktest.Check(t)()
 
@@ -263,4 +248,19 @@ func checkClose(t *testing.T, c io.Closer) {
 	if err := c.Close(); err != nil {
 		t.Errorf("Error in Close: %v", err)
 	}
+}
+
+func mustPost(t *testing.T, url, req string, code int) string {
+	t.Helper()
+	rsp, err := http.Post(url, "application/json", strings.NewReader(req))
+	if err != nil {
+		t.Fatalf("POST request failed: %v", err)
+	} else if got := rsp.StatusCode; got != code {
+		t.Errorf("POST response code: got %v, want %v", got, code)
+	}
+	body, err := io.ReadAll(rsp.Body)
+	if err != nil {
+		t.Errorf("Reading POST body: %v", err)
+	}
+	return string(body)
 }
