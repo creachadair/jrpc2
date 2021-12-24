@@ -130,7 +130,7 @@ func isValidID(v json.RawMessage) bool {
 }
 
 func (j *jmessage) fail(code code.Code, msg string) {
-	j.err = Errorf(code, msg)
+	j.err = &Error{Code: code, Message: msg}
 }
 
 func (j *jmessage) toJSON() ([]byte, error) {
