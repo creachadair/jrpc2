@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
 
 	"github.com/creachadair/jrpc2"
 	"github.com/creachadair/jrpc2/server"
@@ -29,6 +28,9 @@ import (
 // If a ParseRequest hook is set, these requirements are disabled, and the hook
 // is entirely responsible for checking request structure.
 //
+// If a ParseGETRequest hook is set, HTTP "GET" requests are handled by a
+// Getter using that hook; otherwise "GET" requests are handled as above.
+//
 // If the request completes, whether or not there is an error, the HTTP
 // response is 200 (OK) for ordinary requests or 204 (No Response) for
 // notifications, and the response body contains the JSON-RPC response.
@@ -39,12 +41,19 @@ import (
 type Bridge struct {
 	local    server.Local
 	parseReq func(*http.Request) ([]*jrpc2.Request, error)
+	getter   *Getter
 }
 
 // ServeHTTP implements the required method of http.Handler.
 func (b Bridge) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	// If a GET hook is defined, allow GET requests.
+	if req.Method == "GET" && b.getter != nil {
+		b.getter.ServeHTTP(w, req)
+		return
+	}
+
 	// If no parse hook is defined, insist that the method is POST and the
-	// content-type is application/json.  Setting a hook disables these checks.
+	// content-type is application/json. Setting a hook disables these checks.
 	if b.parseReq == nil {
 		if req.Method != "POST" {
 			w.WriteHeader(http.StatusMethodNotAllowed)
@@ -147,15 +156,18 @@ func (b Bridge) encodeResponses(rsps []*jrpc2.Response, w http.ResponseWriter) e
 	if err != nil {
 		return err
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Content-Length", strconv.Itoa(len(data)))
-	_, err = w.Write(data)
-	return err
+	writeJSON(w, http.StatusOK, json.RawMessage(data))
+	return nil
 }
 
 // Close closes the channel to the server, waits for the server to exit, and
 // reports its exit status.
-func (b Bridge) Close() error { return b.local.Close() }
+func (b Bridge) Close() error {
+	if b.getter != nil {
+		b.getter.Close()
+	}
+	return b.local.Close()
+}
 
 // NewBridge constructs a new Bridge that starts a server on mux and dispatches
 // HTTP requests to it.  The server will run until the bridge is closed.
@@ -167,13 +179,22 @@ func (b Bridge) Close() error { return b.local.Close() }
 // hooks on the bridge client as usual, but the remote client will not see push
 // messages from the server.
 func NewBridge(mux jrpc2.Assigner, opts *BridgeOptions) Bridge {
-	return Bridge{
+	b := Bridge{
 		local: server.NewLocal(mux, &server.LocalOptions{
 			Client: opts.clientOptions(),
 			Server: opts.serverOptions(),
 		}),
 		parseReq: opts.parseRequest(),
 	}
+	if pget := opts.parseGETRequest(); pget != nil {
+		g := NewGetter(mux, &GetterOptions{
+			Client:       opts.clientOptions(),
+			Server:       opts.serverOptions(),
+			ParseRequest: pget,
+		})
+		b.getter = &g
+	}
+	return b
 }
 
 // BridgeOptions are optional settings for a Bridge. A nil pointer is ready for
@@ -186,12 +207,21 @@ type BridgeOptions struct {
 	Server *jrpc2.ServerOptions
 
 	// If non-nil, this function is called to parse JSON-RPC requests from the
-	// HTTP request. If this function reports an error, the request fails.  By
-	// default, the bridge uses jrpc2.ParseRequests on the HTTP request body.
+	// HTTP request body. If this function reports an error, the request fails.
+	// By default, the bridge uses jrpc2.ParseRequests on the HTTP request body.
 	//
 	// Setting this hook disables the default requirement that the request
 	// method be POST and the content-type be application/json.
 	ParseRequest func(*http.Request) ([]*jrpc2.Request, error)
+
+	// If non-nil, this function is used to parse JSON-RPC requests from the URL
+	// of an HTTP GET request for a method name and parameters. If this function
+	// reports an error, the request fails.
+	//
+	// If this hook is set, all GET requests are handled by a Getter using this
+	// parse function, and are not passed to a ParseRequest hook even if one is
+	// defined.
+	ParseGETRequest func(*http.Request) (string, interface{}, error)
 }
 
 func (o *BridgeOptions) clientOptions() *jrpc2.ClientOptions {
@@ -213,6 +243,13 @@ func (o *BridgeOptions) parseRequest() func(*http.Request) ([]*jrpc2.Request, er
 		return nil
 	}
 	return o.ParseRequest
+}
+
+func (o *BridgeOptions) parseGETRequest() func(*http.Request) (string, interface{}, error) {
+	if o == nil {
+		return nil
+	}
+	return o.ParseGETRequest
 }
 
 type httpReqKey struct{}

@@ -181,6 +181,53 @@ func TestBridge_parseRequest(t *testing.T) {
 	})
 }
 
+func TestBridge_parseGETRequest(t *testing.T) {
+	defer leaktest.Check(t)()
+
+	mux := handler.Map{
+		"str/eq": handler.NewPos(func(ctx context.Context, a, b string) bool {
+			return a == b
+		}, "lhs", "rhs"),
+	}
+	b := jhttp.NewBridge(mux, &jhttp.BridgeOptions{
+		ParseGETRequest: func(req *http.Request) (string, interface{}, error) {
+			if err := req.ParseForm(); err != nil {
+				return "", nil, err
+			}
+			method := strings.Trim(req.URL.Path, "/")
+			params := make(map[string]string)
+			for key := range req.Form {
+				params[key] = req.Form.Get(key)
+			}
+			return method, params, nil
+		},
+	})
+	defer checkClose(t, b)
+
+	hsrv := httptest.NewServer(b)
+	defer hsrv.Close()
+	url := func(pathQuery string) string {
+		return hsrv.URL + "/" + pathQuery
+	}
+
+	t.Run("GET", func(t *testing.T) {
+		got := mustGet(t, url("str/eq?rhs=fizz&lhs=buzz"), http.StatusOK)
+		const want = `false`
+		if got != want {
+			t.Errorf("Response body: got %#q, want %#q", got, want)
+		}
+	})
+	t.Run("POST", func(t *testing.T) {
+		const req = `{"jsonrpc":"2.0", "id":1, "method":"str/eq", "params":["foo","foo"]}`
+		got := mustPost(t, hsrv.URL, req, http.StatusOK)
+
+		const want = `{"jsonrpc":"2.0","id":1,"result":true}`
+		if got != want {
+			t.Errorf("Response body: got %#q, want %#q", got, want)
+		}
+	})
+}
+
 func TestChannel(t *testing.T) {
 	defer leaktest.Check(t)()
 
