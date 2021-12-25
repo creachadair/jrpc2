@@ -47,6 +47,6 @@ func main() {
 	log.Fatal(http.ListenAndServe(*listenAddr, nil))
 }
 
-func ping(ctx context.Context, msg ...string) string {
+func ping(ctx context.Context, msg []string) string {
 	return "OK: " + strings.Join(msg, "|")
 }
