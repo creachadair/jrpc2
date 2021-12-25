@@ -549,6 +549,9 @@ func TestServer_serverInfoMetrics(t *testing.T) {
 	if _, err := c.Call(ctx, "Metricize", nil); err != nil {
 		t.Fatalf("Call(Metricize) failed: %v", err)
 	}
+	if got := s.ServerInfo().Counter["rpc.serversActive"]; got != 1 {
+		t.Errorf("Metric rpc.serversActive: got %d, want 1", got)
+	}
 	loc.Close()
 
 	info := s.ServerInfo()
@@ -562,6 +565,7 @@ func TestServer_serverInfoMetrics(t *testing.T) {
 		{info.Counter, "zero-sum", 0},
 		{info.Counter, "rpc.bytesRead", -1},
 		{info.Counter, "rpc.bytesWritten", -1},
+		{info.Counter, "rpc.serversActive", 0},
 		{info.MaxValue, "max-metric-value", 5},
 		{info.MaxValue, "rpc.bytesRead", -1},
 		{info.MaxValue, "rpc.bytesWritten", -1},

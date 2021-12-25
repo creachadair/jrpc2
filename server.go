@@ -102,6 +102,7 @@ func (s *Server) Start(c channel.Channel) *Server {
 	if s.start.IsZero() {
 		s.start = time.Now().In(time.UTC)
 	}
+	s.metrics.Count("rpc.serversActive", 1)
 
 	// Reset all the I/O structures and start up the workers.
 	s.err = nil
@@ -581,6 +582,7 @@ func (s *Server) stop(err error) {
 
 	s.err = err
 	s.ch = nil
+	s.metrics.Count("rpc.serversActive", -1)
 }
 
 // read is the main receiver loop, decoding requests from the client and adding
