@@ -40,7 +40,7 @@ func main() {
 		"Reverse": handler.New(reverse),
 	})
 
-	log.Printf("Listing at ws://%s/rpc", *listenAddr)
+	log.Printf("Listening at ws://%s/rpc", *listenAddr)
 	ctx := context.Background()
 	err := server.Loop(ctx, accepter{lst}, svc, &server.LoopOptions{
 		ServerOptions: &jrpc2.ServerOptions{
