@@ -3,7 +3,6 @@
 package jrpc2
 
 import (
-	"container/list"
 	"context"
 	"encoding/json"
 	"errors"
@@ -42,7 +41,7 @@ type Server struct {
 	nbar sync.WaitGroup  // notification barrier (see the dispatch method)
 	err  error           // error from a previous operation
 	work *sync.Cond      // for signaling message availability
-	inq  *list.List      // inbound requests awaiting processing
+	inq  *queue          // inbound requests awaiting processing
 	ch   channel.Channel // the channel to the client
 
 	// For each request ID currently in-flight, this map carries a cancel
@@ -78,7 +77,7 @@ func NewServer(mux Assigner, opts *ServerOptions) *Server {
 		metrics: opts.metrics(),
 		start:   opts.startTime(),
 		builtin: opts.allowBuiltin(),
-		inq:     list.New(),
+		inq:     newQueue(),
 		used:    make(map[string]context.CancelFunc),
 		call:    make(map[string]*Response),
 		callID:  1,
@@ -162,16 +161,16 @@ func (s *Server) serve() {
 func (s *Server) nextRequest() (func() error, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	for s.ch != nil && s.inq.Len() == 0 {
+	for s.ch != nil && s.inq.isEmpty() {
 		s.work.Wait()
 	}
-	if s.ch == nil && s.inq.Len() == 0 {
+	if s.ch == nil && s.inq.isEmpty() {
 		return nil, s.err
 	}
 	ch := s.ch // capture
 
-	next := s.inq.Remove(s.inq.Front()).(jmessages)
-	s.log("Dequeued request batch of length %d (qlen=%d)", len(next), s.inq.Len())
+	next := s.inq.pop()
+	s.log("Dequeued request batch of length %d (qlen=%d)", len(next), s.inq.size())
 
 	// Construct a dispatcher to run the handlers outside the lock.
 	return s.dispatch(next, ch), nil
@@ -519,7 +518,7 @@ func (s ServerStatus) Success() bool { return s.Err == nil }
 func (s *Server) WaitStatus() ServerStatus {
 	s.wg.Wait()
 	// Postcondition check.
-	if s.inq.Len() != 0 {
+	if !s.inq.isEmpty() {
 		panic("s.inq is not empty at shutdown")
 	}
 	stat := ServerStatus{Err: s.err}
@@ -552,8 +551,8 @@ func (s *Server) stop(err error) {
 	//
 	// TODO(@creachadair): We need better tests for this behaviour.
 	var keep jmessages
-	for cur := s.inq.Front(); cur != nil; cur = s.inq.Front() {
-		for _, req := range cur.Value.(jmessages) {
+	s.inq.each(func(cur jmessages) {
+		for _, req := range cur {
 			if req.isNotification() {
 				keep = append(keep, req)
 				s.log("Retaining notification %p", req)
@@ -561,10 +560,10 @@ func (s *Server) stop(err error) {
 				s.cancel(string(req.ID))
 			}
 		}
-		s.inq.Remove(cur)
-	}
+	})
+	s.inq.reset()
 	for _, elt := range keep {
-		s.inq.PushBack(jmessages{elt})
+		s.inq.push(jmessages{elt})
 	}
 	s.work.Broadcast()
 
@@ -615,8 +614,8 @@ func (s *Server) read(ch receiver) {
 		} else if len(in) == 0 {
 			s.pushError(errEmptyBatch)
 		} else {
-			s.log("Received request batch of size %d (qlen=%d)", len(in), s.inq.Len())
-			s.inq.PushBack(in)
+			s.log("Received request batch of size %d (qlen=%d)", len(in), s.inq.size())
+			s.inq.push(in)
 			s.work.Broadcast()
 		}
 		s.mu.Unlock()
