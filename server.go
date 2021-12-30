@@ -203,32 +203,35 @@ func (s *Server) dispatch(next jmessages, ch sender) func() error {
 	// Resolve all the task handlers or record errors.
 	start := time.Now()
 	tasks := s.checkAndAssign(next)
-	last := len(tasks) - 1
 
 	// Ensure all notifications already issued have completed; see #24.
-	s.waitForBarrier(tasks.numValidNotifications())
+	todo, notes := tasks.numToDo()
+	s.waitForBarrier(notes)
 
 	return func() error {
 		var wg sync.WaitGroup
-		for i, t := range tasks {
+		for _, t := range tasks {
 			if t.err != nil {
 				continue // nothing to do here; this task has already failed
 			}
-			t := t
 
-			wg.Add(1)
-			run := func() {
-				defer wg.Done()
-				if t.hreq.IsNotification() {
-					defer s.nbar.Done()
-				}
+			todo--
+			if todo == 0 {
 				t.val, t.err = s.invoke(t.ctx, t.m, t.hreq)
+				if t.hreq.IsNotification() {
+					s.nbar.Done()
+				}
+				break
 			}
-			if i < last {
-				go run()
-			} else {
-				run()
-			}
+			t := t
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				t.val, t.err = s.invoke(t.ctx, t.m, t.hreq)
+				if t.hreq.IsNotification() {
+					s.nbar.Done()
+				}
+			}()
 		}
 
 		// Wait for all the handlers to return, then deliver any responses.
@@ -742,12 +745,15 @@ func (ts tasks) responses(rpcLog RPCLogger) jmessages {
 	return rsps
 }
 
-// numValidNotifications reports the number of elements in ts that are
-// syntactically valid notifications.
-func (ts tasks) numValidNotifications() (n int) {
+// numToDo reports the number of tasks in ts that need to be executed, and the
+// number of those that are notifications.
+func (ts tasks) numToDo() (todo, notes int) {
 	for _, t := range ts {
-		if t.err == nil && t.hreq.IsNotification() {
-			n++
+		if t.err == nil {
+			todo++
+			if t.hreq.IsNotification() {
+				notes++
+			}
 		}
 	}
 	return
