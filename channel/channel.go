@@ -84,14 +84,12 @@ type direct struct {
 }
 
 func (d direct) Send(msg []byte) (err error) {
-	cp := make([]byte, len(msg))
-	copy(cp, msg)
 	defer func() {
 		if p := recover(); p != nil {
 			err = errors.New("send on closed channel")
 		}
 	}()
-	d.send <- cp
+	d.send <- msg
 	return nil
 }
 
@@ -108,6 +106,10 @@ func (d direct) Close() error { close(d.send); return nil }
 // Direct returns a pair of synchronous connected channels that pass message
 // buffers directly in memory without framing or encoding. Sends to client will
 // be received by server, and vice versa.
+//
+// Note that buffers passed to direct channels are not copied. If the caller
+// needs to use the buffer after sending it on a direct channel, the caller is
+// responsible for making a copy.
 func Direct() (client, server Channel) {
 	c2s := make(chan []byte)
 	s2c := make(chan []byte)
