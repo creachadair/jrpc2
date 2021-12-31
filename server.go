@@ -40,7 +40,7 @@ type Server struct {
 
 	nbar sync.WaitGroup  // notification barrier (see the dispatch method)
 	err  error           // error from a previous operation
-	work *sync.Cond      // for signaling message availability
+	work chan struct{}   // for signaling message availability
 	inq  *queue          // inbound requests awaiting processing
 	ch   channel.Channel // the channel to the client
 
@@ -82,7 +82,6 @@ func NewServer(mux Assigner, opts *ServerOptions) *Server {
 		call:    make(map[string]*Response),
 		callID:  1,
 	}
-	s.work = sync.NewCond(s.mu)
 	return s
 }
 
@@ -105,6 +104,9 @@ func (s *Server) Start(c channel.Channel) *Server {
 
 	// Reset all the I/O structures and start up the workers.
 	s.err = nil
+
+	// Reset the signal channel.
+	s.work = make(chan struct{}, 1)
 
 	// s.wg waits for the maintenance goroutines for receiving input and
 	// processing the request queue. In addition, each request in flight adds a
@@ -152,6 +154,13 @@ func (s *Server) serve() {
 	}
 }
 
+func (s *Server) signal() {
+	select {
+	case s.work <- struct{}{}:
+	default:
+	}
+}
+
 // nextRequest blocks until a request batch is available and returns a function
 // that dispatches it to the appropriate handlers. The result is only an error
 // if the connection failed; errors reported by the handler are reported to the
@@ -162,7 +171,9 @@ func (s *Server) nextRequest() (func() error, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for s.ch != nil && s.inq.isEmpty() {
-		s.work.Wait()
+		s.mu.Unlock()
+		<-s.work
+		s.mu.Lock()
 	}
 	if s.ch == nil && s.inq.isEmpty() {
 		return nil, s.err
@@ -565,7 +576,7 @@ func (s *Server) stop(err error) {
 	for _, elt := range keep {
 		s.inq.push(jmessages{elt})
 	}
-	s.work.Broadcast()
+	close(s.work)
 
 	// Cancel any in-flight requests that made it out of the queue, and
 	// terminate any pending callback invocations.
@@ -616,7 +627,9 @@ func (s *Server) read(ch receiver) {
 		} else {
 			s.log("Received request batch of size %d (qlen=%d)", len(in), s.inq.size())
 			s.inq.push(in)
-			s.work.Broadcast()
+			if s.inq.size() == 1 { // the queue was empty
+				s.signal()
+			}
 		}
 		s.mu.Unlock()
 	}
