@@ -4,7 +4,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/creachadair/jrpc2)](https://goreportcard.com/report/github.com/creachadair/jrpc2)
 
 This repository provides a Go module that implements a [JSON-RPC 2.0][spec] client and server.
-There is also a working [example in the Go playground](https://go.dev/play/p/QvJSOz0w8ZJ).
+There is also a working [example in the Go playground](https://go.dev/play/p/jAcxePARNXz).
 
 ## Packages
 
