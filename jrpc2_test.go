@@ -1250,19 +1250,19 @@ func TestRequest_strictFields(t *testing.T) {
 		X string `json:"xray"`
 	}
 	loc := server.NewLocal(handler.Map{
-		"Strict": handler.New(func(ctx context.Context, req *jrpc2.Request) (interface{}, error) {
+		"Strict": handler.New(func(ctx context.Context, req *jrpc2.Request) (string, error) {
 			var ps params
 			if err := req.UnmarshalParams(jrpc2.StrictFields(&ps)); err != nil {
-				return nil, err
+				return "", err
 			}
-			return map[string]string{"xray": ps.A, "extra": "not ok"}, nil
+			return ps.A, nil
 		}),
-		"Normal": handler.New(func(ctx context.Context, req *jrpc2.Request) (interface{}, error) {
+		"Normal": handler.New(func(ctx context.Context, req *jrpc2.Request) (string, error) {
 			var ps params
 			if err := req.UnmarshalParams(&ps); err != nil {
-				return nil, err
+				return "", err
 			}
-			return map[string]string{"xray": ps.A, "extra": "not ok"}, nil
+			return ps.A, nil
 		}),
 	}, nil)
 	defer loc.Close()
@@ -1286,7 +1286,7 @@ func TestRequest_strictFields(t *testing.T) {
 			name += test.code.String()
 		}
 		t.Run(name, func(t *testing.T) {
-			var res result
+			var res string
 			err := loc.Client.CallResult(ctx, test.method, test.params, &res)
 			if err == nil && test.code != code.NoError {
 				t.Errorf("CallResult: got %+v, want error code %v", res, test.code)
@@ -1294,8 +1294,8 @@ func TestRequest_strictFields(t *testing.T) {
 				if c := code.FromError(err); c != test.code {
 					t.Errorf("CallResult: got error %v, wanted code %v", err, test.code)
 				}
-			} else if res.X != test.want {
-				t.Errorf("CallResult: got %#q, want %#q", res.X, test.want)
+			} else if res != test.want {
+				t.Errorf("CallResult: got %#q, want %#q", res, test.want)
 			}
 		})
 	}
