@@ -150,8 +150,8 @@ func writeJSON(w http.ResponseWriter, code int, obj interface{}) {
 		fmt.Fprintln(w, err.Error())
 		return
 	}
-	w.WriteHeader(code)
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Content-Length", strconv.Itoa(len(bits)))
+	w.WriteHeader(code)
 	w.Write(bits)
 }
