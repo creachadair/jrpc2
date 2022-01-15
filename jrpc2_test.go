@@ -1246,9 +1246,6 @@ func TestRequest_strictFields(t *testing.T) {
 		B int    `json:"bravo"`
 		other
 	}
-	type result struct {
-		X string `json:"xray"`
-	}
 	loc := server.NewLocal(handler.Map{
 		"Strict": handler.New(func(ctx context.Context, req *jrpc2.Request) (string, error) {
 			var ps params
@@ -1275,6 +1272,7 @@ func TestRequest_strictFields(t *testing.T) {
 		want   string
 	}{
 		{"Strict", handler.Obj{"alpha": "aiuto"}, code.NoError, "aiuto"},
+		{"Strict", handler.Obj{"alpha": "selva me", "charlie": true}, code.NoError, "selva me"},
 		{"Strict", handler.Obj{"alpha": "OK", "nonesuch": true}, code.InvalidParams, ""},
 		{"Normal", handler.Obj{"alpha": "OK", "nonesuch": true}, code.NoError, "OK"},
 	}
