@@ -1262,12 +1262,27 @@ func TestRequest_strictFields(t *testing.T) {
 			}
 
 			return map[string]string{
-				"xray":  "ok",
+				"xray":  qs.A,
 				"gamma": "not ok",
 			}, nil
 		}),
 	}, nil)
 	defer loc.Close()
+
+	t.Run("StrictOK", func(t *testing.T) {
+		const want = "we have met the enemy and he is us"
+
+		var res result
+		if err := loc.Client.CallResult(ctx, "Test", handler.Obj{
+			"alpha":   want,
+			"charlie": true,
+		}, &res); err != nil {
+			t.Fatalf("CallResult failed: %v", err)
+		}
+		if res.X != want {
+			t.Errorf("Wrong result: got %#q, want %#q", res.X, want)
+		}
+	})
 
 	ctx := context.Background()
 	rsp, err := loc.Client.Call(ctx, "Test", handler.Obj{
