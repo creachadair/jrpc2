@@ -1246,66 +1246,90 @@ func TestRequest_strictFields(t *testing.T) {
 		B int    `json:"bravo"`
 		other
 	}
-	type result struct {
-		X string `json:"xray"`
-	}
 	loc := server.NewLocal(handler.Map{
-		"Test": handler.New(func(ctx context.Context, req *jrpc2.Request) (interface{}, error) {
-			var ps, qs params
-
-			if err := req.UnmarshalParams(jrpc2.StrictFields(&ps)); err == nil {
-				t.Errorf("Unmarshal strict: got %+v, want error", ps)
+		"Strict": handler.New(func(ctx context.Context, req *jrpc2.Request) (string, error) {
+			var ps params
+			if err := req.UnmarshalParams(jrpc2.StrictFields(&ps)); err != nil {
+				return "", err
 			}
-
-			if err := req.UnmarshalParams(&qs); err != nil {
-				t.Errorf("Unmarshal non-strict (default): unexpected error: %v", err)
+			return ps.A, nil
+		}),
+		"Normal": handler.New(func(ctx context.Context, req *jrpc2.Request) (string, error) {
+			var ps params
+			if err := req.UnmarshalParams(&ps); err != nil {
+				return "", err
 			}
-
-			return map[string]string{
-				"xray":  qs.A,
-				"gamma": "not ok",
-			}, nil
+			return ps.A, nil
 		}),
 	}, nil)
 	defer loc.Close()
-
-	t.Run("StrictOK", func(t *testing.T) {
-		const want = "we have met the enemy and he is us"
-
-		var res result
-		if err := loc.Client.CallResult(ctx, "Test", handler.Obj{
-			"alpha":   want,
-			"charlie": true,
-		}, &res); err != nil {
-			t.Fatalf("CallResult failed: %v", err)
-		}
-		if res.X != want {
-			t.Errorf("Wrong result: got %#q, want %#q", res.X, want)
-		}
-	})
-
 	ctx := context.Background()
-	rsp, err := loc.Client.Call(ctx, "Test", handler.Obj{
-		"alpha":   "foo",
-		"bravo":   25,
-		"charlie": true, // exercise embedding
-		"delta":   31.5, // unknown field
-	})
+
+	tests := []struct {
+		method string
+		params interface{}
+		code   code.Code
+		want   string
+	}{
+		{"Strict", handler.Obj{"alpha": "aiuto"}, code.NoError, "aiuto"},
+		{"Strict", handler.Obj{"alpha": "selva me", "charlie": true}, code.NoError, "selva me"},
+		{"Strict", handler.Obj{"alpha": "OK", "nonesuch": true}, code.InvalidParams, ""},
+		{"Normal", handler.Obj{"alpha": "OK", "nonesuch": true}, code.NoError, "OK"},
+	}
+	for _, test := range tests {
+		name := test.method + "/"
+		if test.code == code.NoError {
+			name += "OK"
+		} else {
+			name += test.code.String()
+		}
+		t.Run(name, func(t *testing.T) {
+			var res string
+			err := loc.Client.CallResult(ctx, test.method, test.params, &res)
+			if err == nil && test.code != code.NoError {
+				t.Errorf("CallResult: got %+v, want error code %v", res, test.code)
+			} else if err != nil {
+				if c := code.FromError(err); c != test.code {
+					t.Errorf("CallResult: got error %v, wanted code %v", err, test.code)
+				}
+			} else if res != test.want {
+				t.Errorf("CallResult: got %#q, want %#q", res, test.want)
+			}
+		})
+	}
+}
+
+func TestResponse_strictFields(t *testing.T) {
+	defer leaktest.Check(t)()
+
+	type result struct {
+		A string `json:"alpha"`
+	}
+	loc := server.NewLocal(handler.Map{
+		"Test": handler.New(func(ctx context.Context, req *jrpc2.Request) handler.Obj {
+			return handler.Obj{"alpha": "OK", "bravo": "not OK"}
+		}),
+	}, nil)
+	defer loc.Close()
+	ctx := context.Background()
+
+	res, err := loc.Client.Call(ctx, "Test", nil)
 	if err != nil {
 		t.Fatalf("Call failed: %v", err)
 	}
 
-	t.Run("NonStrictResult", func(t *testing.T) {
-		var res result
-		if err := rsp.UnmarshalResult(&res); err != nil {
-			t.Errorf("UnmarshalResult: %v", err)
+	t.Run("Normal", func(t *testing.T) {
+		var got result
+		if err := res.UnmarshalResult(&got); err != nil {
+			t.Errorf("UnmarshalResult failed: %v", err)
+		} else if got.A != "OK" {
+			t.Errorf("Result: got %#q, want OK", got.A)
 		}
 	})
-
-	t.Run("StrictResult", func(t *testing.T) {
-		var res result
-		if err := rsp.UnmarshalResult(jrpc2.StrictFields(&res)); err == nil {
-			t.Errorf("UnmarshalResult: got %+v, want error", res)
+	t.Run("Strict", func(t *testing.T) {
+		var got result
+		if err := res.UnmarshalResult(jrpc2.StrictFields(&got)); err == nil {
+			t.Errorf("UnmarshalResult: got %#v, wanted error", got)
 		}
 	})
 }
