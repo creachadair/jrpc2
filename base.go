@@ -100,7 +100,10 @@ func (r *Request) UnmarshalParams(v interface{}) error {
 		}
 		return nil
 	}
-	return json.Unmarshal(r.params, v)
+	if err := json.Unmarshal(r.params, v); err != nil {
+		return Errorf(code.InvalidParams, "invalid parameters: %v", err.Error())
+	}
+	return nil
 }
 
 // ParamString returns the encoded request parameters of r as a string.
