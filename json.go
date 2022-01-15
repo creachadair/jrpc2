@@ -276,8 +276,8 @@ type strictFielder interface {
 	DisallowUnknownFields()
 }
 
-// StrictFields wraps a value v to implement the DisallowUnknownFields method,
-// requiring unknown fields to be rejected when unmarshaling from JSON.
+// StrictFields wraps a value v to require unknown fields to be rejected when
+// unmarshaling from JSON.
 //
 // For example:
 //
@@ -288,4 +288,8 @@ func StrictFields(v interface{}) interface{} { return &strict{v: v} }
 
 type strict struct{ v interface{} }
 
-func (strict) DisallowUnknownFields() {}
+func (s *strict) UnmarshalJSON(data []byte) error {
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.DisallowUnknownFields()
+	return dec.Decode(s.v)
+}

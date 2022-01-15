@@ -1250,64 +1250,55 @@ func TestRequest_strictFields(t *testing.T) {
 		X string `json:"xray"`
 	}
 	loc := server.NewLocal(handler.Map{
-		"Test": handler.New(func(ctx context.Context, req *jrpc2.Request) (interface{}, error) {
-			var ps, qs params
-
-			if err := req.UnmarshalParams(jrpc2.StrictFields(&ps)); err == nil {
-				t.Errorf("Unmarshal strict: got %+v, want error", ps)
+		"Strict": handler.New(func(ctx context.Context, req *jrpc2.Request) (interface{}, error) {
+			var ps params
+			if err := req.UnmarshalParams(jrpc2.StrictFields(&ps)); err != nil {
+				return nil, err
 			}
-
-			if err := req.UnmarshalParams(&qs); err != nil {
-				t.Errorf("Unmarshal non-strict (default): unexpected error: %v", err)
+			return map[string]string{"xray": ps.A, "extra": "not ok"}, nil
+		}),
+		"Normal": handler.New(func(ctx context.Context, req *jrpc2.Request) (interface{}, error) {
+			var ps params
+			if err := req.UnmarshalParams(&ps); err != nil {
+				return nil, err
 			}
-
-			return map[string]string{
-				"xray":  qs.A,
-				"gamma": "not ok",
-			}, nil
+			return map[string]string{"xray": ps.A, "extra": "not ok"}, nil
 		}),
 	}, nil)
 	defer loc.Close()
-
-	t.Run("StrictOK", func(t *testing.T) {
-		const want = "we have met the enemy and he is us"
-
-		var res result
-		if err := loc.Client.CallResult(ctx, "Test", handler.Obj{
-			"alpha":   want,
-			"charlie": true,
-		}, &res); err != nil {
-			t.Fatalf("CallResult failed: %v", err)
-		}
-		if res.X != want {
-			t.Errorf("Wrong result: got %#q, want %#q", res.X, want)
-		}
-	})
-
 	ctx := context.Background()
-	rsp, err := loc.Client.Call(ctx, "Test", handler.Obj{
-		"alpha":   "foo",
-		"bravo":   25,
-		"charlie": true, // exercise embedding
-		"delta":   31.5, // unknown field
-	})
-	if err != nil {
-		t.Fatalf("Call failed: %v", err)
+
+	tests := []struct {
+		method string
+		params interface{}
+		code   code.Code
+		want   string
+	}{
+		{"Strict", handler.Obj{"alpha": "aiuto"}, code.NoError, "aiuto"},
+		{"Strict", handler.Obj{"alpha": "OK", "nonesuch": true}, code.InvalidParams, ""},
+		{"Normal", handler.Obj{"alpha": "OK", "nonesuch": true}, code.NoError, "OK"},
 	}
-
-	t.Run("NonStrictResult", func(t *testing.T) {
-		var res result
-		if err := rsp.UnmarshalResult(&res); err != nil {
-			t.Errorf("UnmarshalResult: %v", err)
+	for _, test := range tests {
+		name := test.method
+		if test.code == code.NoError {
+			name += "OK"
+		} else {
+			name += test.code.String()
 		}
-	})
-
-	t.Run("StrictResult", func(t *testing.T) {
-		var res result
-		if err := rsp.UnmarshalResult(jrpc2.StrictFields(&res)); err == nil {
-			t.Errorf("UnmarshalResult: got %+v, want error", res)
-		}
-	})
+		t.Run(name, func(t *testing.T) {
+			var res result
+			err := loc.Client.CallResult(ctx, test.method, test.params, &res)
+			if err == nil && test.code != code.NoError {
+				t.Errorf("CallResult: got %+v, want error code %v", res, test.code)
+			} else if err != nil {
+				if c := code.FromError(err); c != test.code {
+					t.Errorf("CallResult: got error %v, wanted code %v", err, test.code)
+				}
+			} else if res.X != test.want {
+				t.Errorf("CallResult: got %#q, want %#q", res.X, test.want)
+			}
+		})
+	}
 }
 
 func TestServerFromContext(t *testing.T) {
