@@ -1277,7 +1277,7 @@ func TestRequest_strictFields(t *testing.T) {
 		{"Normal", handler.Obj{"alpha": "OK", "nonesuch": true}, code.NoError, "OK"},
 	}
 	for _, test := range tests {
-		name := test.method
+		name := test.method + "/"
 		if test.code == code.NoError {
 			name += "OK"
 		} else {
@@ -1297,6 +1297,41 @@ func TestRequest_strictFields(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestResponse_strictFields(t *testing.T) {
+	defer leaktest.Check(t)()
+
+	type result struct {
+		A string `json:"alpha"`
+	}
+	loc := server.NewLocal(handler.Map{
+		"Test": handler.New(func(ctx context.Context, req *jrpc2.Request) handler.Obj {
+			return handler.Obj{"alpha": "OK", "bravo": "not OK"}
+		}),
+	}, nil)
+	defer loc.Close()
+	ctx := context.Background()
+
+	res, err := loc.Client.Call(ctx, "Test", nil)
+	if err != nil {
+		t.Fatalf("Call failed: %v", err)
+	}
+
+	t.Run("Normal", func(t *testing.T) {
+		var got result
+		if err := res.UnmarshalResult(&got); err != nil {
+			t.Errorf("UnmarshalResult failed: %v", err)
+		} else if got.A != "OK" {
+			t.Errorf("Result: got %#q, want OK", got.A)
+		}
+	})
+	t.Run("Strict", func(t *testing.T) {
+		var got result
+		if err := res.UnmarshalResult(jrpc2.StrictFields(&got)); err == nil {
+			t.Errorf("UnmarshalResult: got %#v, wanted error", got)
+		}
+	})
 }
 
 func TestServerFromContext(t *testing.T) {
