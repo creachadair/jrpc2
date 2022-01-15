@@ -3,7 +3,7 @@ module github.com/creachadair/jrpc2/tools
 go 1.17
 
 require (
-	github.com/creachadair/jrpc2 v0.35.2
+	github.com/creachadair/jrpc2 v0.35.3
 	github.com/creachadair/wschannel v0.0.0-20211230014228-bd659c142c64
 )
 
