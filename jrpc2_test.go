@@ -1185,7 +1185,6 @@ func TestHandler_assignContext(t *testing.T) {
 type assignFunc func(context.Context, string) jrpc2.Handler
 
 func (a assignFunc) Assign(ctx context.Context, m string) jrpc2.Handler { return a(ctx, m) }
-func (assignFunc) Names() []string                                      { return nil }
 
 func TestServer_WaitStatus(t *testing.T) {
 	defer leaktest.Check(t)()
