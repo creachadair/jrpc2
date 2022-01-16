@@ -317,9 +317,9 @@ func TestHandler_errorOnly(t *testing.T) {
 	})
 }
 
-// Verify that a timeout set on the context is respected by the server and
-// propagates back to the client as an error.
-func TestServer_contextTimeout(t *testing.T) {
+// Verify that a timeout set on the client context is respected and reports
+// back to the caller as an error.
+func TestClient_contextTimeout(t *testing.T) {
 	defer leaktest.Check(t)()
 
 	loc := server.NewLocal(handler.Map{
@@ -335,13 +335,12 @@ func TestServer_contextTimeout(t *testing.T) {
 		}),
 	}, nil)
 	defer loc.Close()
-	c := loc.Client
 
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
 	start := time.Now()
-	got, err := c.Call(ctx, "Stall", nil)
+	got, err := loc.Client.Call(ctx, "Stall", nil)
 	if err == nil {
 		t.Errorf("Stall: got %+v, wanted error", got)
 	} else if err != context.DeadlineExceeded {
