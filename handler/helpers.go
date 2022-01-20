@@ -3,6 +3,7 @@
 package handler
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 )
@@ -90,4 +91,13 @@ func filterJSONError(tag, want string, err error) error {
 		return fmt.Errorf("%s: cannot decode %s as %s", tag, t.Value, want)
 	}
 	return err
+}
+
+// firstByte returns the first non-whitespace byte of data, or 0 if there is none.
+func firstByte(data []byte) byte {
+	clean := bytes.TrimSpace(data)
+	if len(clean) == 0 {
+		return 0
+	}
+	return clean[0]
 }

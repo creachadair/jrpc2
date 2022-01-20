@@ -326,7 +326,7 @@ type strict struct {
 // equivalent object with field names assigned by the positional names.
 // Otherwise, data is returned as-is without error.
 func (s *strict) translate(data []byte) ([]byte, error) {
-	if len(s.posNames) == 0 || len(data) == 0 || data[0] != '[' {
+	if len(s.posNames) == 0 || firstByte(data) != '[' {
 		return data, nil // no names, or not an array
 	}
 
