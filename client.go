@@ -434,7 +434,7 @@ func (c *Client) marshalParams(ctx context.Context, method string, params interf
 	if err != nil {
 		return nil, err
 	}
-	if len(pbits) == 0 || (pbits[0] != '[' && pbits[0] != '{' && !isNull(pbits)) {
+	if fb := firstByte(pbits); fb != '[' && fb != '{' && !isNull(pbits) {
 		// JSON-RPC requires that if parameters are provided at all, they are
 		// an array or an object.
 		return nil, &Error{Code: code.InvalidRequest, Message: "invalid parameters: array or object required"}

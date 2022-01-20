@@ -72,7 +72,7 @@ func (j *jmessages) parseJSON(data []byte) error {
 	// or array.
 	var msgs []json.RawMessage
 	var batch bool
-	if len(data) == 0 || data[0] != '[' {
+	if firstByte(data) != '[' {
 		msgs = append(msgs, nil)
 		if err := json.Unmarshal(data, &msgs[0]); err != nil {
 			return errInvalidRequest
@@ -207,7 +207,7 @@ func (j *jmessage) parseJSON(data []byte) error {
 			if !isNull(val) {
 				j.P = val
 			}
-			if len(j.P) != 0 && j.P[0] != '[' && j.P[0] != '{' {
+			if fb := firstByte(j.P); fb != 0 && fb != '[' && fb != '{' {
 				j.fail(code.InvalidRequest, "parameters must be array or object")
 			}
 		case "error":
@@ -267,6 +267,15 @@ func encode(ch sender, rsps jmessages) (int, error) {
 // isNull reports whether msg is exactly the JSON "null" value.
 func isNull(msg json.RawMessage) bool {
 	return len(msg) == 4 && msg[0] == 'n' && msg[1] == 'u' && msg[2] == 'l' && msg[3] == 'l'
+}
+
+// firstByte returns the first non-whitespace byte of data, or 0 if there is none.
+func firstByte(data []byte) byte {
+	clean := bytes.TrimSpace(data)
+	if len(clean) == 0 {
+		return 0
+	}
+	return clean[0]
 }
 
 // strictFielder is an optional interface that can be implemented by a type to
