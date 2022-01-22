@@ -4,7 +4,9 @@ package jhttp
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -31,14 +33,8 @@ import (
 // By default, the URL path identifies the JSON-RPC method, and the URL query
 // parameters are converted into a JSON object for the parameters. Leading and
 // trailing slashes are stripped from the path, and query values are converted
-// into JSON strings.
-//
-// For example, the URL "http://host:port/path/to/method?foo=true&bar=okay"
-// decodes to the method name "path/to/method" and this parameter object:
-//
-//   {"foo": "true", "bar": "okay"}
-//
-// Set a ParseRequest hook in the GetterOptions to override this behaviour.
+// into JSON values. See ParseQuery for the conversion rules.  To override this
+// behaviour, set a ParseRequest hook in the GetterOptions.
 type Getter struct {
 	local    server.Local
 	parseReq func(*http.Request) (string, interface{}, error)
@@ -94,14 +90,7 @@ func (g Getter) parseHTTPRequest(req *http.Request) (string, interface{}, error)
 	if g.parseReq != nil {
 		return g.parseReq(req)
 	}
-	if err := req.ParseForm(); err != nil {
-		return "", nil, err
-	}
-	params := make(map[string]string)
-	for key := range req.Form {
-		params[key] = req.Form.Get(key)
-	}
-	return strings.Trim(req.URL.Path, "/"), params, nil
+	return ParseQuery(req)
 }
 
 // GetterOptions are optional settings for a Getter. A nil pointer is ready for
@@ -154,4 +143,124 @@ func writeJSON(w http.ResponseWriter, code int, obj interface{}) {
 	w.Header().Set("Content-Length", strconv.Itoa(len(bits)))
 	w.WriteHeader(code)
 	w.Write(bits)
+}
+
+// ParseQuery parses a request URL and constructs a parameter map from the
+// query values encoded in the URL and/or request body.
+//
+// Query values are converted into argument values by these rules:
+//
+// Double-quoted values are interpreted as JSON string values, with the same
+// encoding and escaping rules (UTF-8 with backslash escapes). Examples:
+//
+//    ""
+//    "foo\nbar"
+//    "a \"string\" of text"
+//
+// Values that consist of decimal digits and an optional leading sign are
+// treated as either int64 (if there is no decimal point) or float64 values.
+// Examples:
+//
+//    25
+//    -16
+//    3.259
+//
+// The unquoted strings "true" and "false" are converted to the corresponding
+// Boolean values. The unquoted string "null" is converted to nil.
+//
+// To express arbitrary bytes, use a singly-quoted string encoded in base64.
+// For example:
+//
+//    'aGVsbG8sIHdvcmxk'   -- represents "hello, world"
+//
+// All values not matching any of the above are treated as literal strings.
+//
+// On success, the result has concrete type map[string]interface{} and the
+// method name is not empty.
+func ParseQuery(req *http.Request) (string, interface{}, error) {
+	if err := req.ParseForm(); err != nil {
+		return "", nil, err
+	}
+	method := strings.Trim(req.URL.Path, "/")
+	if method == "" {
+		return "", nil, errors.New("empty URL path")
+	}
+	if len(req.Form) == 0 {
+		return method, nil, nil
+	}
+
+	params := make(map[string]interface{})
+	for key := range req.Form {
+		val := req.Form.Get(key)
+		if v, ok, err := parseJSONString(val); err != nil {
+			return "", nil, fmt.Errorf("decoding string %q: %w", key, err)
+		} else if ok {
+			params[key] = v
+		} else if n, ok := parseNumber(val); ok {
+			params[key] = n
+		} else if b, ok := parseConstant(val); ok {
+			params[key] = b
+		} else if d, ok, err := parseQuoted64(val); err != nil {
+			return "", nil, fmt.Errorf("decoding bytes %q: %w", key, err)
+		} else if ok {
+			params[key] = d
+		} else {
+			params[key] = val
+		}
+	}
+	return method, params, nil
+}
+
+func parseJSONString(s string) (string, bool, error) {
+	if len(s) >= 2 {
+		if s[0] == '"' && s[len(s)-1] == '"' {
+			var dec string
+			err := json.Unmarshal([]byte(s), &dec)
+			if err != nil {
+				return "", false, err
+			}
+			return dec, true, nil
+		} else if s[0] == '"' || s[len(s)-1] == '"' {
+			return "", false, errors.New("missing string quote")
+		}
+	}
+	return "", false, nil
+}
+
+func parseNumber(s string) (interface{}, bool) {
+	z, err := strconv.ParseInt(s, 10, 64)
+	if err == nil {
+		return z, true
+	}
+	v, err := strconv.ParseFloat(s, 64)
+	if err == nil {
+		return v, true
+	}
+	return nil, false
+}
+
+func parseConstant(s string) (interface{}, bool) {
+	switch s {
+	case "true":
+		return true, true
+	case "false":
+		return false, true
+	case "null":
+		return nil, true
+	default:
+		return nil, false
+	}
+}
+
+func parseQuoted64(s string) ([]byte, bool, error) {
+	if len(s) >= 2 {
+		if s[0] == '\'' && s[len(s)-1] == '\'' {
+			trim := strings.TrimRight(s[1:len(s)-1], "=") // discard base64 padding
+			dec, err := base64.RawStdEncoding.DecodeString(trim)
+			return dec, err == nil, err
+		} else if s[0] == '\'' || s[len(s)-1] == '\'' {
+			return nil, false, errors.New("missing bytes quote")
+		}
+	}
+	return nil, false, nil
 }
