@@ -32,9 +32,19 @@ import (
 //
 // By default, the URL path identifies the JSON-RPC method, and the URL query
 // parameters are converted into a JSON object for the parameters. Leading and
-// trailing slashes are stripped from the path, and query values are converted
-// into JSON values. See ParseQuery for the conversion rules.  To override this
-// behaviour, set a ParseRequest hook in the GetterOptions.
+// trailing slashes are stripped from the path, and query values are sent as
+// JSON strings.
+//
+// For example, this URL:
+//
+//    http://site.org:2112/some/method?param1=xyzzy&param2=apple
+//
+// would produce the method name "some/method" and this parameter object:
+//
+//    {"param1":"xyzzy", "param2":"apple"}
+//
+// To override the default behaviour, set a ParseRequest hook in GetterOptions.
+// See also the jhttp.ParseQuery function for a more expressive translation.
 type Getter struct {
 	local    server.Local
 	parseReq func(*http.Request) (string, interface{}, error)
@@ -90,7 +100,18 @@ func (g Getter) parseHTTPRequest(req *http.Request) (string, interface{}, error)
 	if g.parseReq != nil {
 		return g.parseReq(req)
 	}
-	return ParseQuery(req)
+	if err := req.ParseForm(); err != nil {
+		return "", nil, err
+	}
+	method := strings.Trim(req.URL.Path, "/")
+	if method == "" {
+		return "", nil, errors.New("empty method name")
+	}
+	params := make(map[string]string)
+	for key := range req.Form {
+		params[key] = req.Form.Get(key)
+	}
+	return method, params, nil
 }
 
 // GetterOptions are optional settings for a Getter. A nil pointer is ready for
