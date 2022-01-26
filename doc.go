@@ -25,9 +25,9 @@ request parameters using the UnmarshalParams method on the request:
       return usefulStuffWith(args)
    }
 
-The handler package exists to make it easier to use functions that do not have
-this exact type signature. It uses reflection to lift functions into the
-Handler interface.  For example, suppose we want to export this Add function:
+The handler package makes it easier to use functions that do not have this
+exact type signature as handlers, by using reflection to lift functions into
+the Handler interface.  For example, suppose we want to export this Add function:
 
    // Add returns the sum of a slice of integers.
    func Add(ctx context.Context, values []int) int {
