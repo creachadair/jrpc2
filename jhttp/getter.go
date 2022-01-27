@@ -169,6 +169,7 @@ func writeJSON(w http.ResponseWriter, code int, obj interface{}) {
 // ParseQuery parses a request URL and constructs a parameter map from the
 // query values encoded in the URL and/or request body.
 //
+// The method name is the URL path, with leading and trailing slashes trimmed.
 // Query values are converted into argument values by these rules:
 //
 // Double-quoted values are interpreted as JSON string values, with the same
