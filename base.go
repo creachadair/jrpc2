@@ -96,12 +96,12 @@ func (r *Request) UnmarshalParams(v interface{}) error {
 		dec := json.NewDecoder(bytes.NewReader(r.params))
 		dec.DisallowUnknownFields()
 		if err := dec.Decode(v); err != nil {
-			return Errorf(code.InvalidParams, "invalid parameters: %v", err.Error())
+			return errInvalidParams.WithData(err.Error())
 		}
 		return nil
 	}
 	if err := json.Unmarshal(r.params, v); err != nil {
-		return Errorf(code.InvalidParams, "invalid parameters: %v", err.Error())
+		return errInvalidParams.WithData(err.Error())
 	}
 	return nil
 }
