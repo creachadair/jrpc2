@@ -12,11 +12,14 @@ import (
 	"github.com/creachadair/jrpc2/channel"
 	"github.com/creachadair/jrpc2/handler"
 	"github.com/creachadair/jrpc2/server"
+	"github.com/fortytw2/leaktest"
 )
 
 // Verify that a notification handler will not deadlock with the dispatcher on
 // holding the server lock. See: https://github.com/creachadair/jrpc2/issues/27
 func TestLockRaceRegression(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	hdone := make(chan struct{})
 	local := server.NewLocal(handler.Map{
 		// Do some busy-work and then try to get the server lock, in this case
@@ -56,6 +59,8 @@ func TestLockRaceRegression(t *testing.T) {
 // Verify that if a callback handler panics, the client will report an error
 // back to the server. See https://github.com/creachadair/jrpc2/issues/41.
 func TestOnCallbackPanicRegression(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	const panicString = "the devil you say"
 
 	loc := server.NewLocal(handler.Map{
@@ -91,6 +96,8 @@ func TestOnCallbackPanicRegression(t *testing.T) {
 // Verify that a duplicate request ID that arrives while a task is in flight
 // does not cause the existing task to be cancelled.
 func TestDuplicateIDCancellation(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	tctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
