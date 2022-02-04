@@ -58,6 +58,9 @@ var errInvalidRequest = &Error{Code: code.ParseError, Message: "invalid request 
 // errEmptyBatch is the error reported for an empty request batch.
 var errEmptyBatch = &Error{Code: code.InvalidRequest, Message: "empty request batch"}
 
+// errInvalidParams is the error reported for invalid request parameters.
+var errInvalidParams = &Error{Code: code.InvalidParams, Message: "invalid parameters"}
+
 // ErrConnClosed is returned by a server's push-to-client methods if they are
 // called after the client connection is closed.
 var ErrConnClosed = errors.New("client connection is closed")
