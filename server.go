@@ -278,16 +278,15 @@ func (s *Server) deliver(rsps jmessages, ch sender, elapsed time.Duration) error
 // records errors for them as appropriate. The caller must hold s.mu.
 func (s *Server) checkAndAssign(next jmessages) tasks {
 	var ts tasks
+	var ids []string
+	dup := make(map[string]*task) // :: id ⇒ first task in batch with id
+
+	// Phase 1: Filter out responses from push calls and check for duplicate
+	// request ID.s
 	for _, req := range next {
 		fid := fixID(req.ID)
-		t := &task{
-			hreq:  &Request{id: fid, method: req.M, params: req.P},
-			batch: req.batch,
-		}
 		id := string(fid)
-		if req.err != nil {
-			t.err = req.err // deferred validation error
-		} else if !req.isRequestOrNotification() && s.call[id] != nil {
+		if !req.isRequestOrNotification() && s.call[id] != nil {
 			// This is a result or error for a pending push-call.
 			//
 			// N.B. It is important to check for this before checking for
@@ -296,24 +295,51 @@ func (s *Server) checkAndAssign(next jmessages) tasks {
 			delete(s.call, id)
 			rsp.ch <- req
 			continue // don't send a reply for this
-		} else if id != "" && s.used[id] != nil {
-			t.err = Errorf(code.InvalidRequest, "duplicate request id %q", id)
+		} else if req.err != nil {
+			// keep the existing error
 		} else if !s.versionOK(req.V) {
-			t.err = ErrInvalidVersion
-		} else if req.M == "" {
+			req.err = ErrInvalidVersion
+		}
+
+		t := &task{
+			hreq:  &Request{id: fid, method: req.M, params: req.P},
+			batch: req.batch,
+			err:   req.err,
+		}
+		if old := dup[id]; old != nil {
+			// A previous task already used this ID, fail both.
+			old.err = errDuplicateID.WithData(id)
+			t.err = old.err
+		} else if id != "" && s.used[id] != nil {
+			// A task from a previous batch already used this ID, fail this one.
+			t.err = errDuplicateID.WithData(id)
+		} else if id != "" {
+			// This is the first task with this ID in the batch.
+			dup[id] = t
+		}
+		ts = append(ts, t)
+		ids = append(ids, id)
+	}
+
+	// Phase 2: Assign method handlers and set up contexts.
+	for i, t := range ts {
+		id := ids[i]
+		if t.err != nil {
+			// deferred validation error
+		} else if t.hreq.method == "" {
 			t.err = errEmptyMethod
 		} else if s.setContext(t, id) {
-			t.m = s.assign(t.ctx, req.M)
+			t.m = s.assign(t.ctx, t.hreq.method)
 			if t.m == nil {
-				t.err = Errorf(code.MethodNotFound, "no such method %q", req.M)
+				t.err = Errorf(code.MethodNotFound, "no such method %q", t.hreq.method)
 			}
 		}
 
 		if t.err != nil {
-			s.log("Request check error for %q (params %q): %v", req.M, string(req.P), t.err)
+			s.log("Request check error for %q (params %q): %v",
+				t.hreq.method, string(t.hreq.params), t.err)
 			s.metrics.Count("rpc.errors", 1)
 		}
-		ts = append(ts, t)
 	}
 	return ts
 }
