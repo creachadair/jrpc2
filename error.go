@@ -46,6 +46,9 @@ var errClientStopped = errors.New("the client has been stopped")
 // errEmptyMethod is the error reported for an empty request method name.
 var errEmptyMethod = &Error{Code: code.InvalidRequest, Message: "empty method name"}
 
+// errNoSuchMethod is the error reported for an unknown method name.
+var errNoSuchMethod = &Error{Code: code.MethodNotFound, Message: "no such method"}
+
 // errDuplicateID is the error reported for a duplicated request ID.
 var errDuplicateID = &Error{Code: code.InvalidRequest, Message: "duplicate request ID"}
 

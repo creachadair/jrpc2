@@ -619,7 +619,7 @@ func TestServer_nonLibraryClient(t *testing.T) {
 
 		// The method specified doesn't exist.
 		{`{"jsonrpc":"2.0", "id": 3, "method": "NoneSuch"}`,
-			`{"jsonrpc":"2.0","id":3,"error":{"code":-32601,"message":"no such method \"NoneSuch\""}}`},
+			`{"jsonrpc":"2.0","id":3,"error":{"code":-32601,"message":"no such method","data":"NoneSuch"}}`},
 
 		// The parameters are of the wrong form.
 		{`{"jsonrpc":"2.0", "id": 4, "method": "X", "params": "bogus"}`,
@@ -654,7 +654,7 @@ func TestServer_nonLibraryClient(t *testing.T) {
 
 		// A batch of invalid requests returns a batch of errors.
 		{`[{"jsonrpc": "2.0", "id": 6, "method":"bogus"}]`,
-			`[{"jsonrpc":"2.0","id":6,"error":{"code":-32601,"message":"no such method \"bogus\""}}]`},
+			`[{"jsonrpc":"2.0","id":6,"error":{"code":-32601,"message":"no such method","data":"bogus"}}]`},
 
 		// Batch requests return batch responses, even for a singleton.
 		{`[{"jsonrpc": "2.0", "id": 7, "method": "X"}]`, `[{"jsonrpc":"2.0","id":7,"result":"OK"}]`},

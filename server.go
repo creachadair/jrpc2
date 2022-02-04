@@ -331,7 +331,7 @@ func (s *Server) checkAndAssign(next jmessages) tasks {
 		} else if s.setContext(t, id) {
 			t.m = s.assign(t.ctx, t.hreq.method)
 			if t.m == nil {
-				t.err = Errorf(code.MethodNotFound, "no such method %q", t.hreq.method)
+				t.err = errNoSuchMethod.WithData(t.hreq.method)
 			}
 		}
 
