@@ -38,10 +38,10 @@ the Handler interface.  For example, suppose we want to export this Add function
       return sum
    }
 
-To convert Add to a jrpc2.Handler, call handler.New, which wraps its argument
-into the jrpc2.Handler interface via the handler.Func type:
+To convert Add to a handler, call handler.New, which wraps its argument in a a
+handler.Func, which satisfies the jrpc2.Handler interface:
 
-   h := handler.New(Add)  // h is now a jrpc2.Handler that calls Add
+   h := handler.New(Add)  // h is now a handler.Func that calls Add
 
 The handler package also provides handler.Map, which implements the Assigner
 interface with a Go map. To advertise this function under the name "Add":
