@@ -47,7 +47,7 @@ var errClientStopped = errors.New("the client has been stopped")
 var errEmptyMethod = &Error{Code: code.InvalidRequest, Message: "empty method name"}
 
 // errNoSuchMethod is the error reported for an unknown method name.
-var errNoSuchMethod = &Error{Code: code.MethodNotFound, Message: "no such method"}
+var errNoSuchMethod = &Error{Code: code.MethodNotFound, Message: code.MethodNotFound.String()}
 
 // errDuplicateID is the error reported for a duplicated request ID.
 var errDuplicateID = &Error{Code: code.InvalidRequest, Message: "duplicate request ID"}
@@ -59,7 +59,7 @@ var errInvalidRequest = &Error{Code: code.ParseError, Message: "invalid request 
 var errEmptyBatch = &Error{Code: code.InvalidRequest, Message: "empty request batch"}
 
 // errInvalidParams is the error reported for invalid request parameters.
-var errInvalidParams = &Error{Code: code.InvalidParams, Message: "invalid parameters"}
+var errInvalidParams = &Error{Code: code.InvalidParams, Message: code.InvalidParams.String()}
 
 // ErrConnClosed is returned by a server's push-to-client methods if they are
 // called after the client connection is closed.
