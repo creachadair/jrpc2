@@ -282,20 +282,11 @@ func (s *Server) checkAndAssign(next jmessages) tasks {
 	dup := make(map[string]*task) // :: id ⇒ first task in batch with id
 
 	// Phase 1: Filter out responses from push calls and check for duplicate
-	// request ID.s
+	// request IDs.
 	for _, req := range next {
 		fid := fixID(req.ID)
 		id := string(fid)
-		if !req.isRequestOrNotification() && s.call[id] != nil {
-			// This is a result or error for a pending push-call.
-			//
-			// N.B. It is important to check for this before checking for
-			// duplicate request IDs, since the ID spaces could overlap.
-			rsp := s.call[id]
-			delete(s.call, id)
-			rsp.ch <- req
-			continue // don't send a reply for this
-		} else if req.err != nil {
+		if req.err != nil {
 			// keep the existing error
 		} else if !s.versionOK(req.V) {
 			req.err = ErrInvalidVersion
@@ -651,14 +642,49 @@ func (s *Server) read(ch receiver) {
 		} else if len(in) == 0 {
 			s.pushError(errEmptyBatch)
 		} else {
-			s.log("Received request batch of size %d (qlen=%d)", len(in), s.inq.size())
-			s.inq.push(in)
-			if s.inq.size() == 1 { // the queue was empty
-				s.signal()
+			// Filter out response messages. It's possible that the entire batch
+			// was responses, so re-check the length after doing this.
+			keep := s.filterBatch(in)
+			if len(keep) != 0 {
+				s.log("Received request batch of size %d (qlen=%d)", len(keep), s.inq.size())
+				s.inq.push(keep)
+				if s.inq.size() == 1 { // the queue was empty
+					s.signal()
+				}
 			}
 		}
 		s.mu.Unlock()
 	}
+}
+
+// filterBatch removes and handles any response messages from next, dispatching
+// replies to pending callbacks as required. The remainder is returned.
+// The caller must hold s.mu, and must re-check that the result is not empty.
+func (s *Server) filterBatch(next jmessages) jmessages {
+	var keep jmessages
+	for _, req := range next {
+		if req.isRequestOrNotification() {
+			keep = append(keep, req)
+			continue
+		}
+
+		// If this is a response implicating the ID of a pending push-call,
+		// deliver the result to that call. Do this early to avoid deadlocking on
+		// the sequencing barrier (see #78).
+		//
+		// Note, however, if it does NOT correspond to a known push-call, keep it
+		// in the batch so it can be serviced as an error.
+		id := string(fixID(req.ID))
+		if s.call[id] != nil {
+			rsp := s.call[id]
+			delete(s.call, id)
+			rsp.ch <- req
+			s.log("Received response for callback %q", id)
+		} else {
+			keep = append(keep, req)
+		}
+	}
+	return keep
 }
 
 // ServerInfo is the concrete type of responses from the rpc.serverInfo method.
