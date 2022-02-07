@@ -5,6 +5,7 @@ package jrpc2_test
 import (
 	"context"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -190,5 +191,55 @@ func TestCheckBatchDuplicateID(t *testing.T) {
 	}
 	if diff := cmp.Diff(want, string(rsp)); diff != "" {
 		t.Errorf("Server response: (-want, +got)\n%s", diff)
+	}
+}
+
+// Verify that callbacks from notification handlers cannot deadlock on delivery
+// of their own replies. Fixes #78, test case courtesy of @radeksimko.
+func TestServer_NotificationCallbackDeadlock(t *testing.T) {
+	defer leaktest.Check(t)()
+
+	var wg sync.WaitGroup
+	loc := server.NewLocal(handler.Map{
+		"NotifyMe": handler.New(func(ctx context.Context) error {
+			defer wg.Done()
+			if _, err := jrpc2.ServerFromContext(ctx).Callback(ctx, "succeed", nil); err != nil {
+				t.Errorf("Callback failed: %v", err)
+			}
+			t.Log("Notification handler complete")
+			return nil
+		}),
+	}, &server.LocalOptions{
+		Server: &jrpc2.ServerOptions{AllowPush: true},
+		Client: &jrpc2.ClientOptions{
+			OnCallback: func(ctx context.Context, req *jrpc2.Request) (interface{}, error) {
+				t.Logf("OnCallback invoked for method %q", req.Method())
+				switch req.Method() {
+				case "succeed":
+					return true, nil
+				}
+				panic("broken test: you should not see this")
+			},
+		},
+	})
+	defer loc.Close()
+	ctx := context.Background()
+
+	// Call the notification method that posts a callback.
+	wg.Add(2)
+	if err := loc.Client.Notify(ctx, "NotifyMe", nil); err != nil {
+		t.Fatalf("Notify: unexpected error: %v", err)
+	}
+	if err := loc.Client.Notify(ctx, "NotifyMe", nil); err != nil {
+		t.Fatalf("Notify: unexpected error: %v", err)
+	}
+
+	done := make(chan struct{})
+	go func() { wg.Wait(); close(done) }()
+	select {
+	case <-done:
+		// all is well
+	case <-time.After(5 * time.Second):
+		t.Fatal("Timed out waiting for callbacks to return")
 	}
 }
