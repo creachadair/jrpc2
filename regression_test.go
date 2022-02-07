@@ -206,14 +206,12 @@ func TestServer_NotificationCallbackDeadlock(t *testing.T) {
 			if _, err := jrpc2.ServerFromContext(ctx).Callback(ctx, "succeed", nil); err != nil {
 				t.Errorf("Callback failed: %v", err)
 			}
-			t.Log("Notification handler complete")
 			return nil
 		}),
 	}, &server.LocalOptions{
 		Server: &jrpc2.ServerOptions{AllowPush: true},
 		Client: &jrpc2.ClientOptions{
 			OnCallback: func(ctx context.Context, req *jrpc2.Request) (interface{}, error) {
-				t.Logf("OnCallback invoked for method %q", req.Method())
 				switch req.Method() {
 				case "succeed":
 					return true, nil
