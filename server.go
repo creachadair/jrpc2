@@ -284,19 +284,19 @@ func (s *Server) checkAndAssign(next jmessages) tasks {
 	// Phase 1: Filter out responses from push calls and check for duplicate
 	// request IDs.
 	for _, req := range next {
-		fid := fixID(req.ID)
-		id := string(fid)
 		if req.err != nil {
 			// keep the existing error
 		} else if !s.versionOK(req.V) {
 			req.err = ErrInvalidVersion
 		}
 
+		fid := fixID(req.ID)
 		t := &task{
 			hreq:  &Request{id: fid, method: req.M, params: req.P},
 			batch: req.batch,
 			err:   req.err,
 		}
+		id := string(fid)
 		if old := dup[id]; old != nil {
 			// A previous task already used this ID, fail both.
 			old.err = errDuplicateID.WithData(id)
