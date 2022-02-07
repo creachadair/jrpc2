@@ -832,6 +832,50 @@ func TestServer_Callback(t *testing.T) {
 	}
 }
 
+func TestServer_CallbackFromNotification(t *testing.T) {
+	defer leaktest.Check(t)()
+
+	pCtx, cancelFunc := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancelFunc()
+
+	loc := server.NewLocal(handler.Map{
+		"NotifyMe": handler.New(func(ctx context.Context) error {
+			if _, err := jrpc2.ServerFromContext(ctx).Callback(pCtx, "succeed", nil); err != nil {
+				t.Errorf("Callback failed: %v", err)
+			}
+
+			t.Log("succeed request sent")
+			return nil
+		}),
+	}, &server.LocalOptions{
+		Server: &jrpc2.ServerOptions{AllowPush: true},
+		Client: &jrpc2.ClientOptions{
+			OnCallback: func(ctx context.Context, req *jrpc2.Request) (interface{}, error) {
+				t.Logf("OnCallback invoked for method %q", req.Method())
+				switch req.Method() {
+				case "succeed":
+					return true, nil
+				}
+				panic("broken test: you should not see this")
+			},
+		},
+	})
+	defer loc.Close()
+	ctx := context.Background()
+
+	// Call the notification method that posts a callback.
+	if err := loc.Client.Notify(ctx, "NotifyMe", nil); err != nil {
+		t.Fatalf("Notify NotifyMe: unexpected error: %v", err)
+	}
+	t.Log("first notification sent")
+	if err := loc.Client.Notify(ctx, "NotifyMe", nil); err != nil {
+		t.Fatalf("Notify NotifyMe: unexpected error: %v", err)
+	}
+	t.Log("second notification sent")
+
+	<-pCtx.Done()
+}
+
 // Verify that a server push after the client closes does not trigger a panic.
 func TestServer_pushAfterClose(t *testing.T) {
 	defer leaktest.Check(t)()
