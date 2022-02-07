@@ -195,7 +195,7 @@ func TestCheckBatchDuplicateID(t *testing.T) {
 }
 
 // Verify that callbacks from notification handlers cannot deadlock on delivery
-// of their own replies. Fixes #78, test case courtesy of @radeksimko.
+// of their own replies. Reported in #78, test case courtesy of @radeksimko.
 func TestServer_NotificationCallbackDeadlock(t *testing.T) {
 	defer leaktest.Check(t)()
 
