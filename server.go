@@ -281,8 +281,7 @@ func (s *Server) checkAndAssign(next jmessages) tasks {
 	var ids []string
 	dup := make(map[string]*task) // :: id ⇒ first task in batch with id
 
-	// Phase 1: Filter out responses from push calls and check for duplicate
-	// request IDs.
+	// Phase 1: Check for errors and duplicate request IDs.
 	for _, req := range next {
 		if req.err != nil {
 			// keep the existing error
