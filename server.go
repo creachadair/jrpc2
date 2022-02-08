@@ -660,7 +660,7 @@ func (s *Server) read(ch receiver) {
 // replies to pending callbacks as required. The remainder is returned.
 // The caller must hold s.mu, and must re-check that the result is not empty.
 func (s *Server) filterBatch(next jmessages) jmessages {
-	var keep jmessages
+	keep := make(jmessages, 0, len(next))
 	for _, req := range next {
 		if req.isRequestOrNotification() {
 			keep = append(keep, req)
