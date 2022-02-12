@@ -234,17 +234,15 @@ func ParseQuery(req *http.Request) (string, interface{}, error) {
 }
 
 func parseJSONString(s string) (string, bool, error) {
-	if len(s) >= 2 {
-		if s[0] == '"' && s[len(s)-1] == '"' {
-			var dec string
-			err := json.Unmarshal([]byte(s), &dec)
-			if err != nil {
-				return "", false, err
-			}
-			return dec, true, nil
-		} else if s[0] == '"' || s[len(s)-1] == '"' {
-			return "", false, errors.New("missing string quote")
+	if len(s) >= 2 && s[0] == '"' && s[len(s)-1] == '"' {
+		var dec string
+		err := json.Unmarshal([]byte(s), &dec)
+		if err != nil {
+			return "", false, err
 		}
+		return dec, true, nil
+	} else if s != "" && (s[0] == '"' || s[len(s)-1] == '"') {
+		return "", false, errors.New("missing string quote")
 	}
 	return "", false, nil
 }
@@ -275,14 +273,12 @@ func parseConstant(s string) (interface{}, bool) {
 }
 
 func parseQuoted64(s string) ([]byte, bool, error) {
-	if len(s) >= 2 {
-		if s[0] == '\'' && s[len(s)-1] == '\'' {
-			trim := strings.TrimRight(s[1:len(s)-1], "=") // discard base64 padding
-			dec, err := base64.RawStdEncoding.DecodeString(trim)
-			return dec, err == nil, err
-		} else if s[0] == '\'' || s[len(s)-1] == '\'' {
-			return nil, false, errors.New("missing bytes quote")
-		}
+	if len(s) >= 2 && s[0] == '\'' && s[len(s)-1] == '\'' {
+		trim := strings.TrimRight(s[1:len(s)-1], "=") // discard base64 padding
+		dec, err := base64.RawStdEncoding.DecodeString(trim)
+		return dec, err == nil, err
+	} else if s != "" && (s[0] == '\'' || s[len(s)-1] == '\'') {
+		return nil, false, errors.New("missing bytes quote")
 	}
 	return nil, false, nil
 }
