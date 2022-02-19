@@ -55,6 +55,9 @@ func (b Bridge) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// If no parse hook is defined, insist that the method is POST and the
 	// content-type is application/json. Setting a hook disables these checks.
 	if b.parseReq == nil {
+		// Advertise that we accept POST application/json.
+		w.Header().Set("Accept-Post", "application/json")
+
 		if req.Method != "POST" {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
