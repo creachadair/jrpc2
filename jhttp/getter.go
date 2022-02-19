@@ -30,16 +30,14 @@ import (
 //  Method not found        404 (Not found)
 //  (other errors)          500 (Internal server error)
 //
-// By default, the URL path identifies the JSON-RPC method, and the URL query
-// parameters are converted into a JSON object for the parameters. Leading and
-// trailing slashes are stripped from the path, and query values are sent as
-// JSON strings.
-//
-// For example, this URL:
+// By default, a Getter uses ParseBasic to convert the HTTP request. The URL
+// path identifies the JSON-RPC method, and the URL query parameters are
+// converted into a JSON object for the parameters.  Query values are sent as
+// JSON strings.  For example, this URL:
 //
 //    http://site.org:2112/some/method?param1=xyzzy&param2=apple
 //
-// would produce the method name "some/method" and this parameter object:
+// produces the method name "some/method" and this parameter object:
 //
 //    {"param1":"xyzzy", "param2":"apple"}
 //
@@ -100,18 +98,7 @@ func (g Getter) parseHTTPRequest(req *http.Request) (string, interface{}, error)
 	if g.parseReq != nil {
 		return g.parseReq(req)
 	}
-	if err := req.ParseForm(); err != nil {
-		return "", nil, err
-	}
-	method := strings.Trim(req.URL.Path, "/")
-	if method == "" {
-		return "", nil, errors.New("empty method name")
-	}
-	params := make(map[string]string)
-	for key := range req.Form {
-		params[key] = req.Form.Get(key)
-	}
-	return method, params, nil
+	return ParseBasic(req)
 }
 
 // GetterOptions are optional settings for a Getter. A nil pointer is ready for
@@ -164,6 +151,27 @@ func writeJSON(w http.ResponseWriter, code int, obj interface{}) {
 	w.Header().Set("Content-Length", strconv.Itoa(len(bits)))
 	w.WriteHeader(code)
 	w.Write(bits)
+}
+
+// ParseBasic parses a request URL and query parameters to obtain a method name
+// and parameters. The URL path identifies the method name, with leading and
+// trailing slashes removed. Query values are packed into a map[string]string.
+//
+// This is the default query parser used by a Getter if none is specified in
+// its GetterOptions.
+func ParseBasic(req *http.Request) (string, interface{}, error) {
+	if err := req.ParseForm(); err != nil {
+		return "", nil, err
+	}
+	method := strings.Trim(req.URL.Path, "/")
+	if method == "" {
+		return "", nil, errors.New("empty method name")
+	}
+	params := make(map[string]string)
+	for key := range req.Form {
+		params[key] = req.Form.Get(key)
+	}
+	return method, params, nil
 }
 
 // ParseQuery parses a request URL and constructs a parameter map from the
