@@ -110,7 +110,7 @@ func TestBridge(t *testing.T) {
 		}
 	})
 
-	// Verify that invalid IDs are not swallowed (see #80).
+	// Verify that an invalid ID is not swallowed by the remapping process (see #80).
 	t.Run("PostInvalidID", func(t *testing.T) {
 		got := mustPost(t, hsrv.URL, `{
         "jsonrpc": "2.0",
@@ -118,7 +118,7 @@ func TestBridge(t *testing.T) {
         "method": "Test1"
       }`, http.StatusOK)
 
-		const exp = `{}`
+		const exp = `{"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"invalid request ID"}}`
 		if got != exp {
 			t.Errorf("POST body: got %#q, want %#q", got, exp)
 		}
