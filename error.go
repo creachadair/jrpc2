@@ -61,6 +61,9 @@ var errEmptyBatch = &Error{Code: code.InvalidRequest, Message: "empty request ba
 // errInvalidParams is the error reported for invalid request parameters.
 var errInvalidParams = &Error{Code: code.InvalidParams, Message: code.InvalidParams.String()}
 
+// errTaskNotExecuted is the internal sentinel error for an unassigned task.
+var errTaskNotExecuted = new(Error)
+
 // ErrConnClosed is returned by a server's push-to-client methods if they are
 // called after the client connection is closed.
 var ErrConnClosed = errors.New("client connection is closed")

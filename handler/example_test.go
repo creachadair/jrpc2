@@ -10,6 +10,7 @@ import (
 
 	"github.com/creachadair/jrpc2"
 	"github.com/creachadair/jrpc2/handler"
+	"github.com/creachadair/jrpc2/internal/testutil"
 )
 
 func ExampleCheck() {
@@ -111,11 +112,9 @@ func ExamplePositional_array() {
 }
 
 func mustParseReq(s string) *jrpc2.Request {
-	reqs, err := jrpc2.ParseRequests([]byte(s))
+	req, err := testutil.ParseRequest(s)
 	if err != nil {
-		log.Fatalf("ParseRequests: %v", err)
-	} else if len(reqs) == 0 {
-		log.Fatal("ParseRequests: empty result")
+		log.Fatalf("ParseRequest: %v", err)
 	}
-	return reqs[0]
+	return req
 }

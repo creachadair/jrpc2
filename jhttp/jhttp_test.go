@@ -110,6 +110,20 @@ func TestBridge(t *testing.T) {
 		}
 	})
 
+	// Verify that an invalid ID is not swallowed by the remapping process (see #80).
+	t.Run("PostInvalidID", func(t *testing.T) {
+		got := mustPost(t, hsrv.URL, `{
+        "jsonrpc": "2.0",
+        "id": ["this is totally bogus"],
+        "method": "Test1"
+      }`, http.StatusOK)
+
+		const exp = `{"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"invalid request ID"}}`
+		if got != exp {
+			t.Errorf("POST body: got %#q, want %#q", got, exp)
+		}
+	})
+
 	// Verify that a notification returns an empty success.
 	t.Run("PostNotification", func(t *testing.T) {
 		got := mustPost(t, hsrv.URL, `{
@@ -131,7 +145,7 @@ func TestBridge_parseRequest(t *testing.T) {
 	const wantReply = `{"jsonrpc":"2.0","id":100,"result":0}`
 
 	b := jhttp.NewBridge(testService, &jhttp.BridgeOptions{
-		ParseRequest: func(req *http.Request) ([]*jrpc2.Request, error) {
+		ParseRequest: func(req *http.Request) ([]*jrpc2.ParsedRequest, error) {
 			action := req.Header.Get("x-test-header")
 			if action == "fail" {
 				return nil, errors.New("parse hook reporting failure")

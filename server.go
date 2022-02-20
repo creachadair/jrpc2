@@ -283,17 +283,13 @@ func (s *Server) checkAndAssign(next jmessages) tasks {
 
 	// Phase 1: Check for errors and duplicate request IDs.
 	for _, req := range next {
-		if req.err != nil {
-			// keep the existing error
-		} else if !s.versionOK(req.V) {
-			req.err = ErrInvalidVersion
-		}
-
 		fid := fixID(req.ID)
 		t := &task{
 			hreq:  &Request{id: fid, method: req.M, params: req.P},
 			batch: req.batch,
-			err:   req.err,
+		}
+		if req.err != nil {
+			t.err = req.err
 		}
 		id := string(fid)
 		if old := dup[id]; old != nil {
@@ -749,8 +745,6 @@ func (s *Server) cancel(id string) bool {
 	return ok
 }
 
-func (s *Server) versionOK(v string) bool { return v == Version }
-
 // A task represents a pending method invocation received by the server.
 type task struct {
 	m Handler // the assigned handler (after assignment)
@@ -787,7 +781,7 @@ func (ts tasks) responses(rpcLog RPCLogger) jmessages {
 		}
 		if task.m == nil {
 			// No method was ever assigned for this task, so it was never run.
-			rsp.err = errors.New("task not executed")
+			rsp.err = errTaskNotExecuted
 		}
 		if task.err == nil {
 			rsp.R = task.val

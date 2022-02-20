@@ -6,7 +6,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"strconv"
 	"sync"
@@ -150,22 +149,18 @@ func (c *Client) deliver(rsp *jmessage) {
 	}
 
 	id := string(fixID(rsp.ID))
-	if p := c.pending[id]; p == nil {
+	p := c.pending[id]
+	if p == nil {
 		c.log("Discarding response for unknown ID %q", id)
-	} else if !c.versionOK(rsp.V) {
-		delete(c.pending, id)
-		p.ch <- &jmessage{
-			ID: rsp.ID,
-			E: &Error{
-				Code:    code.InvalidRequest,
-				Message: fmt.Sprintf("incorrect version marker %q", rsp.V),
-			},
-		}
+		return
+	}
+	// Remove the pending request from the set and deliver its response.
+	// Determining whether it's an error is the caller's responsibility.
+	delete(c.pending, id)
+	if rsp.err != nil {
+		p.ch <- &jmessage{ID: rsp.ID, E: rsp.err}
 		c.log("Invalid response for ID %q", id)
 	} else {
-		// Remove the pending request from the set and deliver its response.
-		// Determining whether it's an error is the caller's responsibility.
-		delete(c.pending, id)
 		p.ch <- rsp
 		c.log("Completed request for ID %q", id)
 	}
@@ -421,8 +416,6 @@ func (c *Client) stop(err error) {
 	c.err = err
 	c.ch = nil
 }
-
-func (c *Client) versionOK(v string) bool { return v == Version }
 
 // marshalParams validates and marshals params to JSON for a request.  The
 // value of params must be either nil or encodable as a JSON object or array.

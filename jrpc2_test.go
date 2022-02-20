@@ -607,11 +607,11 @@ func TestServer_nonLibraryClient(t *testing.T) {
 	}{
 		// Missing version marker (and therefore wrong).
 		{`{"id":0}`,
-			`{"jsonrpc":"2.0","id":0,"error":{"code":-32600,"message":"incorrect version marker"}}`},
+			`{"jsonrpc":"2.0","id":0,"error":{"code":-32600,"message":"invalid version marker"}}`},
 
 		// Version marker is present, but wrong.
 		{`{"jsonrpc":"1.5","id":1}`,
-			`{"jsonrpc":"2.0","id":1,"error":{"code":-32600,"message":"incorrect version marker"}}`},
+			`{"jsonrpc":"2.0","id":1,"error":{"code":-32600,"message":"invalid version marker"}}`},
 
 		// No method was specified.
 		{`{"jsonrpc":"2.0","id":2}`,

@@ -13,6 +13,7 @@ import (
 	"github.com/creachadair/jrpc2"
 	"github.com/creachadair/jrpc2/code"
 	"github.com/creachadair/jrpc2/handler"
+	"github.com/creachadair/jrpc2/internal/testutil"
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -105,7 +106,7 @@ func TestFuncInfo_wrapDecode(t *testing.T) {
 	}
 	ctx := context.Background()
 	for _, test := range tests {
-		req := mustParseRequest(t,
+		req := testutil.MustParseRequest(t,
 			fmt.Sprintf(`{"jsonrpc":"2.0","id":1,"method":"x","params":%s}`, test.p))
 		got, err := test.fn(ctx, req)
 		if err != nil {
@@ -165,7 +166,7 @@ func TestNewStrict(t *testing.T) {
 	}
 	fn := handler.NewStrict(func(ctx context.Context, arg *arg) error { return nil })
 
-	req := mustParseRequest(t, `{
+	req := testutil.MustParseRequest(t, `{
    "jsonrpc": "2.0",
    "id":      100,
    "method":  "f",
@@ -199,7 +200,7 @@ func TestNew_pointerRegression(t *testing.T) {
 		t.Logf("Got argument struct: %+v", got)
 		return nil
 	})
-	req := mustParseRequest(t, `{
+	req := testutil.MustParseRequest(t, `{
    "jsonrpc": "2.0",
    "id":      "foo",
    "method":  "bar",
@@ -245,7 +246,7 @@ func TestPositional_decode(t *testing.T) {
 		{`{"jsonrpc":"2.0","id":15,"method":"add","params":[1,2,3]}`, 0, true}, // too many
 	}
 	for _, test := range tests {
-		req := mustParseRequest(t, test.input)
+		req := testutil.MustParseRequest(t, test.input)
 		got, err := call(context.Background(), req)
 		if !test.bad {
 			if err != nil {
@@ -436,17 +437,6 @@ func TestObjUnmarshal(t *testing.T) {
 			t.Errorf("Wrong values: (-want, +got)\n%s", diff)
 		}
 	}
-}
-
-func mustParseRequest(t *testing.T, text string) *jrpc2.Request {
-	t.Helper()
-	req, err := jrpc2.ParseRequests([]byte(text))
-	if err != nil {
-		t.Fatalf("ParseRequests: %v", err)
-	} else if len(req) != 1 {
-		t.Fatalf("Wrong number of requests: got %d, want 1", len(req))
-	}
-	return req[0]
 }
 
 // stringByte is a byte with a custom JSON encoding. It expects a string of
