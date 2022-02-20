@@ -12,10 +12,15 @@ import (
 )
 
 // ParseRequest parses a single JSON request object.
-func ParseRequest(s string) (req *jrpc2.Request, err error) {
-	cch, sch := channel.Direct()
+func ParseRequest(s string) (_ *jrpc2.Request, err error) {
+	// Check syntax.
+	if _, err := jrpc2.ParseRequests([]byte(s)); err != nil {
+		return nil, err
+	}
 
-	srv := jrpc2.NewServer(requestStub{req: &req}, nil).Start(sch)
+	cch, sch := channel.Direct()
+	rs := newRequestStub()
+	srv := jrpc2.NewServer(rs, nil).Start(sch)
 	defer func() {
 		cch.Close()
 		serr := srv.Wait()
@@ -23,12 +28,12 @@ func ParseRequest(s string) (req *jrpc2.Request, err error) {
 			err = serr
 		}
 	}()
-
 	if err := cch.Send([]byte(s)); err != nil {
-		srv.Stop()
 		return nil, err
-	} else if _, err := cch.Recv(); err != nil {
-		return nil, err
+	}
+	req := <-rs.reqc
+	if !rs.isNote {
+		cch.Recv()
 	}
 	return req, nil
 }
@@ -44,11 +49,20 @@ func MustParseRequest(t *testing.T, s string) *jrpc2.Request {
 	return req
 }
 
-type requestStub struct{ req **jrpc2.Request }
+func newRequestStub() *requestStub {
+	return &requestStub{reqc: make(chan *jrpc2.Request, 1)}
+}
 
-func (r requestStub) Assign(context.Context, string) jrpc2.Handler { return r }
+type requestStub struct {
+	reqc   chan *jrpc2.Request
+	isNote bool
+}
 
-func (r requestStub) Handle(_ context.Context, req *jrpc2.Request) (interface{}, error) {
-	*r.req = req
+func (r *requestStub) Assign(context.Context, string) jrpc2.Handler { return r }
+
+func (r *requestStub) Handle(_ context.Context, req *jrpc2.Request) (interface{}, error) {
+	defer close(r.reqc)
+	r.isNote = req.IsNotification()
+	r.reqc <- req
 	return nil, nil
 }
