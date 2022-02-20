@@ -199,8 +199,9 @@ func (j *jmessage) parseJSON(data []byte) error {
 				j.fail(code.ParseError, "invalid version key")
 			}
 		case "id":
-			j.ID = val
-			if !isValidID(val) {
+			if isValidID(val) {
+				j.ID = val
+			} else {
 				j.fail(code.InvalidRequest, "invalid request ID")
 			}
 		case "method":
