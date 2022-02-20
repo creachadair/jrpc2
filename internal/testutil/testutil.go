@@ -1,3 +1,5 @@
+// Copyright (C) 2022 Michael J. Fromberger. All Rights Reserved.
+
 // Package testutil defines internal support code for writing tests.
 package testutil
 
