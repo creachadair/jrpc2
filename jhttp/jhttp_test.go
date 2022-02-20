@@ -110,6 +110,20 @@ func TestBridge(t *testing.T) {
 		}
 	})
 
+	// Verify that invalid IDs are not swallowed (see #80).
+	t.Run("PostInvalidID", func(t *testing.T) {
+		got := mustPost(t, hsrv.URL, `{
+        "jsonrpc": "2.0",
+        "id": ["this is totally bogus"],
+        "method": "Test1"
+      }`, http.StatusOK)
+
+		const exp = `{}`
+		if got != exp {
+			t.Errorf("POST body: got %#q, want %#q", got, exp)
+		}
+	})
+
 	// Verify that a notification returns an empty success.
 	t.Run("PostNotification", func(t *testing.T) {
 		got := mustPost(t, hsrv.URL, `{

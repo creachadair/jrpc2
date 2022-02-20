@@ -91,9 +91,6 @@ func (b Bridge) serveInternal(w http.ResponseWriter, req *http.Request) error {
 	// *jrpc2.Client detangles batch order so that responses come back in the
 	// same order (modulo notifications) even if the server response did not
 	// preserve order.
-	//
-	// Note that we don't check individual request structure; if the request is
-	// invalid the server will generate an error for it.
 
 	// Generate request specifications for the client.
 	var inboundID []string                // for requests
