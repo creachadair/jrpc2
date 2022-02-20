@@ -19,40 +19,47 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
+var errInvalidVersion = &Error{Code: code.InvalidRequest, Message: "invalid version marker"}
+
 func TestParseRequests(t *testing.T) {
 	tests := []struct {
 		input string
-		want  []*Request
+		want  []*ParsedRequest
 		err   error
 	}{
 		// An empty batch is valid and produces no results.
 		{`[]`, nil, nil},
 
 		// An empty single request is invalid but returned anyway.
-		{`{}`, []*Request{{}}, ErrInvalidVersion},
+		{`{}`, []*ParsedRequest{{Error: errInvalidVersion}}, nil},
+
+		// Structurally invalid JSON reports an error.
+		{`[`, nil, errInvalidRequest},
+		{`{}}`, nil, errInvalidRequest},
+		{`[{}, ttt]`, nil, errInvalidRequest},
 
 		// A valid notification.
-		{`{"jsonrpc":"2.0", "method": "foo", "params":[1, 2, 3]}`, []*Request{{
-			method: "foo",
-			params: json.RawMessage(`[1, 2, 3]`),
+		{`{"jsonrpc":"2.0", "method": "foo", "params":[1, 2, 3]}`, []*ParsedRequest{{
+			Method: "foo",
+			Params: json.RawMessage(`[1, 2, 3]`),
 		}}, nil},
 
 		// A valid request, with nil parameters.
-		{`{"jsonrpc":"2.0", "method": "foo", "id":10332, "params":null}`, []*Request{{
-			id: json.RawMessage("10332"), method: "foo",
+		{`{"jsonrpc":"2.0", "method": "foo", "id":10332, "params":null}`, []*ParsedRequest{{
+			ID: "10332", Method: "foo",
 		}}, nil},
 
 		// A valid mixed batch.
 		{`[ {"jsonrpc": "2.0", "id": 1, "method": "A", "params": {}},
-          {"jsonrpc": "2.0", "params": [5], "method": "B"} ]`, []*Request{
-			{method: "A", id: json.RawMessage(`1`), params: json.RawMessage(`{}`)},
-			{method: "B", params: json.RawMessage(`[5]`)},
+          {"jsonrpc": "2.0", "params": [5], "method": "B"} ]`, []*ParsedRequest{
+			{Method: "A", ID: "1", Params: json.RawMessage(`{}`)},
+			{Method: "B", Params: json.RawMessage(`[5]`)},
 		}, nil},
 
 		// An invalid batch.
-		{`[{"id": 37, "method": "complain", "params":[]}]`, []*Request{
-			{method: "complain", id: json.RawMessage(`37`), params: json.RawMessage(`[]`)},
-		}, ErrInvalidVersion},
+		{`[{"id": 37, "method": "complain", "params":[]}]`, []*ParsedRequest{
+			{Method: "complain", ID: "37", Params: json.RawMessage(`[]`), Error: errInvalidVersion},
+		}, nil},
 
 		// A broken request.
 		{`{`, nil, Errorf(code.ParseError, "invalid request value")},
@@ -67,7 +74,7 @@ func TestParseRequests(t *testing.T) {
 			continue
 		}
 
-		diff := cmp.Diff(test.want, got, cmp.AllowUnexported(Request{}), cmpopts.EquateEmpty())
+		diff := cmp.Diff(test.want, got, cmpopts.EquateEmpty())
 		if diff != "" {
 			t.Errorf("ParseRequests(%#q): wrong result (-want, +got):\n%s", test.input, diff)
 		}
@@ -113,17 +120,18 @@ func TestRequest_UnmarshalParams(t *testing.T) {
 			xy{X: 23}, `{"x":23, "z":"wat"}`, code.NoError},
 	}
 	for _, test := range tests {
-		req, err := ParseRequests([]byte(test.input))
-		if err != nil {
+		var reqs jmessages
+		if err := reqs.parseJSON([]byte(test.input)); err != nil {
 			t.Errorf("Parsing request %#q failed: %v", test.input, err)
-		} else if len(req) != 1 {
-			t.Fatalf("Wrong number of requests: got %d, want 1", len(req))
+		} else if len(reqs) != 1 {
+			t.Fatalf("Wrong number of requests: got %d, want 1", len(reqs))
 		}
+		req := &Request{id: reqs[0].ID, method: reqs[0].M, params: reqs[0].P}
 
 		// Allocate a zero of the expected type to unmarshal into.
 		target := reflect.New(reflect.TypeOf(test.want)).Interface()
 		{
-			err := req[0].UnmarshalParams(target)
+			err := req.UnmarshalParams(target)
 			if got := code.FromError(err); got != test.code {
 				t.Errorf("UnmarshalParams error: got code %d, want %d [%v]", got, test.code, err)
 			}
@@ -139,7 +147,7 @@ func TestRequest_UnmarshalParams(t *testing.T) {
 		}
 
 		// Check that the parameter string matches.
-		if got := req[0].ParamString(); got != test.pstring {
+		if got := req.ParamString(); got != test.pstring {
 			t.Errorf("ParamString(%#q): got %q, want %q", test.input, got, test.pstring)
 		}
 	}

@@ -601,17 +601,19 @@ func TestServer_nonLibraryClient(t *testing.T) {
 		}
 	}()
 
-	const invalidIDMessage = `{"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"invalid request ID"}}`
+	invalidIDMessage := func(s string) string {
+		return fmt.Sprintf(`{"jsonrpc":"2.0","id":%s,"error":{"code":-32600,"message":"invalid request ID"}}`, s)
+	}
 	tests := []struct {
 		input, want string
 	}{
 		// Missing version marker (and therefore wrong).
 		{`{"id":0}`,
-			`{"jsonrpc":"2.0","id":0,"error":{"code":-32600,"message":"incorrect version marker"}}`},
+			`{"jsonrpc":"2.0","id":0,"error":{"code":-32600,"message":"invalid version marker"}}`},
 
 		// Version marker is present, but wrong.
 		{`{"jsonrpc":"1.5","id":1}`,
-			`{"jsonrpc":"2.0","id":1,"error":{"code":-32600,"message":"incorrect version marker"}}`},
+			`{"jsonrpc":"2.0","id":1,"error":{"code":-32600,"message":"invalid version marker"}}`},
 
 		// No method was specified.
 		{`{"jsonrpc":"2.0","id":2}`,
@@ -684,11 +686,11 @@ func TestServer_nonLibraryClient(t *testing.T) {
 			`{"jsonrpc":"2.0","id":null,"error":{"code":-32700,"message":"invalid request value"}}`},
 
 		// Various invalid ID checks.
-		{`{"jsonrpc":"2.0", "id":[], "method":"X"}`, invalidIDMessage},    // invalid ID: array
-		{`{"jsonrpc":"2.0", "id":["q"], "method":"X"}`, invalidIDMessage}, // "
-		{`{"jsonrpc":"2.0", "id":{}, "method":"X"}`, invalidIDMessage},    // invalid ID: object
-		{`{"jsonrpc":"2.0", "id":true, "method":"X"}`, invalidIDMessage},  // invalid ID: Boolean
-		{`{"jsonrpc":"2.0", "id":false, "method":"X"}`, invalidIDMessage}, // "
+		{`{"jsonrpc":"2.0", "id":[], "method":"X"}`, invalidIDMessage("[]")},       // invalid ID: array
+		{`{"jsonrpc":"2.0", "id":["q"], "method":"X"}`, invalidIDMessage(`["q"]`)}, // "
+		{`{"jsonrpc":"2.0", "id":{}, "method":"X"}`, invalidIDMessage("{}")},       // invalid ID: object
+		{`{"jsonrpc":"2.0", "id":true, "method":"X"}`, invalidIDMessage("true")},   // invalid ID: Boolean
+		{`{"jsonrpc":"2.0", "id":false, "method":"X"}`, invalidIDMessage("false")}, // "
 	}
 	for _, test := range tests {
 		if err := cli.Send([]byte(test.input)); err != nil {

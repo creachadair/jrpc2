@@ -9,33 +9,35 @@ import (
 	"github.com/creachadair/jrpc2/code"
 )
 
-// ErrInvalidVersion is returned by ParseRequests if one or more of the
-// requests in the input has a missing or invalid version marker.
-var ErrInvalidVersion error = &Error{Code: code.InvalidRequest, Message: "incorrect version marker"}
-
 // ParseRequests parses a single request or a batch of requests from JSON.
-//
-// If msg is syntactically valid apart from one or more of the requests having
-// a missing or invalid JSON-RPC version, ParseRequests returns ErrInvalidVersion
-// along with the parsed results.
-func ParseRequests(msg []byte) ([]*Request, error) {
-	var req jmessages
-	if err := req.parseJSON(msg); err != nil {
+// This function reports an error only if msg is not valid JSON. The caller
+// must check the individual results for their validity.
+func ParseRequests(msg []byte) ([]*ParsedRequest, error) {
+	var reqs jmessages
+	if err := reqs.parseJSON(msg); err != nil {
 		return nil, err
 	}
 	var err error
-	out := make([]*Request, len(req))
-	for i, req := range req {
-		if req.V != Version {
-			err = ErrInvalidVersion
-		}
-		out[i] = &Request{
-			id:     fixID(req.ID),
-			method: req.M,
-			params: req.P,
+	out := make([]*ParsedRequest, len(reqs))
+	for i, req := range reqs {
+		out[i] = &ParsedRequest{
+			ID:     string(fixID(req.ID)),
+			Method: req.M,
+			Params: req.P,
+			Error:  req.err,
 		}
 	}
 	return out, err
+}
+
+// A ParsedRequest is the parsed form of a request message. If a request is
+// valid, its Error field is nil. Otherwise, the Error field describes why the
+// request is invalid, and the other fields may be incomplete or missing.
+type ParsedRequest struct {
+	ID     string
+	Method string
+	Params json.RawMessage
+	Error  *Error
 }
 
 // jmessages is either a single protocol message or an array of protocol
@@ -111,8 +113,8 @@ type jmessage struct {
 	// and R. Specifically, if M != "" then E and R must both be unset. This is
 	// checked during parsing.
 
-	batch bool  // this message was part of a batch
-	err   error // if not nil, this message is invalid and err is why
+	batch bool   // this message was part of a batch
+	err   *Error // if not nil, this message is invalid and err is why
 }
 
 // isValidID reports whether v is a valid JSON encoding of a request ID.
@@ -129,8 +131,13 @@ func isValidID(v json.RawMessage) bool {
 	return false // anything else is garbage
 }
 
+// isValidVersion reports whether v is a valid JSON-RPC version string.
+func isValidVersion(v string) bool { return v == Version }
+
 func (j *jmessage) fail(code code.Code, msg string) {
-	j.err = &Error{Code: code, Message: msg}
+	if j.err == nil {
+		j.err = &Error{Code: code, Message: msg}
+	}
 }
 
 func (j *jmessage) toJSON() ([]byte, error) {
@@ -192,9 +199,8 @@ func (j *jmessage) parseJSON(data []byte) error {
 				j.fail(code.ParseError, "invalid version key")
 			}
 		case "id":
-			if isValidID(val) {
-				j.ID = val
-			} else {
+			j.ID = val
+			if !isValidID(val) {
 				j.fail(code.InvalidRequest, "invalid request ID")
 			}
 		case "method":
@@ -219,6 +225,11 @@ func (j *jmessage) parseJSON(data []byte) error {
 		default:
 			extra = append(extra, key)
 		}
+	}
+
+	// Report an error for an invalid version marker
+	if !isValidVersion(j.V) {
+		j.fail(code.InvalidRequest, "invalid version marker")
 	}
 
 	// Report an error if request/response fields overlap.

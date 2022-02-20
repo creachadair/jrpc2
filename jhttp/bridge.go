@@ -40,7 +40,7 @@ import (
 // headers. Use jhttp.HTTPRequest to retrieve the request from the context.
 type Bridge struct {
 	local    server.Local
-	parseReq func(*http.Request) ([]*jrpc2.Request, error)
+	parseReq func(*http.Request) ([]*jrpc2.ParsedRequest, error)
 	getter   *Getter
 }
 
@@ -77,12 +77,8 @@ func (b Bridge) serveInternal(w http.ResponseWriter, req *http.Request) error {
 	// The HTTP request requires a response, but the server will not reply if
 	// all the requests are notifications. Check whether we have any calls
 	// needing a response, and choose whether to wait for a reply based on that.
-	//
-	// Note that we are forgiving about a missing version marker in a request,
-	// since we can't tell at this point whether the server is willing to accept
-	// messages like that.
 	jreq, err := b.parseHTTPRequest(req)
-	if err != nil && err != jrpc2.ErrInvalidVersion {
+	if err != nil {
 		return err
 	}
 
@@ -95,22 +91,21 @@ func (b Bridge) serveInternal(w http.ResponseWriter, req *http.Request) error {
 	// *jrpc2.Client detangles batch order so that responses come back in the
 	// same order (modulo notifications) even if the server response did not
 	// preserve order.
+	//
+	// Note that we don't check individual request structure; if the request is
+	// invalid the server will generate an error for it.
 
 	// Generate request specifications for the client.
 	var inboundID []string                // for requests
 	spec := make([]jrpc2.Spec, len(jreq)) // requests & notifications
 	for i, req := range jreq {
 		spec[i] = jrpc2.Spec{
-			Method: req.Method(),
-			Notify: req.IsNotification(),
-		}
-		if req.HasParams() {
-			var p json.RawMessage
-			req.UnmarshalParams(&p)
-			spec[i].Params = p
+			Method: req.Method,
+			Notify: req.ID == "",
+			Params: req.Params,
 		}
 		if !spec[i].Notify {
-			inboundID = append(inboundID, req.ID())
+			inboundID = append(inboundID, req.ID)
 		}
 	}
 
@@ -136,7 +131,7 @@ func (b Bridge) serveInternal(w http.ResponseWriter, req *http.Request) error {
 	return b.encodeResponses(rsps, w)
 }
 
-func (b Bridge) parseHTTPRequest(req *http.Request) ([]*jrpc2.Request, error) {
+func (b Bridge) parseHTTPRequest(req *http.Request) ([]*jrpc2.ParsedRequest, error) {
 	if b.parseReq != nil {
 		return b.parseReq(req)
 	}
@@ -215,7 +210,7 @@ type BridgeOptions struct {
 	//
 	// Setting this hook disables the default requirement that the request
 	// method be POST and the content-type be application/json.
-	ParseRequest func(*http.Request) ([]*jrpc2.Request, error)
+	ParseRequest func(*http.Request) ([]*jrpc2.ParsedRequest, error)
 
 	// If non-nil, this function is used to parse a JSON-RPC method name and
 	// parameters from the URL of an HTTP GET request. If this function reports
@@ -241,7 +236,7 @@ func (o *BridgeOptions) serverOptions() *jrpc2.ServerOptions {
 	return o.Server
 }
 
-func (o *BridgeOptions) parseRequest() func(*http.Request) ([]*jrpc2.Request, error) {
+func (o *BridgeOptions) parseRequest() func(*http.Request) ([]*jrpc2.ParsedRequest, error) {
 	if o == nil {
 		return nil
 	}

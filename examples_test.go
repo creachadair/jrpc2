@@ -13,6 +13,7 @@ import (
 	"github.com/creachadair/jrpc2"
 	"github.com/creachadair/jrpc2/code"
 	"github.com/creachadair/jrpc2/handler"
+	"github.com/creachadair/jrpc2/internal/testutil"
 	"github.com/creachadair/jrpc2/server"
 )
 
@@ -98,10 +99,9 @@ func ExampleClient_Batch() {
 
 func ExampleRequest_UnmarshalParams() {
 	const msg = `{"jsonrpc":"2.0", "id":101, "method":"M", "params":{"a":1, "b":2, "c":3}}`
-
-	reqs, err := jrpc2.ParseRequests([]byte(msg))
+	req, err := testutil.ParseRequest(msg)
 	if err != nil {
-		log.Fatalf("ParseRequests: %v", err)
+		log.Fatalf("Parsing %#q failed: %v", msg, err)
 	}
 
 	var t, u struct {
@@ -110,7 +110,7 @@ func ExampleRequest_UnmarshalParams() {
 	}
 
 	// By default, unmarshaling ignores unknown fields (here, "c").
-	if err := reqs[0].UnmarshalParams(&t); err != nil {
+	if err := req.UnmarshalParams(&t); err != nil {
 		log.Fatalf("UnmarshalParams: %v", err)
 	}
 	fmt.Printf("t.A=%d, t.B=%d\n", t.A, t.B)
@@ -118,21 +118,21 @@ func ExampleRequest_UnmarshalParams() {
 	// To implement strict field checking, there are several options:
 	//
 	// Solution 1: Use the jrpc2.StrictFields helper.
-	err = reqs[0].UnmarshalParams(jrpc2.StrictFields(&t))
+	err = req.UnmarshalParams(jrpc2.StrictFields(&t))
 	if code.FromError(err) != code.InvalidParams {
 		log.Fatalf("UnmarshalParams strict: %v", err)
 	}
 
 	// Solution 2: Implement a DisallowUnknownFields method.
 	var p strictParams
-	err = reqs[0].UnmarshalParams(&p)
+	err = req.UnmarshalParams(&p)
 	if code.FromError(err) != code.InvalidParams {
 		log.Fatalf("UnmarshalParams strict: %v", err)
 	}
 
 	// Solution 3: Decode the raw message separately.
 	var tmp json.RawMessage
-	reqs[0].UnmarshalParams(&tmp) // cannot fail
+	req.UnmarshalParams(&tmp) // cannot fail
 	dec := json.NewDecoder(bytes.NewReader(tmp))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&u); err == nil {

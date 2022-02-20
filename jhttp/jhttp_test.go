@@ -131,7 +131,7 @@ func TestBridge_parseRequest(t *testing.T) {
 	const wantReply = `{"jsonrpc":"2.0","id":100,"result":0}`
 
 	b := jhttp.NewBridge(testService, &jhttp.BridgeOptions{
-		ParseRequest: func(req *http.Request) ([]*jrpc2.Request, error) {
+		ParseRequest: func(req *http.Request) ([]*jrpc2.ParsedRequest, error) {
 			action := req.Header.Get("x-test-header")
 			if action == "fail" {
 				return nil, errors.New("parse hook reporting failure")

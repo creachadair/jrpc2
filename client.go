@@ -152,7 +152,7 @@ func (c *Client) deliver(rsp *jmessage) {
 	id := string(fixID(rsp.ID))
 	if p := c.pending[id]; p == nil {
 		c.log("Discarding response for unknown ID %q", id)
-	} else if !c.versionOK(rsp.V) {
+	} else if !isValidVersion(rsp.V) {
 		delete(c.pending, id)
 		p.ch <- &jmessage{
 			ID: rsp.ID,
@@ -421,8 +421,6 @@ func (c *Client) stop(err error) {
 	c.err = err
 	c.ch = nil
 }
-
-func (c *Client) versionOK(v string) bool { return v == Version }
 
 // marshalParams validates and marshals params to JSON for a request.  The
 // value of params must be either nil or encodable as a JSON object or array.
