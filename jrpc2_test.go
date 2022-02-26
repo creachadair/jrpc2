@@ -17,7 +17,6 @@ import (
 	"github.com/creachadair/jrpc2/channel"
 	"github.com/creachadair/jrpc2/code"
 	"github.com/creachadair/jrpc2/handler"
-	"github.com/creachadair/jrpc2/jctx"
 	"github.com/creachadair/jrpc2/server"
 	"github.com/fortytw2/leaktest"
 	"github.com/google/go-cmp/cmp"
@@ -1058,36 +1057,6 @@ func TestClient_callbackUpCall(t *testing.T) {
 	loc.Close()
 	if probe != pingMessage {
 		t.Errorf("Probe response: got %q, want %q", probe, pingMessage)
-	}
-}
-
-// Verify that the context encoding/decoding hooks work.
-func TestContextPlumbing(t *testing.T) {
-	defer leaktest.Check(t)()
-
-	want := time.Now().Add(10 * time.Second)
-	ctx, cancel := context.WithDeadline(context.Background(), want)
-	defer cancel()
-
-	loc := server.NewLocal(handler.Map{
-		"X": handler.New(func(ctx context.Context) (bool, error) {
-			got, ok := ctx.Deadline()
-			if !ok {
-				return false, errors.New("no deadline was set")
-			} else if !got.Equal(want) {
-				return false, fmt.Errorf("deadline: got %v, want %v", got, want)
-			}
-			t.Logf("Got expected deadline: %v", got)
-			return true, nil
-		}),
-	}, &server.LocalOptions{
-		Server: &jrpc2.ServerOptions{DecodeContext: jctx.Decode},
-		Client: &jrpc2.ClientOptions{EncodeContext: jctx.Encode},
-	})
-	defer loc.Close()
-
-	if _, err := loc.Client.Call(ctx, "X", nil); err != nil {
-		t.Errorf("Call X failed: %v", err)
 	}
 }
 

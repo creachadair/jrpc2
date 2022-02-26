@@ -24,7 +24,6 @@ import (
 
 	"github.com/creachadair/jrpc2"
 	"github.com/creachadair/jrpc2/channel"
-	"github.com/creachadair/jrpc2/jctx"
 	"github.com/creachadair/jrpc2/jhttp"
 	"github.com/creachadair/wschannel"
 )
@@ -33,7 +32,6 @@ var (
 	dialTimeout = flag.Duration("dial", 5*time.Second, "Timeout on dialing the server (0 for no timeout)")
 	callTimeout = flag.Duration("timeout", 0, "Timeout on each call (0 for no timeout)")
 	doNotify    = flag.Bool("notify", false, "Send a notification")
-	withContext = flag.Bool("c", false, "Send context with request")
 	chanFraming = flag.String("f", envOrDefault("JCALL_FRAMING", "line"), "Channel framing")
 	doBatch     = flag.Bool("batch", false, "Issue calls as a batch rather than sequentially")
 	doErrors    = flag.Bool("e", false, "Print error values to stdout")
@@ -42,7 +40,6 @@ var (
 	doTiming    = flag.Bool("T", false, "Print call timing stats")
 	doWaitExit  = flag.Bool("W", false, "Wait for interrupt at exit")
 	withLogging = flag.Bool("v", false, "Enable verbose logging")
-	withMeta    = flag.String("meta", "", "Attach this JSON value as request metadata (implies -c)")
 )
 
 func init() {
@@ -97,21 +94,8 @@ func main() {
 		log.Fatal("Arguments are <address> {<method> <params>}...")
 	}
 
-	// Set up the context for the call, including timeouts and any metadata that
-	// are specified on the command line. Setting -meta also implicitly sets -c.
+	// Set up the context for the call, including a timeouts if specified.
 	ctx := context.Background()
-	if *withMeta == "" {
-		*withMeta = os.Getenv("JCALL_META")
-	}
-	if *withMeta != "" {
-		mc, err := jctx.WithMetadata(ctx, json.RawMessage(*withMeta))
-		if err != nil {
-			log.Fatalf("Invalid request metadata: %v", err)
-		}
-		ctx = mc
-		*withContext = true
-	}
-
 	if *callTimeout > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, *callTimeout)
@@ -179,9 +163,6 @@ func newClient(conn channel.Channel) *jrpc2.Client {
 			req.UnmarshalParams(&p)
 			fmt.Printf(`{"method":%q,"params":%s}`+"\n", req.Method(), string(p))
 		},
-	}
-	if *withContext {
-		opts.EncodeContext = jctx.Encode
 	}
 	if *withLogging {
 		opts.Logger = jrpc2.StdLogger(nil)

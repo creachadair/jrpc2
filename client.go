@@ -20,7 +20,6 @@ type Client struct {
 	done *sync.WaitGroup // done when the reader is finished at shutdown time
 
 	log   func(string, ...interface{}) // write debug logs here
-	enctx encoder
 	snote func(*jmessage)
 	scall func(context.Context, *jmessage) []byte
 	chook func(*Client, *Response)
@@ -41,7 +40,6 @@ func NewClient(ch channel.Channel, opts *ClientOptions) *Client {
 	c := &Client{
 		done:  new(sync.WaitGroup),
 		log:   opts.logFunc(),
-		enctx: opts.encodeContext(),
 		snote: opts.handleNotification(),
 		scall: opts.handleCallback(),
 		chook: opts.handleCancel(),
@@ -421,7 +419,7 @@ func (c *Client) stop(err error) {
 // value of params must be either nil or encodable as a JSON object or array.
 func (c *Client) marshalParams(ctx context.Context, method string, params interface{}) (json.RawMessage, error) {
 	if params == nil {
-		return c.enctx(ctx, method, nil) // no parameters, that is OK
+		return nil, nil // no parameters, that is OK
 	}
 	pbits, err := json.Marshal(params)
 	if err != nil {
@@ -432,11 +430,7 @@ func (c *Client) marshalParams(ctx context.Context, method string, params interf
 		// an array or an object.
 		return nil, &Error{Code: code.InvalidRequest, Message: "invalid parameters: array or object required"}
 	}
-	bits, err := c.enctx(ctx, method, pbits)
-	if err != nil {
-		return nil, err
-	}
-	return bits, err
+	return pbits, nil
 }
 
 func newPending(ctx context.Context, id string) (context.Context, *Response) {

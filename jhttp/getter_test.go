@@ -12,7 +12,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/creachadair/jrpc2"
 	"github.com/creachadair/jrpc2/handler"
 	"github.com/creachadair/jrpc2/jhttp"
 	"github.com/fortytw2/leaktest"
@@ -28,9 +27,7 @@ func TestGetter(t *testing.T) {
 		}, "first", "second"),
 	}
 
-	g := jhttp.NewGetter(mux, &jhttp.GetterOptions{
-		Client: &jrpc2.ClientOptions{EncodeContext: checkContext},
-	})
+	g := jhttp.NewGetter(mux, nil)
 	defer checkClose(t, g)
 
 	hsrv := httptest.NewServer(g)
