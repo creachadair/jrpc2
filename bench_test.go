@@ -10,7 +10,6 @@ import (
 
 	"github.com/creachadair/jrpc2"
 	"github.com/creachadair/jrpc2/handler"
-	"github.com/creachadair/jrpc2/jctx"
 	"github.com/creachadair/jrpc2/server"
 	"github.com/fortytw2/leaktest"
 )
@@ -23,37 +22,17 @@ func BenchmarkRoundTrip(b *testing.B) {
 			return nil, nil
 		}),
 	}
-	ctxClient := &jrpc2.ClientOptions{EncodeContext: jctx.Encode}
 	tests := []struct {
 		desc string
 		cli  *jrpc2.ClientOptions
 		srv  *jrpc2.ServerOptions
 	}{
-		{"C01-CTX-B", nil, &jrpc2.ServerOptions{DisableBuiltin: true, Concurrency: 1}},
-		{"C01-CTX+B", nil, &jrpc2.ServerOptions{Concurrency: 1}},
-		{"C04-CTX-B", nil, &jrpc2.ServerOptions{DisableBuiltin: true, Concurrency: 4}},
-		{"C04-CTX+B", nil, &jrpc2.ServerOptions{Concurrency: 4}},
-		{"C12-CTX-B", nil, &jrpc2.ServerOptions{DisableBuiltin: true, Concurrency: 12}},
-		{"C12-CTX+B", nil, &jrpc2.ServerOptions{Concurrency: 12}},
-
-		{"C01+CTX-B", ctxClient,
-			&jrpc2.ServerOptions{DecodeContext: jctx.Decode, DisableBuiltin: true, Concurrency: 1},
-		},
-		{"C01+CTX+B", ctxClient,
-			&jrpc2.ServerOptions{DecodeContext: jctx.Decode, Concurrency: 1},
-		},
-		{"C04+CTX-B", ctxClient,
-			&jrpc2.ServerOptions{DecodeContext: jctx.Decode, DisableBuiltin: true, Concurrency: 4},
-		},
-		{"C04+CTX+B", ctxClient,
-			&jrpc2.ServerOptions{DecodeContext: jctx.Decode, Concurrency: 4},
-		},
-		{"C12+CTX-B", ctxClient,
-			&jrpc2.ServerOptions{DecodeContext: jctx.Decode, DisableBuiltin: true, Concurrency: 4},
-		},
-		{"C12+CTX+B", ctxClient,
-			&jrpc2.ServerOptions{DecodeContext: jctx.Decode, Concurrency: 12},
-		},
+		{"C01-B", nil, &jrpc2.ServerOptions{DisableBuiltin: true, Concurrency: 1}},
+		{"C01+B", nil, &jrpc2.ServerOptions{Concurrency: 1}},
+		{"C04-B", nil, &jrpc2.ServerOptions{DisableBuiltin: true, Concurrency: 4}},
+		{"C04+B", nil, &jrpc2.ServerOptions{Concurrency: 4}},
+		{"C12-B", nil, &jrpc2.ServerOptions{DisableBuiltin: true, Concurrency: 12}},
+		{"C12+B", nil, &jrpc2.ServerOptions{Concurrency: 12}},
 	}
 	for _, test := range tests {
 		b.Run(test.desc, func(b *testing.B) {

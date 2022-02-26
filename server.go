@@ -31,7 +31,6 @@ type Server struct {
 	log     func(string, ...interface{}) // write debug logs here
 	rpcLog  RPCLogger                    // log RPC requests and responses here
 	newctx  func() context.Context       // create a new base request context
-	dectx   decoder                      // decode context from request
 	metrics *metrics.M                   // metrics collected during execution
 	start   time.Time                    // when Start was called
 	builtin bool                         // whether built-in rpc.* methods are enabled
@@ -72,7 +71,6 @@ func NewServer(mux Assigner, opts *ServerOptions) *Server {
 		log:     opts.logFunc(),
 		rpcLog:  opts.rpcLog(),
 		newctx:  opts.newContext(),
-		dectx:   opts.decodeContext(),
 		mu:      new(sync.Mutex),
 		metrics: opts.metrics(),
 		start:   opts.startTime(),
@@ -314,7 +312,8 @@ func (s *Server) checkAndAssign(next jmessages) tasks {
 			// deferred validation error
 		} else if t.hreq.method == "" {
 			t.err = errEmptyMethod
-		} else if s.setContext(t, id) {
+		} else {
+			s.setContext(t, id)
 			t.m = s.assign(t.ctx, t.hreq.method)
 			if t.m == nil {
 				t.err = errNoSuchMethod.WithData(t.hreq.method)
@@ -332,15 +331,8 @@ func (s *Server) checkAndAssign(next jmessages) tasks {
 
 // setContext constructs and attaches a request context to t, and reports
 // whether this succeeded.
-func (s *Server) setContext(t *task, id string) bool {
-	base, params, err := s.dectx(s.newctx(), t.hreq.method, t.hreq.params)
-	t.hreq.params = params
-	if err != nil {
-		t.err = Errorf(code.InternalError, "invalid request context: %v", err)
-		return false
-	}
-
-	t.ctx = context.WithValue(base, inboundRequestKey{}, t.hreq)
+func (s *Server) setContext(t *task, id string) {
+	t.ctx = context.WithValue(s.newctx(), inboundRequestKey{}, t.hreq)
 
 	// Store the cancellation for a request that needs a reply, so that we can
 	// respond to cancellation requests.
@@ -349,7 +341,6 @@ func (s *Server) setContext(t *task, id string) bool {
 		s.used[id] = cancel
 		t.ctx = ctx
 	}
-	return true
 }
 
 // invoke invokes the handler m for the specified request type, and marshals

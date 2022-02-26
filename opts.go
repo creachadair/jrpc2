@@ -46,13 +46,6 @@ type ServerOptions struct {
 	// If unset, the server uses a background context.
 	NewContext func() context.Context
 
-	// If set, this function is called with the method name and encoded request
-	// parameters received from the client, before they are delivered to the
-	// handler. Its return value replaces the context and argument values. This
-	// allows the server to decode context metadata sent by the client.
-	// If unset, context and parameters are used as given.
-	DecodeContext func(context.Context, string, json.RawMessage) (context.Context, json.RawMessage, error)
-
 	// If set, use this value to record server metrics. All servers created
 	// from the same options will share the same metrics collector.  If none is
 	// set, an empty collector will be created for each new server.
@@ -95,17 +88,6 @@ func (o *ServerOptions) newContext() func() context.Context {
 	return o.NewContext
 }
 
-type decoder = func(context.Context, string, json.RawMessage) (context.Context, json.RawMessage, error)
-
-func (s *ServerOptions) decodeContext() decoder {
-	if s == nil || s.DecodeContext == nil {
-		return func(ctx context.Context, method string, params json.RawMessage) (context.Context, json.RawMessage, error) {
-			return ctx, params, nil
-		}
-	}
-	return s.DecodeContext
-}
-
 func (s *ServerOptions) metrics() *metrics.M {
 	if s == nil || s.Metrics == nil {
 		return metrics.New()
@@ -125,13 +107,6 @@ func (s *ServerOptions) rpcLog() RPCLogger {
 type ClientOptions struct {
 	// If not nil, send debug text logs here.
 	Logger Logger
-
-	// If set, this function is called with the context, method name, and
-	// encoded request parameters before the request is sent to the server.
-	// Its return value replaces the request parameters. This allows the client
-	// to send context metadata along with the request. If unset, the parameters
-	// are unchanged.
-	EncodeContext func(context.Context, string, json.RawMessage) (json.RawMessage, error)
 
 	// If set, this function is called if a notification is received from the
 	// server. If unset, server notifications are logged and discarded.  At
@@ -167,17 +142,6 @@ func (c *ClientOptions) logFunc() func(string, ...interface{}) {
 		return func(string, ...interface{}) {}
 	}
 	return c.Logger.Printf
-}
-
-type encoder = func(context.Context, string, json.RawMessage) (json.RawMessage, error)
-
-func (c *ClientOptions) encodeContext() encoder {
-	if c == nil || c.EncodeContext == nil {
-		return func(_ context.Context, methods string, params json.RawMessage) (json.RawMessage, error) {
-			return params, nil
-		}
-	}
-	return c.EncodeContext
 }
 
 func (c *ClientOptions) handleNotification() func(*jmessage) {

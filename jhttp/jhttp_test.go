@@ -27,20 +27,11 @@ var testService = handler.Map{
 	}),
 }
 
-func checkContext(ctx context.Context, _ string, p json.RawMessage) (json.RawMessage, error) {
-	if jhttp.HTTPRequest(ctx) == nil {
-		return nil, errors.New("no HTTP request in context")
-	}
-	return p, nil
-}
-
 func TestBridge(t *testing.T) {
 	defer leaktest.Check(t)()
 
 	// Set up a bridge with the test configuration.
-	b := jhttp.NewBridge(testService, &jhttp.BridgeOptions{
-		Client: &jrpc2.ClientOptions{EncodeContext: checkContext},
-	})
+	b := jhttp.NewBridge(testService, nil)
 	defer checkClose(t, b)
 
 	// Create an HTTP test server to call into the bridge.
