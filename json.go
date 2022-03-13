@@ -251,8 +251,8 @@ func (j *jmessage) isRequestOrNotification() bool { return j.M != "" && j.E == n
 // isNotification reports whether j is a notification
 func (j *jmessage) isNotification() bool { return j.isRequestOrNotification() && fixID(j.ID) == nil }
 
-// fixID filters id, treating "null" as a synonym for an unset ID.  This
-// supports interoperation with JSON-RPC v1 where "null" is used as an ID for
+// fixID filters id, treating "null" as a synonym for an unset ID.  Some
+// implementations (possibly a vestige of v1) emit "null" as an ID for
 // notifications.
 func fixID(id json.RawMessage) json.RawMessage {
 	if !isNull(id) {
