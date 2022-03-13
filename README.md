@@ -60,12 +60,3 @@ This implementation resolves the conflict in favour of the batch rules. Specific
 -  Otherwise, parse or validation errors resulting from any batch member without an ID are mapped to error objects with a `null` ID, in the same position in the reply as the corresponding request. Preservation of order is not required by the specification, but it ensures the server has stable behaviour.
 
 Because a server is allowed to reorder the results, a client should not depend on this implementation detail.
-
-### Non-standard server push
-
-The specification defines client and server as follows:
-
-> The Client is defined as the origin of `Request` objects and the handler of `Response` objects.
-> The Server is defined as the origin of `Response` objects and the handler of `Request` objects.
-
-Although a client may also be a server, and vice versa, the specification does not require them to do so. The server notification support defined in the `jrpc2` package is thus "non-standard" in that it allows the server to act as a client, and the client as a server, in the narrow context of "push" notifications and server callbacks. Otherwise the feature is not special: Requests sent by `*jrpc2.Server.Notify` and `*jrpc2.Server.Callback`are standard `Request` objects.
