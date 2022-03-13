@@ -53,7 +53,7 @@ This conflicts with the definition of batch requests, which asserts:
 
 and includes examples that contain request values with no ID (which are, perforce, notifications) and report errors back to the client. Since order may not be relied upon, and there are no IDs, the client cannot correctly match such responses back to their originating requests.
 
-This implementation resolves the conflict in favour of the notification rules. Specifically:
+This implementation resolves the conflict in favour of the batch rules. Specifically:
 
 -  If a batch is empty or not valid JSON, the server reports error -32700 (Invalid JSON) as a single error Response object.
 
