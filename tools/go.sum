@@ -1,7 +1,7 @@
 github.com/creachadair/jrpc2 v0.37.0 h1:ULoWu1MPX+KTF1QsP6MFGTzvUTPHJxVEIV/D0Pn495k=
 github.com/creachadair/jrpc2 v0.37.0/go.mod h1:a53Cer/NMD1y8P9UB2XbuOLRELKRLDf8u7bRi4v1qsE=
-github.com/creachadair/wschannel v0.0.0-20220226220607-283c4c43175b h1:Ohi5ILNvQQw8UlGKlbUZn2OKAvUnlssiOzIX8EmaBUg=
-github.com/creachadair/wschannel v0.0.0-20220226220607-283c4c43175b/go.mod h1:xsFdrl2SSekKEhSVhbh8QedoEW9epEQkWTgzQvAkdUs=
+github.com/creachadair/wschannel v0.0.0-20220330011739-a5cda5f6009d h1:S7RpL1eo3bwM+hQrQUvW0V0Ow9ZH/2lsURoecPE8/HY=
+github.com/creachadair/wschannel v0.0.0-20220330011739-a5cda5f6009d/go.mod h1:xsFdrl2SSekKEhSVhbh8QedoEW9epEQkWTgzQvAkdUs=
 github.com/fortytw2/leaktest v1.3.0 h1:u8491cBMTQ8ft8aeV+adlcytMZylmA5nnwwkRZjI8vw=
 github.com/fortytw2/leaktest v1.3.0/go.mod h1:jDsjWgpAGjm2CA7WthBh/CdZYEPF31XHquHwclZch5g=
 github.com/google/go-cmp v0.5.7 h1:81/ik6ipDQS2aGcBfIN5dHDB36BwrStyeAQquSYCV4o=
