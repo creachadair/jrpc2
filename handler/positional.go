@@ -62,7 +62,12 @@ func NewStruct(fn interface{}) Func {
 // Otherwise, if the field has a `json:"name"` tag and the name is not empty,
 // "name" is used.
 //
-// Otherwise,if the field is anonymous (embedded) it is skipped.
+// Otherwise, if the field nas a `jrpc:"name"` tag, "name" is used.  Note: This
+// case is meant to support types with custom implementations of UnmarshalJSON.
+// Assigning a name that does not match the field name can cause json.Unmarshal
+// to report an error.
+//
+// Otherwise, if the field is anonymous (embedded) it is skipped.
 //
 // Otherwise the name of the field is used with its first character converted
 // to lowercase.
@@ -103,7 +108,11 @@ func Struct(fn interface{}) (*FuncInfo, error) {
 				names = append(names, name)
 				continue
 			}
-			// fall through to the default
+			// fall through to other cases
+		}
+		if tag, ok := fi.Tag.Lookup("jrpc"); ok {
+			names = append(names, tag)
+			continue
 		}
 		if fi.Anonymous {
 			continue
