@@ -160,6 +160,51 @@ func TestPositional(t *testing.T) {
 	}
 }
 
+// Verify that the STruct function correctly handles its cases.
+func TestStruct(t *testing.T) {
+	type args struct {
+		A string `json:"alpha"`
+		B int    `json:"-"`
+		C bool   `json:",omitempty"`
+		D byte
+		E int `jrpc:"evil"`
+	}
+	tests := []struct {
+		v   interface{}
+		bad bool
+	}{
+		{v: nil, bad: true},              // nil value
+		{v: "not a function", bad: true}, // not a function
+
+		// Things that should work.
+		{v: func(context.Context, args) error { return nil }},
+		{v: func(context.Context, *args) error { return nil }},
+		{v: func(context.Context, args) int { return 0 }},
+		{v: func(context.Context, *args) (bool, error) { return true, nil }},
+
+		// Things that should not work.
+
+		// No non-context argument.
+		{v: func(context.Context) error { return nil }, bad: true},
+		{v: func(context.Context) int { return 1 }, bad: true},
+		// Argument is not a struct.
+		{v: func(context.Context, bool) bool { return false }, bad: true},
+		// Too many arguemnts.
+		{v: func(context.Context, args, *args) int { return 0 }, bad: true},
+
+		// N.B. Other cases are covered by TestCheck. The cases here are only
+		// those that Struct checks for explicitly.
+	}
+	for _, test := range tests {
+		got, err := handler.Struct(test.v)
+		if !test.bad && err != nil {
+			t.Errorf("Struct(%T: unexpected error: %v", test.v, err)
+		} else if test.bad && err == nil {
+			t.Errorf("Struct(%T: got %+v, want error", test.v, got)
+		}
+	}
+}
+
 func TestNewStrict(t *testing.T) {
 	type arg struct {
 		A, B string

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 )
 
 // NewPos adapts a function to a jrpc2.Handler. The concrete value of fn must
@@ -24,6 +25,99 @@ func NewPos(fn interface{}, names ...string) Func {
 	return fi.Wrap()
 }
 
+// NewStruct adapts a function to a jrpc2.Handler. The concrete value of fn
+// must be a function accepted by Struct. The resulting Func will handle JSON
+// encoding and decoding, call fn, and report appropriate aerrors.
+//
+// NewStruct is intended for use during program initialization, and will panic
+// if the t ype of fn does not have one of the accepted forms. Programs that
+// need to check for possible errors should call handler.Struct directly, and
+// use the Wrap method of the resulting FuncInfo to obtain the wrapper.
+func NewStruct(fn interface{}) Func {
+	fi, err := Struct(fn)
+	if err != nil {
+		panic(err)
+	}
+	return fi.Wrap()
+}
+
+// Struct checks whether fn can serve as a jrpc2.Handler. The concrete value of
+// fn must be a function with one of the following type signature schemes:
+//
+//   func(context.Context, X) (Y, error)
+//   func(context.Context, X) Y
+//   func(context.Context, X) error
+//
+// The type of X must be a struct or a pointer to a struct, Y may be any type
+// that can be marshaled to JSON. Struct acts as shorthand for Positional, but
+// in which the names of the positional arguments are derived from the fields
+// of X.
+//
+// The field names are chosen by examining the fields of X in order of their
+// declaration. Unexported fields are skipped. The parameter name for each
+// exported field is chosen by following these rules, in order:
+//
+// If the field has a `json:"-"` tag, the field is skipped.
+//
+// Otherwise, if the field has a `json:"name"` tag and the name is not empty,
+// "name" is used.
+//
+// Otherwise, the name of the field is used with its first character converted
+// to lowercase.
+func Struct(fn interface{}) (*FuncInfo, error) {
+	if fn == nil {
+		return nil, errors.New("nil function")
+	}
+
+	ftype := reflect.TypeOf(fn)
+	if ftype.Kind() != reflect.Func {
+		return nil, errors.New("not a function")
+	} else if np := ftype.NumIn(); np != 2 {
+		return nil, errors.New("wrong number of parameters")
+	}
+
+	// Check will verify the rest of the signature; for now we just need to
+	// extract the argument names from the fields.
+	atype := ftype.In(1)
+	if atype.Kind() == reflect.Ptr {
+		atype = atype.Elem()
+	}
+	if atype.Kind() != reflect.Struct {
+		return nil, errors.New("second parameter is not a struct")
+	}
+
+	var names []string
+	for i := 0; i < atype.NumField(); i++ {
+		fi := atype.Field(i)
+		if !fi.IsExported() {
+			continue
+		}
+		if tag, ok := fi.Tag.Lookup("json"); ok {
+			if tag == "-" {
+				continue // explicitly omitted
+			}
+			name := strings.SplitN(tag, ",", 2)[0]
+			if name != "" {
+				names = append(names, name)
+				continue
+			}
+			// fall through to the default
+		}
+		name := strings.ToLower(fi.Name[:1]) + fi.Name[1:]
+		names = append(names, name)
+	}
+
+	if len(names) == 0 {
+		return nil, errors.New("no matching fields")
+	}
+	fi, err := Check(fn)
+	if err == nil {
+		fi.strictFields = true
+		fi.posNames = names
+	}
+	return fi, err
+}
+
 // Positional checks whether fn can serve as a jrpc2.Handler. The concrete
 // value of fn must be a function with one of the following type signature
 // schemes:
@@ -32,7 +126,7 @@ func NewPos(fn interface{}, names ...string) Func {
 //   func(context.Context, X1, X2, ..., Xn) Y
 //   func(context.Context, X1, X2, ..., Xn) error
 //
-// For JSON-marshalable types X_i and Y. If fn does not have one of these
+// for JSON-marshalable types X_i and Y. If fn does not have one of these
 // forms, Positional reports an error. The given names must match the number of
 // non-context arguments exactly. Variadic functions are not supported.
 //
