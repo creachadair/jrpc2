@@ -41,6 +41,7 @@ var testService = handler.Map{
 	"Nil":  handler.New(methodNil),
 	"Ctx":  handler.New(methodCtx),
 	"Ping": handler.New(methodPing),
+	"Echo": handler.NewStruct(methodStruct),
 }
 
 type dummy struct{}
@@ -99,6 +100,27 @@ func methodPing(ctx context.Context, req *jrpc2.Request) error {
 	return nil
 }
 
+type Anon struct{ OK string }
+
+// structArgs has 4 valid fields.
+type structArgs struct {
+	A string `json:"alpha"` // explicitly named
+	B bool   `json:"-"`     // explicitly skipped
+
+	//lint:ignore U1000 Verify that unexported fields are skipped.
+	skip bool
+
+	Anon     // unnamed anonymous, skipped for positional
+	C    int // default name "c"
+	D    int `json:"delta"` // assigned name "delta"
+}
+
+// methodStruct has a struct argument that can be called with either an object
+// or an array. It returns the value of arg.D.
+func methodStruct(ctx context.Context, arg *structArgs) int {
+	return arg.D
+}
+
 var callTests = []struct {
 	method string
 	params interface{}
@@ -112,6 +134,8 @@ var callTests = []struct {
 	{"Test.Ctx", nil, 1},
 	{"Test.Nil", nil, 42},
 	{"Test.Nil", json.RawMessage("null"), 42},
+	{"Test.Echo", []interface{}{"foo", 4, 17}, 17},
+	{"Test.Echo", map[string]interface{}{"delta": 144, "ok": "yes"}, 144},
 }
 
 func TestServerInfo_methodNames(t *testing.T) {
@@ -125,7 +149,7 @@ func TestServerInfo_methodNames(t *testing.T) {
 
 	// Verify that the assigner got the names it was supposed to.
 	got, want := s.ServerInfo().Methods, []string{
-		"Test.Add", "Test.Ctx", "Test.Max", "Test.Mul", "Test.Nil", "Test.Ping",
+		"Test.Add", "Test.Ctx", "Test.Echo", "Test.Max", "Test.Mul", "Test.Nil", "Test.Ping",
 	}
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("Wrong method names: (-want, +got)\n%s", diff)

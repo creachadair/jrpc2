@@ -54,7 +54,7 @@ func NewStruct(fn interface{}) Func {
 // of X.
 //
 // The field names are chosen by examining the fields of X in order of their
-// declaration. Unexported fields are skipped. The parameter name for each
+// declaration. Unexported fields are skipped The parameter name for each
 // exported field is chosen by following these rules, in order:
 //
 // If the field has a `json:"-"` tag, the field is skipped.
@@ -62,7 +62,9 @@ func NewStruct(fn interface{}) Func {
 // Otherwise, if the field has a `json:"name"` tag and the name is not empty,
 // "name" is used.
 //
-// Otherwise, the name of the field is used with its first character converted
+// Otherwise,if the field is anonymous (embedded) it is skipped.
+//
+// Otherwise the name of the field is used with its first character converted
 // to lowercase.
 func Struct(fn interface{}) (*FuncInfo, error) {
 	if fn == nil {
@@ -102,6 +104,9 @@ func Struct(fn interface{}) (*FuncInfo, error) {
 				continue
 			}
 			// fall through to the default
+		}
+		if fi.Anonymous {
+			continue
 		}
 		name := strings.ToLower(fi.Name[:1]) + fi.Name[1:]
 		names = append(names, name)
