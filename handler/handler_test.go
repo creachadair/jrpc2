@@ -205,11 +205,16 @@ func TestStruct(t *testing.T) {
 	}
 }
 
-func TestNewStrict(t *testing.T) {
+func TestFuncInfo_SetStrict(t *testing.T) {
 	type arg struct {
 		A, B string
 	}
-	fn := handler.NewStrict(func(ctx context.Context, arg *arg) error { return nil })
+	fi, err := handler.Check(func(ctx context.Context, arg *arg) error { return nil })
+	if err != nil {
+		t.Fatalf("Check failed: %v", err)
+	}
+	fi.SetStrict(true)
+	fn := fi.Wrap()
 
 	req := testutil.MustParseRequest(t, `{
    "jsonrpc": "2.0",
@@ -223,17 +228,6 @@ func TestNewStrict(t *testing.T) {
 	if got := code.FromError(err); got != code.InvalidParams {
 		t.Errorf("Handler returned (%+v, %v), want InvalidParms", rsp, err)
 	}
-}
-
-// Verify that a handler with no argument type does not panic attempting to
-// enforce strict field checking.
-func TestNewStrict_argumentRegression(t *testing.T) {
-	defer func() {
-		if x := recover(); x != nil {
-			t.Fatalf("NewStrict panic: %v", x)
-		}
-	}()
-	handler.NewStrict(func(context.Context) error { return nil })
 }
 
 // Verify that the handling of pointer-typed arguments does not incorrectly

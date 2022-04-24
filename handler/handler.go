@@ -94,17 +94,6 @@ func New(fn interface{}) Func {
 	return fi.Wrap()
 }
 
-// NewStrict acts as New, but enforces strict field checking on an argument of
-// struct type.
-func NewStrict(fn interface{}) Func {
-	fi, err := Check(fn)
-	if err != nil {
-		panic(err)
-	}
-	fi.strictFields = true
-	return fi.Wrap()
-}
-
 var (
 	ctxType = reflect.TypeOf((*context.Context)(nil)).Elem() // type context.Context
 	errType = reflect.TypeOf((*error)(nil)).Elem()           // type error
@@ -126,6 +115,13 @@ type FuncInfo struct {
 
 	fn interface{} // the original function value
 }
+
+// SetStrict sets the flag on fi that determines whether the wrapper it
+// generates will enforce strict field checking. If set true, the wrapper will
+// report an error when unmarshaling an object into a struct if the object
+// contains fields unknown by the struct. Strict field checking has no effect
+// for non-struct arguments.
+func (fi *FuncInfo) SetStrict(strict bool) { fi.strictFields = strict }
 
 // Wrap adapts the function represented by fi in a Func that satisfies the
 // jrpc2.Handler interface.  The wrapped function can obtain the *jrpc2.Request
