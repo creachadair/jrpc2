@@ -153,20 +153,15 @@ func (fi *FuncInfo) Wrap() Func {
 		return Func(f)
 	}
 
-	// If strict field checking is desired, ensure arguments are wrapped.
-	arg := fi.Argument
-	wrapArg := func(v reflect.Value) interface{} { return v.Interface() }
-	if fi.strictFields && arg != nil && !arg.Implements(strictType) {
-		names := fi.posNames
-		wrapArg = func(v reflect.Value) interface{} {
-			return &strict{v: v.Interface(), posNames: names}
-		}
-	}
+	// If strict field checking or positional decoding are enabled, ensure
+	// arguments are wrapped with the appropriate decoder stubs.
+	wrapArg := fi.argWrapper()
 
 	// Construct a function to unpack the parameters from the request message,
 	// based on the signature of the user's callback.
 	var newInput func(ctx reflect.Value, req *jrpc2.Request) ([]reflect.Value, error)
 
+	arg := fi.Argument
 	if arg == nil {
 		// Case 1: The function does not want any request parameters.
 		// Nothing needs to be decoded, but verify no parameters were passed.
@@ -307,10 +302,9 @@ func Check(fn interface{}) (*FuncInfo, error) {
 	return info, nil
 }
 
-// strict is a wrapper for an arbitrary value that enforces strict field
-// checking when unmarshaling from JSON, and handles translation of array
-// format into object format.
-type strict struct {
+// arrayStub is a wrapper for an arbitrary value that handles translation of
+// JSON arrays into a corresponding object format.
+type arrayStub struct {
 	v        interface{}
 	posNames []string
 }
@@ -321,9 +315,9 @@ type strict struct {
 // If s.posNames is set and data encodes an array, the array is rewritten to an
 // equivalent object with field names assigned by the positional names.
 // Otherwise, data is returned as-is without error.
-func (s *strict) translate(data []byte) ([]byte, error) {
-	if len(s.posNames) == 0 || firstByte(data) != '[' {
-		return data, nil // no names, or not an array
+func (s *arrayStub) translate(data []byte) ([]byte, error) {
+	if firstByte(data) != '[' {
+		return data, nil // not an array
 	}
 
 	// Decode the array wrapper and verify it has the correct length.
@@ -343,12 +337,42 @@ func (s *strict) translate(data []byte) ([]byte, error) {
 	return json.Marshal(obj)
 }
 
-func (s *strict) UnmarshalJSON(data []byte) error {
+func (s *arrayStub) UnmarshalJSON(data []byte) error {
 	actual, err := s.translate(data)
 	if err != nil {
 		return err
 	}
-	dec := json.NewDecoder(bytes.NewReader(actual))
+	return json.Unmarshal(actual, s.v)
+}
+
+// strictStub is a wrapper for an arbitrary value that enforces strict field
+// checking when unmarshaling from JSON.
+type strictStub struct{ v interface{} }
+
+func (s *strictStub) UnmarshalJSON(data []byte) error {
+	dec := json.NewDecoder(bytes.NewReader(data))
 	dec.DisallowUnknownFields()
 	return dec.Decode(s.v)
+}
+
+func (fi *FuncInfo) argWrapper() func(reflect.Value) interface{} {
+	strict := fi.strictFields && fi.Argument != nil && !fi.Argument.Implements(strictType)
+	names := fi.posNames // capture so the wrapper does not pin fi
+	array := len(names) != 0
+	switch {
+	case strict && array:
+		return func(v reflect.Value) interface{} {
+			return &arrayStub{v: &strictStub{v: v.Interface()}, posNames: names}
+		}
+	case strict:
+		return func(v reflect.Value) interface{} {
+			return &strictStub{v: v.Interface()}
+		}
+	case array:
+		return func(v reflect.Value) interface{} {
+			return &arrayStub{v: v.Interface(), posNames: names}
+		}
+	default:
+		return reflect.Value.Interface
+	}
 }

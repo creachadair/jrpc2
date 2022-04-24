@@ -110,9 +110,9 @@ func TestFuncInfo_wrapDecode(t *testing.T) {
 			fmt.Sprintf(`{"jsonrpc":"2.0","id":1,"method":"x","params":%s}`, test.p))
 		got, err := test.fn(ctx, req)
 		if err != nil {
-			t.Errorf("Call %v failed: %v", test.fn, err)
+			t.Errorf("Call %+v failed: %v", test.fn, err)
 		} else if diff := cmp.Diff(test.want, got); diff != "" {
-			t.Errorf("Call %v: wrong result (-want, +got)\n%s", test.fn, diff)
+			t.Errorf("Call %+v: wrong result (-want, +got)\n%s", test.fn, diff)
 		}
 	}
 }
