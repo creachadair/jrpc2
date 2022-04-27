@@ -49,13 +49,13 @@ func NewStruct(fn interface{}) Func {
 //   func(context.Context, X) error
 //
 // The type of X must be a struct or a pointer to a struct, Y may be any type
-// that can be marshaled to JSON. Struct acts as shorthand for Positional, but
-// in which the names of the positional arguments are derived from the fields
-// of X.
+// that can be marshaled to JSON.
 //
-// The field names are chosen by examining the fields of X in order of their
-// declaration. Unexported fields are skipped The parameter name for each
-// exported field is chosen by following these rules, in order:
+// The generated wrapper accepts JSON parameters as either object or array.
+// The names used to map array elements to fields are chosen by examining the
+// fields of X in order of their declaration. Unexported fields are skipped,
+// and the parameter name for each exported field is chosen by following these
+// rules, in order:
 //
 // If the field has a `json:"-"` tag, the field is skipped.
 //
