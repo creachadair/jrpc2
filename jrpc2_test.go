@@ -41,7 +41,7 @@ var testService = handler.Map{
 	"Nil":  handler.New(methodNil),
 	"Ctx":  handler.New(methodCtx),
 	"Ping": handler.New(methodPing),
-	"Echo": handler.NewStruct(methodStruct),
+	"Echo": handler.New(methodStruct),
 }
 
 type dummy struct{}

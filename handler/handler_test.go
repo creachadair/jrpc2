@@ -28,7 +28,7 @@ type argStruct struct {
 	B int    `json:"bravo"`
 }
 
-// Verify that the CHeck function correctly handles the various type signatures
+// Verify that the Check function correctly handles the various type signatures
 // it's advertised to support, and not others.
 func TestCheck(t *testing.T) {
 	tests := []struct {
@@ -160,48 +160,78 @@ func TestPositional(t *testing.T) {
 	}
 }
 
-// Verify that the STruct function correctly handles its cases.
-func TestStruct(t *testing.T) {
+// Verify that the Check function correctly handles struct names.
+func TestCheck_structArg(t *testing.T) {
 	type args struct {
-		A string `json:"alpha"`
-		B int    `json:"-"`
-		C bool   `json:",omitempty"`
-		D byte
-		E int `jrpc:"evil"`
+		A    string `json:"apple"`
+		B    int    `json:"-"`
+		C    bool   `json:",omitempty"`
+		D    byte   // unspecified, use default name
+		Evil int    `jrpc:"evil"`
 	}
+
+	const base = `{"jsonrpc":"2.0","id":1,"method":"M","params":%s}`
+	const inputObj = `{"apple":"1","c":true,"d":25,"evil":666}`
+	const inputArray = `["1", true, 25, 666]`
+	fail := errors.New("fail")
+
+	// Each of these cases has a valid struct argument type.  Call each wrapper
+	// with the same arguments in object an array format, and verify that the
+	// expected result or error are reported.
 	tests := []struct {
-		v   interface{}
-		bad bool
+		name string
+		v    interface{}
+		want interface{}
+		err  error
 	}{
-		{v: nil, bad: true},              // nil value
-		{v: "not a function", bad: true}, // not a function
-
 		// Things that should work.
-		{v: func(context.Context, args) error { return nil }},
-		{v: func(context.Context, *args) error { return nil }},
-		{v: func(context.Context, args) int { return 0 }},
-		{v: func(context.Context, *args) (bool, error) { return true, nil }},
-
-		// Things that should not work.
-
-		// No non-context argument.
-		{v: func(context.Context) error { return nil }, bad: true},
-		{v: func(context.Context) int { return 1 }, bad: true},
-		// Argument is not a struct.
-		{v: func(context.Context, bool) bool { return false }, bad: true},
-		// Too many arguemnts.
-		{v: func(context.Context, args, *args) int { return 0 }, bad: true},
+		{name: "non-pointer returns string",
+			v: func(_ context.Context, x args) string { return x.A }, want: "1"},
+		{name: "pointer returns bool",
+			v: func(_ context.Context, x *args) bool { return x.C }, want: true},
+		{name: "non-pointer returns int",
+			v: func(_ context.Context, x args) int { return x.Evil }, want: 666},
+		{name: "pointer returns bool",
+			v: func(_ context.Context, x *args) (bool, error) { return true, nil }, want: true},
+		{name: "non-pointer reports error",
+			v: func(context.Context, args) (int, error) { return 0, fail }, err: fail},
+		{name: "pointer reports error",
+			v: func(context.Context, *args) error { return fail }, err: fail},
 
 		// N.B. Other cases are covered by TestCheck. The cases here are only
 		// those that Struct checks for explicitly.
 	}
+
 	for _, test := range tests {
-		got, err := handler.Struct(test.v)
-		if !test.bad && err != nil {
-			t.Errorf("Struct(%T: unexpected error: %v", test.v, err)
-		} else if test.bad && err == nil {
-			t.Errorf("Struct(%T: got %+v, want error", test.v, got)
-		}
+		t.Run(test.name, func(t *testing.T) {
+			fi, err := handler.Check(test.v)
+			if err != nil {
+				t.Fatalf("Check failed for %T: %v", test.v, err)
+			}
+			fn := fi.Wrap()
+
+			for _, sub := range []struct {
+				name string
+				req  *jrpc2.Request
+			}{
+				{"Object", testutil.MustParseRequest(t, fmt.Sprintf(base, inputObj))},
+				{"Array", testutil.MustParseRequest(t, fmt.Sprintf(base, inputArray))},
+			} {
+				t.Run(sub.name, func(t *testing.T) {
+
+					rsp, err := fn(context.Background(), sub.req)
+					if err != test.err {
+						t.Errorf("Got error %v, want %v", err, test.err)
+					}
+					if rsp != test.want {
+						t.Errorf("Got value %v, want %v", rsp, test.want)
+					}
+					if t.Failed() {
+						t.Logf("Parameters: %#q", sub.req.ParamString())
+					}
+				})
+			}
+		})
 	}
 }
 
@@ -213,8 +243,7 @@ func TestFuncInfo_SetStrict(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Check failed: %v", err)
 	}
-	fi.SetStrict(true)
-	fn := fi.Wrap()
+	fn := fi.SetStrict(true).Wrap()
 
 	req := testutil.MustParseRequest(t, `{
    "jsonrpc": "2.0",
