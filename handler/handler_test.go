@@ -28,7 +28,7 @@ type argStruct struct {
 	B int    `json:"bravo"`
 }
 
-// Verify that the CHeck function correctly handles the various type signatures
+// Verify that the Check function correctly handles the various type signatures
 // it's advertised to support, and not others.
 func TestCheck(t *testing.T) {
 	tests := []struct {
@@ -243,8 +243,7 @@ func TestFuncInfo_SetStrict(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Check failed: %v", err)
 	}
-	fi.SetStrict(true)
-	fn := fi.Wrap()
+	fn := fi.SetStrict(true).Wrap()
 
 	req := testutil.MustParseRequest(t, `{
    "jsonrpc": "2.0",

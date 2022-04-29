@@ -122,7 +122,7 @@ type FuncInfo struct {
 // report an error when unmarshaling an object into a struct if the object
 // contains fields unknown by the struct. Strict field checking has no effect
 // for non-struct arguments.
-func (fi *FuncInfo) SetStrict(strict bool) { fi.strictFields = strict }
+func (fi *FuncInfo) SetStrict(strict bool) *FuncInfo { fi.strictFields = strict; return fi }
 
 // Wrap adapts the function represented by fi in a Func that satisfies the
 // jrpc2.Handler interface.  The wrapped function can obtain the *jrpc2.Request
