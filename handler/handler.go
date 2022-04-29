@@ -110,8 +110,9 @@ type FuncInfo struct {
 	Argument     reflect.Type // the non-context argument type, or nil
 	Result       reflect.Type // the non-error result type, or nil
 	ReportsError bool         // true if the function reports an error
-	strictFields bool         // enforce strict field checking
-	posNames     []string     // positional field names (requires strictFields)
+
+	strictFields bool     // enforce strict field checking
+	posNames     []string // positional field names
 
 	fn interface{} // the original function value
 }
@@ -253,10 +254,35 @@ func (fi *FuncInfo) Wrap() Func {
 //
 // If fn does not have one of these forms, Check reports an error.
 //
-// Note that the JSON-RPC standard restricts encoded parameter values to arrays
-// and objects.  Check will accept argument types that do not encode to arrays
-// or objects, but the wrapper will report an error when decoding the request.
-// The recommended solution is to define a struct type for your parameters.
+// If the type of X is a struct or a pointer to a struct, the generated wrapper
+// accepts JSON parameters as either an object or an array.  The names used to
+// map array elements to struct fields are chosen by examining the fields of X
+// in order of their declaration.  Unexported fields are skipped, and the
+// parameter name for each exported field is chosen by following these rules,
+// in order:
+//
+// If the field has a `json:"-"` tag, the field is skipped.
+//
+// Otherwise, if the field has a `json:"name"` tag and the name is not empty,
+// "name" is used.
+//
+// Otherwise, if the field nas a `jrpc:"name"` tag, "name" is used.  Note: This
+// case is meant to support types with custom implementations of UnmarshalJSON.
+// Assigning a name that does not match the field name can cause json.Unmarshal
+// to report an error.
+//
+// Otherwise, if the field is anonymous (embedded) it is skipped. To include an
+// anonymous field, ensure it is tagged for one of the previous rules.
+//
+// Otherwise the name of the field is used with its first character converted
+// to lowercase.
+//
+// For other (non-struct) argument types, the accepted format is whatever the
+// json.Unmarshal function can decode into the value.  Note, however, that the
+// JSON-RPC standard restricts encoded parameter values to arrays and objects.
+// Check will accept argument types that cannot accept arrays or objects, but
+// the wrapper will report an error when decoding the request.  The recommended
+// solution is to define a struct type for your parameters.
 //
 // For a single arbitrary type, another approach is to use a 1-element array:
 //
@@ -266,7 +292,6 @@ func (fi *FuncInfo) Wrap() Func {
 //   }
 //
 // For more complex positional signatures, see also handler.Positional.
-//
 func Check(fn interface{}) (*FuncInfo, error) {
 	if fn == nil {
 		return nil, errors.New("nil function")
@@ -286,6 +311,11 @@ func Check(fn interface{}) (*FuncInfo, error) {
 		return nil, errors.New("variadic functions are not supported")
 	} else if np == 2 {
 		info.Argument = info.Type.In(1)
+	}
+
+	// Check for struct field names on the argument type.
+	if ok, names := structFieldNames(info.Argument); ok {
+		info.posNames = names
 	}
 
 	// Check return values.
