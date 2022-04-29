@@ -196,7 +196,7 @@ func TestCheck_structArg(t *testing.T) {
 		{name: "non-pointer reports error",
 			v: func(context.Context, args) (int, error) { return 0, fail }, err: fail},
 		{name: "pointer reports error",
-			v: func(context.Context, *args) error { return nil }, err: fail},
+			v: func(context.Context, *args) error { return fail }, err: fail},
 
 		// N.B. Other cases are covered by TestCheck. The cases here are only
 		// those that Struct checks for explicitly.
