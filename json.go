@@ -40,6 +40,23 @@ type ParsedRequest struct {
 	Error  *Error
 }
 
+// ToRequest converts p to an equivalent server Request. If p.Error is not nil,
+// ToRequest returns nil.
+//
+// This method does not check validity. If p is from a successful call of
+// ParseRequests, the result will be valid; otherwise the caller must ensure
+// that the ID and parameters are valid JSON.
+func (p *ParsedRequest) ToRequest() *Request {
+	if p == nil || p.Error != nil {
+		return nil
+	}
+	return &Request{
+		id:     fixID(json.RawMessage(p.ID)),
+		method: p.Method,
+		params: p.Params,
+	}
+}
+
 // jmessages is either a single protocol message or an array of protocol
 // messages.  This handles the decoding of batch requests in JSON-RPC 2.0.
 type jmessages []*jmessage
