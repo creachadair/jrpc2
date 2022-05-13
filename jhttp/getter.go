@@ -3,7 +3,6 @@
 package jhttp
 
 import (
-	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -74,9 +73,8 @@ func (g Getter) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	ctx := context.WithValue(req.Context(), httpReqKey{}, req)
 	var result json.RawMessage
-	if err := g.local.Client.CallResult(ctx, method, params, &result); err != nil {
+	if err := g.local.Client.CallResult(req.Context(), method, params, &result); err != nil {
 		var status int
 		switch code.FromError(err) {
 		case code.MethodNotFound:

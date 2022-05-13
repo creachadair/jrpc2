@@ -5,7 +5,6 @@
 package jhttp
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -34,10 +33,6 @@ import (
 // If the request completes, whether or not there is an error, the HTTP
 // response is 200 (OK) for ordinary requests or 204 (No Response) for
 // notifications, and the response body contains the JSON-RPC response.
-//
-// The bridge attaches the inbound HTTP request to the context passed to the
-// client, allowing an EncodeContext callback to retrieve state from the HTTP
-// headers. Use jhttp.HTTPRequest to retrieve the request from the context.
 type Bridge struct {
 	local    server.Local
 	parseReq func(*http.Request) ([]*jrpc2.ParsedRequest, error)
@@ -123,9 +118,7 @@ func (b Bridge) serveInternal(w http.ResponseWriter, req *http.Request) error {
 	}
 
 	if len(spec) != 0 {
-		// Attach the HTTP request to the client context, so the encoder can see it.
-		ctx := context.WithValue(req.Context(), httpReqKey{}, req)
-		rsps, err := b.local.Client.Batch(ctx, spec)
+		rsps, err := b.local.Client.Batch(req.Context(), spec)
 		if err != nil {
 			return err
 		}
@@ -266,18 +259,6 @@ func (o *BridgeOptions) parseGETRequest() func(*http.Request) (string, interface
 		return nil
 	}
 	return o.ParseGETRequest
-}
-
-type httpReqKey struct{}
-
-// HTTPRequest returns the HTTP request associated with ctx, or nil. The
-// context passed to the JSON-RPC client by the Bridge will contain this value.
-func HTTPRequest(ctx context.Context) *http.Request {
-	req, ok := ctx.Value(httpReqKey{}).(*http.Request)
-	if ok {
-		return req
-	}
-	return nil
 }
 
 // marshalError encodes an error response for an invalid request.
