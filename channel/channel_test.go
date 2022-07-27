@@ -1,6 +1,6 @@
 // Copyright (C) 2017 Michael J. Fromberger. All Rights Reserved.
 
-package channel
+package channel_test
 
 import (
 	"io"
@@ -9,13 +9,14 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/creachadair/jrpc2/channel"
 	"github.com/fortytw2/leaktest"
 )
 
 // newPipe creates a pair of connected in-memory channels using the specified
 // framing discipline. Sends to client will be received by server, and vice
 // versa. newPipe will panic if framing == nil.
-func newPipe(framing Framing) (client, server Channel) {
+func newPipe(framing channel.Framing) (client, server channel.Channel) {
 	cr, sw := io.Pipe()
 	sr, cw := io.Pipe()
 	client = framing(cr, cw)
@@ -23,7 +24,7 @@ func newPipe(framing Framing) (client, server Channel) {
 	return
 }
 
-func testSendRecv(t *testing.T, s, r Channel, msg string) {
+func testSendRecv(t *testing.T, s, r channel.Channel, msg string) {
 	defer leaktest.Check(t)()
 
 	var wg sync.WaitGroup
@@ -56,7 +57,7 @@ const message1 = `["Full plate and packing steel"]`
 const message2 = `{"slogan":"Jump on your sword, evil!"}`
 
 func TestDirect(t *testing.T) {
-	lhs, rhs := Direct()
+	lhs, rhs := channel.Direct()
 	defer lhs.Close()
 	defer rhs.Close()
 
@@ -65,7 +66,7 @@ func TestDirect(t *testing.T) {
 }
 
 func TestDirectClosed(t *testing.T) {
-	lhs, rhs := Direct()
+	lhs, rhs := channel.Direct()
 	defer rhs.Close()
 	lhs.Close() // immediately
 
@@ -78,17 +79,17 @@ func TestDirectClosed(t *testing.T) {
 
 var tests = []struct {
 	name    string
-	framing Framing
+	framing channel.Framing
 }{
-	{"Header", Header("")},
-	{"Header", Header("binary/octet-stream")},
-	{"LSP", LSP},
-	{"Line", Line},
-	{"NoMIME", Header("")},
-	{"RS", Split('\x1e')},
-	{"RawJSON", RawJSON},
-	{"StrictHeader", StrictHeader("")},
-	{"StrictHeader", StrictHeader("text/plain")},
+	{"Header", channel.Header("")},
+	{"Header", channel.Header("binary/octet-stream")},
+	{"LSP", channel.LSP},
+	{"Line", channel.Line},
+	{"NoMIME", channel.Header("")},
+	{"RS", channel.Split('\x1e')},
+	{"RawJSON", channel.RawJSON},
+	{"StrictHeader", channel.StrictHeader("")},
+	{"StrictHeader", channel.StrictHeader("text/plain")},
 }
 
 // N.B. the first two messages in this list must be valid JSON, since the
@@ -147,60 +148,11 @@ func TestEmptyMessage(t *testing.T) {
 			testSendRecv(t, lhs, rhs, "")
 		})
 		t.Run(test.name, func(t *testing.T) {
-			lhs, rhs := Direct()
+			lhs, rhs := channel.Direct()
 			defer lhs.Close()
 			defer rhs.Close()
 
 			testSendRecv(t, lhs, rhs, "")
 		})
-	}
-}
-
-func TestHeaderTypeMismatch(t *testing.T) {
-	cli, srv := newPipe(StrictHeader("text/plain"))
-	defer cli.Close()
-	defer srv.Close()
-
-	noError := func(err error) bool { return err == nil }
-	tests := []struct {
-		payload string
-		ok      func(error) bool
-	}{
-		// With a content type provided, no error is reported.
-		// Order of headers and extra headers should not affect this.
-		{"Content-Type: text/plain\r\nContent-Length: 3\r\n\r\nfoo", noError},
-		{"Extra: ok\r\nContent-Length: 4\r\nContent-Type: text/plain\r\n\r\nquux", noError},
-
-		// With a content type provided, report an error if it doesn't match.
-		{"Content-Length: 2\r\nContent-Type: application/json\r\n\r\nno", func(err error) bool {
-			v, ok := err.(*ContentTypeMismatchError)
-			return ok && v.Got == "application/json" && v.Want == "text/plain"
-		}},
-
-		// With a content type omitted, a sentinel error is reported.
-		{"Content-Length: 5\r\n\r\nabcde", func(err error) bool {
-			v, ok := err.(*ContentTypeMismatchError)
-			return ok && v.Got == "" && v.Want == "text/plain"
-		}},
-
-		// Other errors do not use this sentinel.
-		{"Nothing: nohow\r\n\r\nfailure\n", func(err error) bool {
-			_, isSentinel := err.(*ContentTypeMismatchError)
-			return err != nil && !isSentinel
-		}},
-	}
-	h := cli.(*hdr)
-	for _, test := range tests {
-		go func() {
-			if _, err := h.wc.Write([]byte(test.payload)); err != nil {
-				t.Errorf("Send %q failed: %v", test.payload, err)
-			}
-		}()
-		msg, err := srv.Recv()
-		if !test.ok(err) {
-			t.Errorf("Recv failed: %v\n >> %q", err, msg)
-		} else {
-			t.Logf("Recv OK: %q", msg)
-		}
 	}
 }
