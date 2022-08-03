@@ -17,18 +17,18 @@ import (
 //
 // Specifically, each message is sent in the format:
 //
-//    Content-Type: <mime-type>\r\n
-//    Content-Length: <nbytes>\r\n
-//    \r\n
-//    <payload>
+//	Content-Type: <mime-type>\r\n
+//	Content-Length: <nbytes>\r\n
+//	\r\n
+//	<payload>
 //
 // The length (nbytes) is encoded as decimal digits. For example, given a
 // mimeType value "application/json", the message "123\n" is transmitted as:
 //
-//    Content-Type: application/json\r\n
-//    Content-Length: 4\r\n
-//    \r\n
-//    123\n
+//	Content-Type: application/json\r\n
+//	Content-Length: 4\r\n
+//	\r\n
+//	123\n
 //
 // If mimeType == "", the Content-Type header is omitted when sending.
 //

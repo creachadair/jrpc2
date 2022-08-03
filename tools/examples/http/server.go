@@ -5,8 +5,8 @@
 //
 // Usage (see also the client example):
 //
-//   go build github.com/creachadair/jrpc2/tools/examples/http
-//   ./http -listen :8080
+//	go build github.com/creachadair/jrpc2/tools/examples/http
+//	./http -listen :8080
 //
 // The server accepts RPCs on http://<address>/rpc.
 package main

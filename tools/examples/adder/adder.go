@@ -4,13 +4,14 @@
 // the process's stdin and stdout.
 //
 // Usage:
-//    go build github.com/creachadair/jrpc2/tools/examples/adder
-//    ./adder
+//
+//	go build github.com/creachadair/jrpc2/tools/examples/adder
+//	./adder
 //
 // Queries to try (copy and paste):
-//    {"jsonrpc":"2.0", "id":1, "method":"Add", "params":[1,2,3]}
-//    {"jsonrpc":"2.0", "id":2, "method":"rpc.serverInfo"}
 //
+//	{"jsonrpc":"2.0", "id":1, "method":"Add", "params":[1,2,3]}
+//	{"jsonrpc":"2.0", "id":2, "method":"rpc.serverInfo"}
 package main
 
 import (

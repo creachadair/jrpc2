@@ -290,14 +290,13 @@ func (c *Client) waitComplete(pctx context.Context, id string, p *Response) {
 // A successful call reports a nil error and a non-nil response. Errors from
 // the server have concrete type *jrpc2.Error.
 //
-//    rsp, err := c.Call(ctx, method, params)
-//    if e, ok := err.(*jrpc2.Error); ok {
-//       log.Fatalf("Error from server: %v", err)
-//    } else if err != nil {
-//       log.Fatalf("Call failed: %v", err)
-//    }
-//    handleValidResponse(rsp)
-//
+//	rsp, err := c.Call(ctx, method, params)
+//	if e, ok := err.(*jrpc2.Error); ok {
+//	   log.Fatalf("Error from server: %v", err)
+//	} else if err != nil {
+//	   log.Fatalf("Call failed: %v", err)
+//	}
+//	handleValidResponse(rsp)
 func (c *Client) Call(ctx context.Context, method string, params interface{}) (*Response, error) {
 	req, err := c.req(ctx, method, params)
 	if err != nil {

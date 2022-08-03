@@ -6,14 +6,14 @@
 // unstructured stream, using a configurable framing discipline. This package
 // provides some basic framing implementations.
 //
-// Channels
+// # Channels
 //
 // A Channel represents the ability to send and received framed records,
 // comprising the methods:
 //
-//     Send([]byte) error      // send a single complete record
-//     Recv() ([]byte, error)  // receive a single complete record
-//     Close() error           // close the channel
+//	Send([]byte) error      // send a single complete record
+//	Recv() ([]byte, error)  // receive a single complete record
+//	Close() error           // close the channel
 //
 // Each record passed to Send is available for Recv. Record contents are not
 // interpreted (except as noted below), and it is up to the implementation to
@@ -21,18 +21,17 @@
 // one sender and one receiver concurrently, but is not otherwise required to
 // be safe for concurrent use.
 //
-// Framing
+// # Framing
 //
 // A Framing function adapts a pair of io.Reader and io.WriteCloser to a
 // Channel by imposing a particular message-framing discipline. This package
 // provides several framing implementations, for example:
 //
-//    ch := channel.LSP(r, wc)
+//	ch := channel.LSP(r, wc)
 //
 // creates a channel that reads from r and writes to wc using the Language
 // Server Protocol (LSP) framing defined by
 // https://microsoft.github.io/language-server-protocol/specification.
-//
 package channel
 
 import (

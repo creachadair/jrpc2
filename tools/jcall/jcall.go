@@ -3,8 +3,8 @@
 // Program jcall issues RPC calls to a JSON-RPC server.
 //
 // Usage:
-//    jcall [options] <address> {<method> <params>}...
 //
+//	jcall [options] <address> {<method> <params>}...
 package main
 
 import (
@@ -323,12 +323,11 @@ func envOrDefault(env, dflt string) string {
 // newFraming returns a channel.Framing described by the specified name, or nil
 // if the name is unknown. The framing types currently understood are:
 //
-//    header:t -- corresponds to channel.Header(t)
-//    strict:t -- corresponds to channel.StrictHeader(t)
-//    line     -- corresponds to channel.Line
-//    lsp      -- corresponds to channel.LSP
-//    raw      -- corresponds to channel.RawJSON
-//
+//	header:t -- corresponds to channel.Header(t)
+//	strict:t -- corresponds to channel.StrictHeader(t)
+//	line     -- corresponds to channel.Line
+//	lsp      -- corresponds to channel.LSP
+//	raw      -- corresponds to channel.RawJSON
 func newFraming(name string) channel.Framing {
 	if t := strings.TrimPrefix(name, "header:"); t != name {
 		return channel.Header(t)

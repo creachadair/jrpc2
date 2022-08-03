@@ -75,9 +75,9 @@ func structFieldNames(atype reflect.Type) (bool, []string) {
 // value of fn must be a function with one of the following type signature
 // schemes:
 //
-//   func(context.Context, X1, X2, ..., Xn) (Y, error)
-//   func(context.Context, X1, X2, ..., Xn) Y
-//   func(context.Context, X1, X2, ..., Xn) error
+//	func(context.Context, X1, X2, ..., Xn) (Y, error)
+//	func(context.Context, X1, X2, ..., Xn) Y
+//	func(context.Context, X1, X2, ..., Xn) error
 //
 // for JSON-marshalable types X_i and Y. If fn does not have one of these
 // forms, Positional reports an error. The given names must match the number of
@@ -91,15 +91,15 @@ func structFieldNames(atype reflect.Type) (bool, []string) {
 // When converted into a handler.Func, the wrapped function accepts a JSON
 // object with the field keys named. For example, given:
 //
-//   func add(ctx context.Context, x, y int) int { return x + y }
+//	func add(ctx context.Context, x, y int) int { return x + y }
 //
-//   fi, err := handler.Positional(add, "first", "second")
-//   // ...
-//   call := fi.Wrap()
+//	fi, err := handler.Positional(add, "first", "second")
+//	// ...
+//	call := fi.Wrap()
 //
 // the resulting JSON-RPC handler accepts a parameter object like:
 //
-//   {"first": 17, "second": 23}
+//	{"first": 17, "second": 23}
 //
 // where "first" is mapped to argument x and "second" to argument y.  Unknown
 // field keys generate an error. The field names are not required to match the
@@ -109,7 +109,7 @@ func structFieldNames(atype reflect.Type) (bool, []string) {
 // The wrapped function will also accept a JSON array with with (exactly) the
 // same number of elements as the positional parameters:
 //
-//   [17, 23]
+//	[17, 23]
 //
 // Unlike the object format, no arguments can be omitted in this format.
 func Positional(fn interface{}, names ...string) (*FuncInfo, error) {

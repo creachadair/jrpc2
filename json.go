@@ -319,9 +319,8 @@ type strictFielder interface {
 //
 // For example:
 //
-//       var obj RequestType
-//       err := req.UnmarshalParams(jrpc2.StrictFields(&obj))`
-//
+//	var obj RequestType
+//	err := req.UnmarshalParams(jrpc2.StrictFields(&obj))`
 func StrictFields(v interface{}) interface{} { return &strict{v: v} }
 
 type strict struct{ v interface{} }

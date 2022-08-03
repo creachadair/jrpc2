@@ -23,22 +23,22 @@ import (
 // with status 200 (OK). In case of error, the response body is a JSON-RPC
 // error object, and the HTTP status is one of the following:
 //
-//  Condition               HTTP Status
-//  ----------------------- -----------------------------------
-//  Parsing request         400 (Bad request)
-//  Method not found        404 (Not found)
-//  (other errors)          500 (Internal server error)
+//	Condition               HTTP Status
+//	----------------------- -----------------------------------
+//	Parsing request         400 (Bad request)
+//	Method not found        404 (Not found)
+//	(other errors)          500 (Internal server error)
 //
 // By default, a Getter uses ParseBasic to convert the HTTP request. The URL
 // path identifies the JSON-RPC method, and the URL query parameters are
 // converted into a JSON object for the parameters.  Query values are sent as
 // JSON strings.  For example, this URL:
 //
-//    http://site.org:2112/some/method?param1=xyzzy&param2=apple
+//	http://site.org:2112/some/method?param1=xyzzy&param2=apple
 //
 // produces the method name "some/method" and this parameter object:
 //
-//    {"param1":"xyzzy", "param2":"apple"}
+//	{"param1":"xyzzy", "param2":"apple"}
 //
 // To override the default behaviour, set a ParseRequest hook in GetterOptions.
 // See also the jhttp.ParseQuery function for a more expressive translation.
@@ -181,17 +181,17 @@ func ParseBasic(req *http.Request) (string, interface{}, error) {
 // Double-quoted values are interpreted as JSON string values, with the same
 // encoding and escaping rules (UTF-8 with backslash escapes). Examples:
 //
-//    ""
-//    "foo\nbar"
-//    "a \"string\" of text"
+//	""
+//	"foo\nbar"
+//	"a \"string\" of text"
 //
 // Values that consist of decimal digits and an optional leading sign are
 // treated as either int64 (if there is no decimal point) or float64 values.
 // Examples:
 //
-//    25
-//    -16
-//    3.259
+//	25
+//	-16
+//	3.259
 //
 // The unquoted strings "true" and "false" are converted to the corresponding
 // Boolean values. The unquoted string "null" is converted to nil.
@@ -199,7 +199,7 @@ func ParseBasic(req *http.Request) (string, interface{}, error) {
 // To express arbitrary bytes, use a singly-quoted string encoded in base64.
 // For example:
 //
-//    'aGVsbG8sIHdvcmxk'   -- represents "hello, world"
+//	'aGVsbG8sIHdvcmxk'   -- represents "hello, world"
 //
 // All values not matching any of the above are treated as literal strings.
 //

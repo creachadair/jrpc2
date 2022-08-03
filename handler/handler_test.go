@@ -522,8 +522,7 @@ func (s *stringByte) UnmarshalText(text []byte) error {
 
 // fauxStruct is an integer with a custom JSON encoding. It expects an object:
 //
-//   {"type":"thing","value":<integer>}
-//
+//	{"type":"thing","value":<integer>}
 type fauxStruct int
 
 func (s *fauxStruct) UnmarshalJSON(data []byte) error {

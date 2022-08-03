@@ -68,7 +68,7 @@ func (m *M) CountAndSetMax(name string, n int64) {
 //
 // As a special case, if value has the concrete type
 //
-//     func() interface{}
+//	func() interface{}
 //
 // then the value of the label is obtained by calling that function.
 func (m *M) SetLabel(name string, value interface{}) {

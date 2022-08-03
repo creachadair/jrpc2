@@ -5,8 +5,8 @@
 //
 // Usage (see also the client example):
 //
-//   go build github.com/creachadair/jrpc2/tools/examples/server
-//   ./server -address :8080
+//	go build github.com/creachadair/jrpc2/tools/examples/server
+//	./server -address :8080
 //
 // See also examples/client/client.go.
 package main

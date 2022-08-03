@@ -126,17 +126,16 @@ func (s *Server) Start(c channel.Channel) *Server {
 //
 // The flow of an inbound request is:
 //
-//   serve             -- main serving loop
-//   * nextRequest     -- process the next request batch
-//     * dispatch
-//       * assign      -- assign handlers to requests
-//       | ...
-//       |
-//       * invoke      -- invoke handlers
-//       | \ handler   -- handle an individual request
-//       |   ...
-//       * deliver     -- send responses to the client
-//
+//	serve             -- main serving loop
+//	* nextRequest     -- process the next request batch
+//	  * dispatch
+//	    * assign      -- assign handlers to requests
+//	    | ...
+//	    |
+//	    * invoke      -- invoke handlers
+//	    | \ handler   -- handle an individual request
+//	    |   ...
+//	    * deliver     -- send responses to the client
 func (s *Server) serve() {
 	for {
 		next, err := s.nextRequest()

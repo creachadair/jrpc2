@@ -4,8 +4,9 @@
 // the github.com/creachadair/jrpc2 package with a Websocket transport.
 //
 // Usage:
-//   go build github.com/creachadair/jrpc2/tools/examples/wshttp
-//   ./wshttp -listen :8080
+//
+//	go build github.com/creachadair/jrpc2/tools/examples/wshttp
+//	./wshttp -listen :8080
 //
 // The server accepts RPC connections on ws://<address>/rpc.
 package main

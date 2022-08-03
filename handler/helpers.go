@@ -22,16 +22,15 @@ import (
 //
 // Usage example:
 //
-//    func Handler(ctx context.Context, req *jrpc2.Request) (interface{}, error) {
-//       var x, y int
-//       var s string
+//	func Handler(ctx context.Context, req *jrpc2.Request) (interface{}, error) {
+//	   var x, y int
+//	   var s string
 //
-//       if err := req.UnmarshalParams(&handler.Args{&x, &y, &s}); err != nil {
-//          return nil, err
-//       }
-//       // do useful work with x, y, and s
-//    }
-//
+//	   if err := req.UnmarshalParams(&handler.Args{&x, &y, &s}); err != nil {
+//	      return nil, err
+//	   }
+//	   // do useful work with x, y, and s
+//	}
 type Args []interface{}
 
 // UnmarshalJSON supports JSON unmarshaling for a.

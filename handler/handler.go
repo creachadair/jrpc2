@@ -241,16 +241,16 @@ func (fi *FuncInfo) Wrap() Func {
 // fn must be a function with one of the following type signature schemes, for
 // JSON-marshalable types X and Y:
 //
-//    func(context.Context) error
-//    func(context.Context) Y
-//    func(context.Context) (Y, error)
-//    func(context.Context, X) error
-//    func(context.Context, X) Y
-//    func(context.Context, X) (Y, error)
-//    func(context.Context, *jrpc2.Request) error
-//    func(context.Context, *jrpc2.Request) Y
-//    func(context.Context, *jrpc2.Request) (Y, error)
-//    func(context.Context, *jrpc2.Request) (interface{}, error)
+//	func(context.Context) error
+//	func(context.Context) Y
+//	func(context.Context) (Y, error)
+//	func(context.Context, X) error
+//	func(context.Context, X) Y
+//	func(context.Context, X) (Y, error)
+//	func(context.Context, *jrpc2.Request) error
+//	func(context.Context, *jrpc2.Request) Y
+//	func(context.Context, *jrpc2.Request) (Y, error)
+//	func(context.Context, *jrpc2.Request) (interface{}, error)
 //
 // If fn does not have one of these forms, Check reports an error.
 //
@@ -286,10 +286,10 @@ func (fi *FuncInfo) Wrap() Func {
 //
 // For a single arbitrary type, another approach is to use a 1-element array:
 //
-//   func(ctx context.Context, sp [1]string) error {
-//      s := sp[0] // pull the actual argument out of the array
-//      // ...
-//   }
+//	func(ctx context.Context, sp [1]string) error {
+//	   s := sp[0] // pull the actual argument out of the array
+//	   // ...
+//	}
 //
 // For more complex positional signatures, see also handler.Positional.
 func Check(fn interface{}) (*FuncInfo, error) {
