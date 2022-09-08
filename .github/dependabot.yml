@@ -3,7 +3,7 @@ updates:
   - package-ecosystem: gomod
     directory: "/"
     schedule:
-      interval: daily
+      interval: weekly
       time: "08:45"
       timezone: "America/Los_Angeles"
     reviewers:
