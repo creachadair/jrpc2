@@ -6,7 +6,7 @@ require (
 	golang.org/x/sync v0.0.0-20220907140024-f12130a52804
 )
 
-go 1.16
+go 1.17
 
 // A bug in handler.New could panic a wrapped handler on pointer arguments.
 retract [v0.21.2, v0.22.0]
