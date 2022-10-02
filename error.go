@@ -73,3 +73,10 @@ var ErrConnClosed = errors.New("client connection is closed")
 func Errorf(code code.Code, msg string, args ...interface{}) *Error {
 	return &Error{Code: code, Message: fmt.Sprintf(msg, args...)}
 }
+
+// ErrorResponse returns a Response with the provided Error.
+func ErrorResponse(err *Error) Response {
+	return Response{
+		err: err,
+	}
+}

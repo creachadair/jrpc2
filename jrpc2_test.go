@@ -1375,3 +1375,11 @@ func TestServer_newContext(t *testing.T) {
 		t.Errorf("Call failed: %v", err)
 	}
 }
+
+func TestErrorResponse(t *testing.T) {
+	err := jrpc2.Errorf(code.InvalidParams, "invalid params")
+	resp := jrpc2.ErrorResponse(err)
+	if resp.Error() != err {
+		t.Errorf(fmt.Sprintf("ErrorResponse: got %v, expected %v", resp.Error(), err))
+	}
+}
