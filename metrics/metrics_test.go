@@ -20,8 +20,8 @@ func getMax(m *metrics.M, name string) int64 {
 	return mv[name]
 }
 
-func getLabel(m *metrics.M, name string) interface{} {
-	vs := make(map[string]interface{})
+func getLabel(m *metrics.M, name string) any {
+	vs := make(map[string]any)
 	m.Snapshot(metrics.Snapshot{Label: vs})
 	return vs[name]
 }
@@ -42,7 +42,7 @@ func TestMetrics(t *testing.T) {
 			t.Errorf("MaxValue %q: got %d, want %d", name, got, want)
 		}
 	}
-	wantLabel := func(name string, want interface{}) {
+	wantLabel := func(name string, want any) {
 		t.Helper()
 		got := getLabel(m, name)
 		if got != want {
@@ -86,7 +86,7 @@ func TestMetrics(t *testing.T) {
 	wantLabel("hey", nil)
 
 	var numCalls int
-	m.SetLabel("dyno", func() interface{} {
+	m.SetLabel("dyno", func() any {
 		numCalls++
 		return numCalls
 	})
@@ -97,11 +97,11 @@ func TestMetrics(t *testing.T) {
 	wantLabel("dyno", nil)
 
 	wantLabel("quux", nil)
-	m.EditLabel("quux", func(v interface{}) interface{} {
+	m.EditLabel("quux", func(v any) any {
 		return "x"
 	})
 	wantLabel("quux", "x")
-	m.EditLabel("quux", func(v interface{}) interface{} {
+	m.EditLabel("quux", func(v any) any {
 		return v.(string) + "2"
 	})
 	wantLabel("quux", "x2")

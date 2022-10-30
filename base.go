@@ -50,7 +50,7 @@ type Handler interface {
 	// which do not receive the request directly. For a handler that implements
 	// the Handle method directly, req is the same value passed as a parameter
 	// to Handle.
-	Handle(context.Context, *Request) (interface{}, error)
+	Handle(context.Context, *Request) (any, error)
 }
 
 // A Request is a request message from a client to a server.
@@ -84,7 +84,7 @@ func (r *Request) HasParams() bool { return len(r.params) != 0 }
 // For more specific behaviour, implement a custom json.Unmarshaler.
 //
 // If v has type *json.RawMessage, unmarshaling will never report an error.
-func (r *Request) UnmarshalParams(v interface{}) error {
+func (r *Request) UnmarshalParams(v any) error {
 	if len(r.params) == 0 {
 		return nil
 	}
@@ -144,7 +144,7 @@ func (r *Response) Error() *Error { return r.err }
 // For more specific behaviour, implement a custom json.Unmarshaler.
 //
 // If v has type *json.RawMessage, unmarshaling will never report an error.
-func (r *Response) UnmarshalResult(v interface{}) error {
+func (r *Response) UnmarshalResult(v any) error {
 	if r.err != nil {
 		return r.err
 	}

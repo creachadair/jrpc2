@@ -321,9 +321,9 @@ type strictFielder interface {
 //
 //	var obj RequestType
 //	err := req.UnmarshalParams(jrpc2.StrictFields(&obj))`
-func StrictFields(v interface{}) interface{} { return &strict{v: v} }
+func StrictFields(v any) any { return &strict{v: v} }
 
-type strict struct{ v interface{} }
+type strict struct{ v any }
 
 func (s *strict) UnmarshalJSON(data []byte) error {
 	dec := json.NewDecoder(bytes.NewReader(data))

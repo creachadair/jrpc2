@@ -26,7 +26,7 @@ func (e Error) ErrCode() code.Code { return e.Code }
 // WithData marshals v as JSON and constructs a copy of e whose Data field
 // includes the result. If v == nil or if marshaling v fails, e is returned
 // without modification.
-func (e *Error) WithData(v interface{}) *Error {
+func (e *Error) WithData(v any) *Error {
 	if v == nil {
 		return e
 	} else if data, err := json.Marshal(v); err == nil {
@@ -70,6 +70,6 @@ var ErrConnClosed = errors.New("client connection is closed")
 
 // Errorf returns an error value of concrete type *Error having the specified
 // code and formatted message string.
-func Errorf(code code.Code, msg string, args ...interface{}) *Error {
+func Errorf(code code.Code, msg string, args ...any) *Error {
 	return &Error{Code: code, Message: fmt.Sprintf(msg, args...)}
 }

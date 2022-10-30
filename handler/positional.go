@@ -17,7 +17,7 @@ import (
 // the type of fn does not have one of the accepted forms. Programs that need
 // to check for possible errors should call handler.Positional directly, and
 // use the Wrap method of the resulting FuncInfo to obtain the wrapper.
-func NewPos(fn interface{}, names ...string) Func {
+func NewPos(fn any, names ...string) Func {
 	fi, err := Positional(fn, names...)
 	if err != nil {
 		panic(err)
@@ -112,7 +112,7 @@ func structFieldNames(atype reflect.Type) (bool, []string) {
 //	[17, 23]
 //
 // Unlike the object format, no arguments can be omitted in this format.
-func Positional(fn interface{}, names ...string) (*FuncInfo, error) {
+func Positional(fn any, names ...string) (*FuncInfo, error) {
 	if fn == nil {
 		return nil, errors.New("nil function")
 	}
@@ -187,7 +187,7 @@ func makeArgType(t reflect.Type, names []string) (reflect.Type, error) {
 // positional arguments.
 //
 // Preconditions: fv is a function and atype is its argument struct.
-func makeCaller(ft reflect.Type, fv reflect.Value, atype reflect.Type) interface{} {
+func makeCaller(ft reflect.Type, fv reflect.Value, atype reflect.Type) any {
 	atypes := []reflect.Type{ctxType, atype}
 
 	otypes := make([]reflect.Type, ft.NumOut())

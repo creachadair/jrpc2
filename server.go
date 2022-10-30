@@ -27,13 +27,13 @@ type Server struct {
 	sem *semaphore.Weighted // bounds concurrent execution (default 1)
 
 	// Configurable settings
-	allowP  bool                         // allow server notifications to the client
-	log     func(string, ...interface{}) // write debug logs here
-	rpcLog  RPCLogger                    // log RPC requests and responses here
-	newctx  func() context.Context       // create a new base request context
-	metrics *metrics.M                   // metrics collected during execution
-	start   time.Time                    // when Start was called
-	builtin bool                         // whether built-in rpc.* methods are enabled
+	allowP  bool                   // allow server notifications to the client
+	log     func(string, ...any)   // write debug logs here
+	rpcLog  RPCLogger              // log RPC requests and responses here
+	newctx  func() context.Context // create a new base request context
+	metrics *metrics.M             // metrics collected during execution
+	start   time.Time              // when Start was called
+	builtin bool                   // whether built-in rpc.* methods are enabled
 
 	mu *sync.Mutex // protects the fields below
 
@@ -370,7 +370,7 @@ func (s *Server) ServerInfo() *ServerInfo {
 		StartTime: s.start,
 		Counter:   make(map[string]int64),
 		MaxValue:  make(map[string]int64),
-		Label:     make(map[string]interface{}),
+		Label:     make(map[string]any),
 	}
 	if n, ok := s.mux.(Namer); ok {
 		info.Methods = n.Names()
@@ -394,7 +394,7 @@ var ErrPushUnsupported = errors.New("server push is not enabled")
 // this method will always report an error (ErrPushUnsupported) without sending
 // anything.  If Notify is called after the client connection is closed, it
 // returns ErrConnClosed.
-func (s *Server) Notify(ctx context.Context, method string, params interface{}) error {
+func (s *Server) Notify(ctx context.Context, method string, params any) error {
 	if !s.allowP {
 		return ErrPushUnsupported
 	}
@@ -416,7 +416,7 @@ func (s *Server) Notify(ctx context.Context, method string, params interface{}) 
 // will always report an error (ErrPushUnsupported) without sending
 // anything. If Callback is called after the client connection is closed, it
 // returns ErrConnClosed.
-func (s *Server) Callback(ctx context.Context, method string, params interface{}) (*Response, error) {
+func (s *Server) Callback(ctx context.Context, method string, params any) (*Response, error) {
 	if !s.allowP {
 		return nil, ErrPushUnsupported
 	}
@@ -450,7 +450,7 @@ func (s *Server) waitCallback(pctx context.Context, id string, p *Response) {
 	}
 }
 
-func (s *Server) pushReq(ctx context.Context, wantID bool, method string, params interface{}) (rsp *Response, _ error) {
+func (s *Server) pushReq(ctx context.Context, wantID bool, method string, params any) (rsp *Response, _ error) {
 	var bits []byte
 	if params != nil {
 		v, err := json.Marshal(params)
@@ -678,9 +678,9 @@ type ServerInfo struct {
 	Methods []string `json:"methods,omitempty"`
 
 	// Metric values defined by the evaluation of methods.
-	Counter  map[string]int64       `json:"counters,omitempty"`
-	MaxValue map[string]int64       `json:"maxValue,omitempty"`
-	Label    map[string]interface{} `json:"labels,omitempty"`
+	Counter  map[string]int64 `json:"counters,omitempty"`
+	MaxValue map[string]int64 `json:"maxValue,omitempty"`
+	Label    map[string]any   `json:"labels,omitempty"`
 
 	// When the server started.
 	StartTime time.Time `json:"startTime,omitempty"`

@@ -44,7 +44,7 @@ import (
 // See also the jhttp.ParseQuery function for a more expressive translation.
 type Getter struct {
 	local    server.Local
-	parseReq func(*http.Request) (string, interface{}, error)
+	parseReq func(*http.Request) (string, any, error)
 }
 
 // NewGetter constructs a new Getter that starts a server on mux and dispatches
@@ -92,7 +92,7 @@ func (g Getter) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 // reports its exit status.
 func (g Getter) Close() error { return g.local.Close() }
 
-func (g Getter) parseHTTPRequest(req *http.Request) (string, interface{}, error) {
+func (g Getter) parseHTTPRequest(req *http.Request) (string, any, error) {
 	if g.parseReq != nil {
 		return g.parseReq(req)
 	}
@@ -112,7 +112,7 @@ type GetterOptions struct {
 	// parameters from an HTTP request. If this is not set, the default handler
 	// uses the URL path as the method name and the URL query as the method
 	// parameters.
-	ParseRequest func(*http.Request) (string, interface{}, error)
+	ParseRequest func(*http.Request) (string, any, error)
 }
 
 func (o *GetterOptions) clientOptions() *jrpc2.ClientOptions {
@@ -129,14 +129,14 @@ func (o *GetterOptions) serverOptions() *jrpc2.ServerOptions {
 	return o.Server
 }
 
-func (o *GetterOptions) parseRequest() func(*http.Request) (string, interface{}, error) {
+func (o *GetterOptions) parseRequest() func(*http.Request) (string, any, error) {
 	if o == nil {
 		return nil
 	}
 	return o.ParseRequest
 }
 
-func writeJSON(w http.ResponseWriter, code int, obj interface{}) {
+func writeJSON(w http.ResponseWriter, code int, obj any) {
 	bits, err := json.Marshal(obj)
 	if err != nil {
 		// Fallback in case of marshaling error. This should not happen, but
@@ -157,7 +157,7 @@ func writeJSON(w http.ResponseWriter, code int, obj interface{}) {
 //
 // This is the default query parser used by a Getter if none is specified in
 // its GetterOptions.
-func ParseBasic(req *http.Request) (string, interface{}, error) {
+func ParseBasic(req *http.Request) (string, any, error) {
 	if err := req.ParseForm(); err != nil {
 		return "", nil, err
 	}
@@ -203,9 +203,9 @@ func ParseBasic(req *http.Request) (string, interface{}, error) {
 //
 // All values not matching any of the above are treated as literal strings.
 //
-// On success, the result has concrete type map[string]interface{} and the
+// On success, the result has concrete type map[string]any and the
 // method name is not empty.
-func ParseQuery(req *http.Request) (string, interface{}, error) {
+func ParseQuery(req *http.Request) (string, any, error) {
 	if err := req.ParseForm(); err != nil {
 		return "", nil, err
 	}
@@ -217,7 +217,7 @@ func ParseQuery(req *http.Request) (string, interface{}, error) {
 		return method, nil, nil
 	}
 
-	params := make(map[string]interface{})
+	params := make(map[string]any)
 	for key := range req.Form {
 		val := req.Form.Get(key)
 		if v, ok, err := parseJSONString(val); err != nil {
@@ -253,7 +253,7 @@ func parseJSONString(s string) (string, bool, error) {
 	return "", false, nil
 }
 
-func parseNumber(s string) (interface{}, bool) {
+func parseNumber(s string) (any, bool) {
 	z, err := strconv.ParseInt(s, 10, 64)
 	if err == nil {
 		return z, true
@@ -265,7 +265,7 @@ func parseNumber(s string) (interface{}, bool) {
 	return nil, false
 }
 
-func parseConstant(s string) (interface{}, bool) {
+func parseConstant(s string) (any, bool) {
 	switch s {
 	case "true":
 		return true, true

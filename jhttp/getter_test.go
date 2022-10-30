@@ -72,7 +72,7 @@ func TestParseQuery(t *testing.T) {
 		url     string
 		body    string
 		method  string
-		want    interface{}
+		want    any
 		errText string
 	}{
 		// Error: Missing method name.
@@ -97,13 +97,13 @@ func TestParseQuery(t *testing.T) {
 
 		// Valid: Single-quoted byte string (base64).
 		{`http://fast.as.hell/and?twice='YXMgcHJldHR5IGFzIHlvdQ=='`,
-			"", "and", map[string]interface{}{
+			"", "and", map[string]any{
 				"twice": []byte("as pretty as you"),
 			}, ""},
 
 		// Valid: Unquoted strings and null.
 		{`http://head.like/a-hole?black=as&your=null&soul`,
-			"", "a-hole", map[string]interface{}{
+			"", "a-hole", map[string]any{
 				"black": "as",
 				"your":  nil,
 				"soul":  "",
@@ -111,7 +111,7 @@ func TestParseQuery(t *testing.T) {
 
 		// Valid: Quoted strings, numbers, Booleans.
 		{`http://foo.com:1999/go/west/?alpha=%22xyz%22&bravo=3&charlie=true&delta=false&echo=3.2`,
-			"", "go/west", map[string]interface{}{
+			"", "go/west", map[string]any{
 				"alpha":   "xyz",
 				"bravo":   int64(3),
 				"charlie": true,
@@ -121,7 +121,7 @@ func TestParseQuery(t *testing.T) {
 
 		// Valid: Form-encoded query in the request body.
 		{`http://buz.org:2013/bodyblow`,
-			"alpha=%22pdq%22&bravo=-19.4&charlie=false", "bodyblow", map[string]interface{}{
+			"alpha=%22pdq%22&bravo=-19.4&charlie=false", "bodyblow", map[string]any{
 				"alpha":   "pdq",
 				"bravo":   float64(-19.4),
 				"charlie": false,
@@ -169,7 +169,7 @@ func TestGetter_parseRequest(t *testing.T) {
 	}
 
 	g := jhttp.NewGetter(mux, &jhttp.GetterOptions{
-		ParseRequest: func(req *http.Request) (string, interface{}, error) {
+		ParseRequest: func(req *http.Request) (string, any, error) {
 			if err := req.ParseForm(); err != nil {
 				return "", nil, err
 			}
@@ -178,7 +178,7 @@ func TestGetter_parseRequest(t *testing.T) {
 			if err != nil && req.Form.Get("value") != "" {
 				return "", nil, fmt.Errorf("invalid number: %w", err)
 			}
-			return strings.TrimPrefix(req.URL.Path, "/x/"), map[string]interface{}{
+			return strings.TrimPrefix(req.URL.Path, "/x/"), map[string]any{
 				"tag":   tag,
 				"value": val,
 			}, nil

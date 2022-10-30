@@ -18,10 +18,10 @@ import (
 )
 
 // A Func adapts a function having the correct signature to a jrpc2.Handler.
-type Func func(context.Context, *jrpc2.Request) (interface{}, error)
+type Func func(context.Context, *jrpc2.Request) (any, error)
 
 // Handle implements the jrpc2.Handler interface by calling m.
-func (m Func) Handle(ctx context.Context, req *jrpc2.Request) (interface{}, error) {
+func (m Func) Handle(ctx context.Context, req *jrpc2.Request) (any, error) {
 	return m(ctx, req)
 }
 
@@ -86,7 +86,7 @@ func (m ServiceMap) Names() []string {
 // type of fn does not have one of the accepted forms. Programs that need to
 // check for possible errors should call handler.Check directly, and use the
 // Wrap method of the resulting FuncInfo to obtain the wrapper.
-func New(fn interface{}) Func {
+func New(fn any) Func {
 	fi, err := Check(fn)
 	if err != nil {
 		panic(err)
@@ -114,7 +114,7 @@ type FuncInfo struct {
 	strictFields bool     // enforce strict field checking
 	posNames     []string // positional field names
 
-	fn interface{} // the original function value
+	fn any // the original function value
 }
 
 // SetStrict sets the flag on fi that determines whether the wrapper it
@@ -150,7 +150,7 @@ func (fi *FuncInfo) Wrap() Func {
 
 	// Special case: If fn has the exact signature of the Handle method, don't do
 	// any (additional) reflection at all.
-	if f, ok := fi.fn.(func(context.Context, *jrpc2.Request) (interface{}, error)); ok {
+	if f, ok := fi.fn.(func(context.Context, *jrpc2.Request) (any, error)); ok {
 		return Func(f)
 	}
 
@@ -201,11 +201,11 @@ func (fi *FuncInfo) Wrap() Func {
 	}
 
 	// Construct a function to decode the result values.
-	var decodeOut func([]reflect.Value) (interface{}, error)
+	var decodeOut func([]reflect.Value) (any, error)
 
 	if fi.Result == nil {
 		// The function returns only an error, the result is always nil.
-		decodeOut = func(vals []reflect.Value) (interface{}, error) {
+		decodeOut = func(vals []reflect.Value) (any, error) {
 			oerr := vals[0].Interface()
 			if oerr != nil {
 				return nil, oerr.(error)
@@ -214,12 +214,12 @@ func (fi *FuncInfo) Wrap() Func {
 		}
 	} else if !fi.ReportsError {
 		// The function returns only single non-error: err is always nil.
-		decodeOut = func(vals []reflect.Value) (interface{}, error) {
+		decodeOut = func(vals []reflect.Value) (any, error) {
 			return vals[0].Interface(), nil
 		}
 	} else {
 		// The function returns both a value and an error.
-		decodeOut = func(vals []reflect.Value) (interface{}, error) {
+		decodeOut = func(vals []reflect.Value) (any, error) {
 			if oerr := vals[1].Interface(); oerr != nil {
 				return nil, oerr.(error)
 			}
@@ -228,7 +228,7 @@ func (fi *FuncInfo) Wrap() Func {
 	}
 
 	call := reflect.ValueOf(fi.fn).Call
-	return Func(func(ctx context.Context, req *jrpc2.Request) (interface{}, error) {
+	return Func(func(ctx context.Context, req *jrpc2.Request) (any, error) {
 		args, ierr := newInput(reflect.ValueOf(ctx), req)
 		if ierr != nil {
 			return nil, ierr
@@ -250,7 +250,7 @@ func (fi *FuncInfo) Wrap() Func {
 //	func(context.Context, *jrpc2.Request) error
 //	func(context.Context, *jrpc2.Request) Y
 //	func(context.Context, *jrpc2.Request) (Y, error)
-//	func(context.Context, *jrpc2.Request) (interface{}, error)
+//	func(context.Context, *jrpc2.Request) (any, error)
 //
 // If fn does not have one of these forms, Check reports an error.
 //
@@ -292,7 +292,7 @@ func (fi *FuncInfo) Wrap() Func {
 //	}
 //
 // For more complex positional signatures, see also handler.Positional.
-func Check(fn interface{}) (*FuncInfo, error) {
+func Check(fn any) (*FuncInfo, error) {
 	if fn == nil {
 		return nil, errors.New("nil function")
 	}
@@ -335,7 +335,7 @@ func Check(fn interface{}) (*FuncInfo, error) {
 // arrayStub is a wrapper for an arbitrary value that handles translation of
 // JSON arrays into a corresponding object format.
 type arrayStub struct {
-	v        interface{}
+	v        any
 	posNames []string
 }
 
@@ -377,7 +377,7 @@ func (s *arrayStub) UnmarshalJSON(data []byte) error {
 
 // strictStub is a wrapper for an arbitrary value that enforces strict field
 // checking when unmarshaling from JSON.
-type strictStub struct{ v interface{} }
+type strictStub struct{ v any }
 
 func (s *strictStub) UnmarshalJSON(data []byte) error {
 	dec := json.NewDecoder(bytes.NewReader(data))
@@ -385,21 +385,21 @@ func (s *strictStub) UnmarshalJSON(data []byte) error {
 	return dec.Decode(s.v)
 }
 
-func (fi *FuncInfo) argWrapper() func(reflect.Value) interface{} {
+func (fi *FuncInfo) argWrapper() func(reflect.Value) any {
 	strict := fi.strictFields && fi.Argument != nil && !fi.Argument.Implements(strictType)
 	names := fi.posNames // capture so the wrapper does not pin fi
 	array := len(names) != 0
 	switch {
 	case strict && array:
-		return func(v reflect.Value) interface{} {
+		return func(v reflect.Value) any {
 			return &arrayStub{v: &strictStub{v: v.Interface()}, posNames: names}
 		}
 	case strict:
-		return func(v reflect.Value) interface{} {
+		return func(v reflect.Value) any {
 			return &strictStub{v: v.Interface()}
 		}
 	case array:
-		return func(v reflect.Value) interface{} {
+		return func(v reflect.Value) any {
 			return &arrayStub{v: v.Interface(), posNames: names}
 		}
 	default:

@@ -230,7 +230,7 @@ type BridgeOptions struct {
 	// If this hook is set, all GET requests are handled by a Getter using this
 	// parse function, and are not passed to a ParseRequest hook even if one is
 	// defined.
-	ParseGETRequest func(*http.Request) (string, interface{}, error)
+	ParseGETRequest func(*http.Request) (string, any, error)
 }
 
 func (o *BridgeOptions) clientOptions() *jrpc2.ClientOptions {
@@ -254,7 +254,7 @@ func (o *BridgeOptions) parseRequest() func(*http.Request) ([]*jrpc2.ParsedReque
 	return o.ParseRequest
 }
 
-func (o *BridgeOptions) parseGETRequest() func(*http.Request) (string, interface{}, error) {
+func (o *BridgeOptions) parseGETRequest() func(*http.Request) (string, any, error) {
 	if o == nil {
 		return nil
 	}

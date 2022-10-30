@@ -14,11 +14,11 @@ import (
 	"github.com/creachadair/jrpc2/channel"
 )
 
-var benchMessage = map[string]interface{}{
+var benchMessage = map[string]any{
 	"jsonrpc": "2.0",
 	"id":      "<XXX>",
 	"method":  "echo",
-	"params": map[string]interface{}{
+	"params": map[string]any{
 		"title":     "A Cask of Amontillado",
 		"author":    "Edgar Allan Poe",
 		"published": 1847,

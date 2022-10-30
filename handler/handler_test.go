@@ -32,7 +32,7 @@ type argStruct struct {
 // it's advertised to support, and not others.
 func TestCheck(t *testing.T) {
 	tests := []struct {
-		v   interface{}
+		v   any
 		bad bool
 	}{
 		{v: nil, bad: true},              // nil value
@@ -40,7 +40,7 @@ func TestCheck(t *testing.T) {
 
 		// All the legal kinds...
 		{v: func(context.Context) error { return nil }},
-		{v: func(context.Context, *jrpc2.Request) (interface{}, error) { return nil, nil }},
+		{v: func(context.Context, *jrpc2.Request) (any, error) { return nil, nil }},
 		{v: func(context.Context) (int, error) { return 0, nil }},
 		{v: func(context.Context, []int) error { return nil }},
 		{v: func(context.Context, []bool) (float64, error) { return 0, nil }},
@@ -80,7 +80,7 @@ func TestFuncInfo_wrapDecode(t *testing.T) {
 	tests := []struct {
 		fn   handler.Func
 		p    string
-		want interface{}
+		want any
 	}{
 		// A positional handler should decode its argument from an array or an object.
 		{handler.NewPos(func(_ context.Context, z int) int { return z }, "arg"),
@@ -120,7 +120,7 @@ func TestFuncInfo_wrapDecode(t *testing.T) {
 // Verify that the Positional function correctly handles its cases.
 func TestPositional(t *testing.T) {
 	tests := []struct {
-		v   interface{}
+		v   any
 		n   []string
 		bad bool
 	}{
@@ -180,8 +180,8 @@ func TestCheck_structArg(t *testing.T) {
 	// expected result or error are reported.
 	tests := []struct {
 		name string
-		v    interface{}
-		want interface{}
+		v    any
+		want any
 		err  error
 	}{
 		// Things that should work.
@@ -424,17 +424,17 @@ func TestArgs(t *testing.T) {
 
 func TestArgsMarshal(t *testing.T) {
 	tests := []struct {
-		input []interface{}
+		input []any
 		want  string
 	}{
 		{nil, "[]"},
-		{[]interface{}{}, "[]"},
-		{[]interface{}{12345}, "[12345]"},
-		{[]interface{}{"hey you"}, `["hey you"]`},
-		{[]interface{}{true, false}, "[true,false]"},
-		{[]interface{}{nil, 3.5}, "[null,3.5]"},
-		{[]interface{}{[]string{"a", "b"}, 33}, `[["a","b"],33]`},
-		{[]interface{}{1, map[string]string{
+		{[]any{}, "[]"},
+		{[]any{12345}, "[12345]"},
+		{[]any{"hey you"}, `["hey you"]`},
+		{[]any{true, false}, "[true,false]"},
+		{[]any{nil, 3.5}, "[null,3.5]"},
+		{[]any{[]string{"a", "b"}, 33}, `[["a","b"],33]`},
+		{[]any{1, map[string]string{
 			"ok": "yes",
 		}, 3}, `[1,{"ok":"yes"},3]`},
 	}

@@ -57,9 +57,9 @@ type ServerOptions struct {
 	StartTime time.Time
 }
 
-func (s *ServerOptions) logFunc() func(string, ...interface{}) {
+func (s *ServerOptions) logFunc() func(string, ...any) {
 	if s == nil || s.Logger == nil {
-		return func(string, ...interface{}) {}
+		return func(string, ...any) {}
 	}
 	return s.Logger.Printf
 }
@@ -126,7 +126,7 @@ type ClientOptions struct {
 	// report a system error back to the server describing the error.
 	//
 	// Server callbacks are a non-standard extension of JSON-RPC.
-	OnCallback func(context.Context, *Request) (interface{}, error)
+	OnCallback func(context.Context, *Request) (any, error)
 
 	// If set, this function is called when the context for a request terminates.
 	// The function receives the client and the response that was cancelled.
@@ -137,9 +137,9 @@ type ClientOptions struct {
 	OnCancel func(cli *Client, rsp *Response)
 }
 
-func (c *ClientOptions) logFunc() func(string, ...interface{}) {
+func (c *ClientOptions) logFunc() func(string, ...any) {
 	if c == nil || c.Logger == nil {
-		return func(string, ...interface{}) {}
+		return func(string, ...any) {}
 	}
 	return c.Logger.Printf
 }
@@ -175,7 +175,7 @@ func (c *ClientOptions) handleCallback() func(context.Context, *jmessage) []byte
 		//
 		// See https://github.com/creachadair/jrpc2/issues/41.
 		rsp := &jmessage{ID: req.ID}
-		v, err := panicToError(func() (interface{}, error) {
+		v, err := panicToError(func() (any, error) {
 			return cb(ctx, &Request{
 				id:     req.ID,
 				method: req.M,
@@ -198,7 +198,7 @@ func (c *ClientOptions) handleCallback() func(context.Context, *jmessage) []byte
 	}
 }
 
-func panicToError(f func() (interface{}, error)) (v interface{}, err error) {
+func panicToError(f func() (any, error)) (v any, err error) {
 	defer func() {
 		if p := recover(); p != nil {
 			err = fmt.Errorf("panic in callback handler: %v", p)
@@ -213,7 +213,7 @@ type Logger func(text string)
 
 // Printf writes a formatted message to the logger. If lg == nil, the message
 // is discarded.
-func (lg Logger) Printf(msg string, args ...interface{}) {
+func (lg Logger) Printf(msg string, args ...any) {
 	if lg != nil {
 		lg(fmt.Sprintf(msg, args...))
 	}
