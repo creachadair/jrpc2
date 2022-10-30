@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/creachadair/jrpc2/code"
-	"github.com/creachadair/jrpc2/metrics"
 )
 
 // ServerOptions control the behaviour of a server created by NewServer.
@@ -45,11 +44,6 @@ type ServerOptions struct {
 	// If set, this function is called to create a new base request context.
 	// If unset, the server uses a background context.
 	NewContext func() context.Context
-
-	// If set, use this value to record server metrics. All servers created
-	// from the same options will share the same metrics collector.  If none is
-	// set, an empty collector will be created for each new server.
-	Metrics *metrics.M
 
 	// If nonzero this value as the server start time; otherwise, use the
 	// current time when Start is called. All servers created from the same
@@ -86,13 +80,6 @@ func (o *ServerOptions) newContext() func() context.Context {
 		return context.Background
 	}
 	return o.NewContext
-}
-
-func (s *ServerOptions) metrics() *metrics.M {
-	if s == nil || s.Metrics == nil {
-		return metrics.New()
-	}
-	return s.Metrics
 }
 
 func (s *ServerOptions) rpcLog() RPCLogger {

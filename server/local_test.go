@@ -37,8 +37,10 @@ func TestLocal(t *testing.T) {
 	}
 
 	// A couple coherence checks on the server info.
-	if nr := si.Counter["rpc.requests"]; nr != 1 {
-		t.Errorf("rpc.serverInfo reports %d requests, wanted 1", nr)
+	if nr, ok := si.Metrics["rpc_requests"].(float64); !ok {
+		t.Fatalf("rpc.serverInfo does not have rpc_requests: %[1]T %[1]v", si.Metrics["rpc_requests"])
+	} else if nr <= 0 {
+		t.Errorf("rpc.serverInfo reports %v requests, wanted 1 or more", nr)
 	}
 	if len(si.Methods) != 0 {
 		t.Errorf("rpc.serverInfo reports methods %+q, wanted []", si.Methods)
