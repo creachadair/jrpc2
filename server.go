@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"expvar"
 	"io"
 	"strconv"
 	"strings"
@@ -14,9 +15,39 @@ import (
 
 	"github.com/creachadair/jrpc2/channel"
 	"github.com/creachadair/jrpc2/code"
-	"github.com/creachadair/jrpc2/metrics"
 	"golang.org/x/sync/semaphore"
 )
+
+var (
+	serverMetrics = new(expvar.Map)
+
+	serversActiveGauge     = new(expvar.Int)
+	rpcRequestsCount       = new(expvar.Int)
+	rpcErrorsCount         = new(expvar.Int)
+	bytesReadCount         = new(expvar.Int)
+	bytesWrittenCount      = new(expvar.Int)
+	rpcCallsPushed         = new(expvar.Int)
+	rpcNotificationsPushed = new(expvar.Int)
+)
+
+func init() {
+	serverMetrics.Set("servers_active", serversActiveGauge)
+	serverMetrics.Set("rpc_requests", rpcRequestsCount)
+	serverMetrics.Set("rpc_errors", rpcErrorsCount)
+	serverMetrics.Set("bytes_read", bytesReadCount)
+	serverMetrics.Set("bytes_written", bytesWrittenCount)
+	serverMetrics.Set("calls_pushed", rpcCallsPushed)
+	serverMetrics.Set("notifications_pushed", rpcNotificationsPushed)
+}
+
+// ServerMetrics returns a map of exported server metrics for use with the
+// expvar package. This map is shared among all server instances created by
+// NewServer. The caller is free to add or remove metrics in the map, but note
+// that such changes will affect all servers.
+//
+// The caller is responsible for publishing the metrics to the exporter via
+// expvar.Publish or similar.
+func ServerMetrics() *expvar.Map { return serverMetrics }
 
 // A Server is a JSON-RPC 2.0 server. The server receives requests and sends
 // responses on a channel.Channel provided by the caller, and dispatches
@@ -31,7 +62,6 @@ type Server struct {
 	log     func(string, ...any)   // write debug logs here
 	rpcLog  RPCLogger              // log RPC requests and responses here
 	newctx  func() context.Context // create a new base request context
-	metrics *metrics.M             // metrics collected during execution
 	start   time.Time              // when Start was called
 	builtin bool                   // whether built-in rpc.* methods are enabled
 
@@ -72,7 +102,6 @@ func NewServer(mux Assigner, opts *ServerOptions) *Server {
 		rpcLog:  opts.rpcLog(),
 		newctx:  opts.newContext(),
 		mu:      new(sync.Mutex),
-		metrics: opts.metrics(),
 		start:   opts.startTime(),
 		builtin: opts.allowBuiltin(),
 		inq:     newQueue(),
@@ -98,7 +127,7 @@ func (s *Server) Start(c channel.Channel) *Server {
 	if s.start.IsZero() {
 		s.start = time.Now().In(time.UTC)
 	}
-	s.metrics.Count("rpc.serversActive", 1)
+	serversActiveGauge.Add(1)
 
 	// Reset all the I/O structures and start up the workers.
 	s.err = nil
@@ -267,7 +296,7 @@ func (s *Server) deliver(rsps jmessages, ch sender, elapsed time.Duration) error
 	}
 
 	nw, err := encode(ch, rsps)
-	s.metrics.CountAndSetMax("rpc.bytesWritten", int64(nw))
+	bytesWrittenCount.Add(int64(nw))
 	return err
 }
 
@@ -322,7 +351,7 @@ func (s *Server) checkAndAssign(next jmessages) tasks {
 		if t.err != nil {
 			s.log("Request check error for %q (params %q): %v",
 				t.hreq.method, string(t.hreq.params), t.err)
-			s.metrics.Count("rpc.errors", 1)
+			rpcErrorsCount.Add(1)
 		}
 	}
 	return ts
@@ -367,19 +396,15 @@ func (s *Server) invoke(base context.Context, h Handler, req *Request) (json.Raw
 func (s *Server) ServerInfo() *ServerInfo {
 	info := &ServerInfo{
 		Methods:   []string{"*"},
+		Metrics:   make(map[string]any),
 		StartTime: s.start,
-		Counter:   make(map[string]int64),
-		MaxValue:  make(map[string]int64),
-		Label:     make(map[string]any),
 	}
+	serverMetrics.Do(func(kv expvar.KeyValue) {
+		info.Metrics[kv.Key] = json.RawMessage(kv.Value.String())
+	})
 	if n, ok := s.mux.(Namer); ok {
 		info.Methods = n.Names()
 	}
-	s.metrics.Snapshot(metrics.Snapshot{
-		Counter:  info.Counter,
-		MaxValue: info.MaxValue,
-		Label:    info.Label,
-	})
 	return info
 }
 
@@ -481,6 +506,9 @@ func (s *Server) pushReq(ctx context.Context, wantID bool, method string, params
 		}
 		s.call[id] = rsp
 		go s.waitCallback(cbctx, id, rsp)
+		rpcCallsPushed.Add(1)
+	} else {
+		rpcNotificationsPushed.Add(1)
 	}
 
 	s.log("Posting server %s %q %s", kind, method, string(bits))
@@ -489,15 +517,9 @@ func (s *Server) pushReq(ctx context.Context, wantID bool, method string, params
 		M:  method,
 		P:  bits,
 	}})
-	s.metrics.CountAndSetMax("rpc.bytesWritten", int64(nw))
-	s.metrics.Count("rpc."+kind+"sPushed", 1)
+	bytesWrittenCount.Add(int64(nw))
 	return rsp, err
 }
-
-// Metrics returns the server metrics collector for s.  If s does not define a
-// collector, this method returns nil, which is ready for use but discards all
-// metrics.
-func (s *Server) Metrics() *metrics.M { return s.metrics }
 
 // Stop shuts down the server. It is safe to call this method multiple times or
 // from concurrent goroutines; it will only take effect once.
@@ -597,7 +619,7 @@ func (s *Server) stop(err error) {
 
 	s.err = err
 	s.ch = nil
-	s.metrics.Count("rpc.serversActive", -1)
+	serversActiveGauge.Add(-1)
 }
 
 // read is the main receiver loop, decoding requests from the client and adding
@@ -611,11 +633,11 @@ func (s *Server) read(ch receiver) {
 		var in jmessages
 		var derr error
 		bits, err := ch.Recv()
-		s.metrics.CountAndSetMax("rpc.bytesRead", int64(len(bits)))
+		bytesReadCount.Add(int64(len(bits)))
 		if err == nil || (err == io.EOF && len(bits) != 0) {
 			err = nil
 			derr = in.parseJSON(bits)
-			s.metrics.Count("rpc.requests", int64(len(in)))
+			rpcRequestsCount.Add(int64(len(in)))
 		}
 		s.mu.Lock()
 		if err != nil { // receive failure; shut down
@@ -677,10 +699,8 @@ type ServerInfo struct {
 	// The list of method names exported by this server.
 	Methods []string `json:"methods,omitempty"`
 
-	// Metric values defined by the evaluation of methods.
-	Counter  map[string]int64 `json:"counters,omitempty"`
-	MaxValue map[string]int64 `json:"maxValue,omitempty"`
-	Label    map[string]any   `json:"labels,omitempty"`
+	// Metrics defined by the server and handler methods.
+	Metrics map[string]any `json:"metrics,omitempty"`
 
 	// When the server started.
 	StartTime time.Time `json:"startTime,omitempty"`
@@ -716,8 +736,8 @@ func (s *Server) pushError(err error) {
 		ID: json.RawMessage("null"),
 		E:  jerr,
 	}})
-	s.metrics.Count("rpc.errors", 1)
-	s.metrics.CountAndSetMax("rpc.bytesWritten", int64(nw))
+	rpcErrorsCount.Add(1)
+	bytesWrittenCount.Add(int64(nw))
 	if err != nil {
 		s.log("Writing error response: %v", err)
 	}

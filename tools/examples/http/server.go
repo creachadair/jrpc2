@@ -21,7 +21,6 @@ import (
 	"github.com/creachadair/jrpc2"
 	"github.com/creachadair/jrpc2/handler"
 	"github.com/creachadair/jrpc2/jhttp"
-	"github.com/creachadair/jrpc2/metrics"
 )
 
 var listenAddr = flag.String("listen", "", "Service address")
@@ -37,8 +36,7 @@ func main() {
 		"Ping": handler.New(ping),
 	}, &jhttp.BridgeOptions{
 		Server: &jrpc2.ServerOptions{
-			Logger:  jrpc2.StdLogger(nil),
-			Metrics: metrics.New(),
+			Logger: jrpc2.StdLogger(nil),
 		},
 	})
 	defer bridge.Close()

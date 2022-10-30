@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"expvar"
 	"fmt"
 	"sort"
 	"sync"
@@ -541,27 +542,13 @@ func TestClient_badCallParams(t *testing.T) {
 func TestServer_serverInfoMetrics(t *testing.T) {
 	defer leaktest.Check(t)()
 
+	const metricValue = "if red were green, green would be my favourite colour"
+	customMetric := new(expvar.String)
+	customMetric.Set(metricValue)
+
 	loc := server.NewLocal(handler.Map{
 		"Metricize": handler.New(func(ctx context.Context) (bool, error) {
-			m := jrpc2.ServerFromContext(ctx).Metrics()
-			if m == nil {
-				t.Error("Request context does not contain a metrics writer")
-				return false, nil
-			}
-			m.Count("counters-written", 1)
-			m.Count("counters-written", 2)
-
-			// Max value trackers are not accumulative.
-			m.SetMaxValue("max-metric-value", 1)
-			m.SetMaxValue("max-metric-value", 5)
-			m.SetMaxValue("max-metric-value", 3)
-			m.SetMaxValue("max-metric-value", -30337)
-
-			// Counters are accumulative, and negative deltas subtract.
-			m.Count("zero-sum", 0)
-			m.Count("zero-sum", 15)
-			m.Count("zero-sum", -16)
-			m.Count("zero-sum", 1)
+			jrpc2.ServerMetrics().Set("custom-metric", customMetric)
 			return true, nil
 		}),
 	}, nil)
@@ -571,36 +558,23 @@ func TestServer_serverInfoMetrics(t *testing.T) {
 	if _, err := c.Call(ctx, "Metricize", nil); err != nil {
 		t.Fatalf("Call(Metricize) failed: %v", err)
 	}
-	if got := s.ServerInfo().Counter["rpc.serversActive"]; got != 1 {
-		t.Errorf("Metric rpc.serversActive: got %d, want 1", got)
+	active, ok := jrpc2.ServerMetrics().Get("servers_active").(*expvar.Int)
+	if !ok {
+		t.Fatal("Metric servers_active not defined")
+	} else if active.Value() != 2 { // 1 for this test, 1 for the examples
+		t.Errorf("Metric servers_active: got %d, want 1", active.Value())
 	}
 	loc.Close()
 
-	info := s.ServerInfo()
-	tests := []struct {
-		input map[string]int64
-		name  string
-		want  int64 // use < 0 to test for existence only
-	}{
-		{info.Counter, "rpc.requests", 1},
-		{info.Counter, "counters-written", 3},
-		{info.Counter, "zero-sum", 0},
-		{info.Counter, "rpc.bytesRead", -1},
-		{info.Counter, "rpc.bytesWritten", -1},
-		{info.Counter, "rpc.serversActive", 0},
-		{info.MaxValue, "max-metric-value", 5},
-		{info.MaxValue, "rpc.bytesRead", -1},
-		{info.MaxValue, "rpc.bytesWritten", -1},
-	}
-	for _, test := range tests {
-		got, ok := test.input[test.name]
-		if !ok {
-			t.Errorf("Metric %q is not defined, but was expected", test.name)
-			continue
-		}
-		if test.want >= 0 && got != test.want {
-			t.Errorf("Wrong value for metric %q: got %d, want %d", test.name, got, test.want)
-		}
+	// When populated into a ServerInfo value, metrics should be converted to
+	// JSON values in a sensible way.
+	metric := s.ServerInfo().Metrics["custom-metric"]
+	if metric == nil {
+		t.Fatal("Custom metric not found")
+	} else if got, ok := metric.(json.RawMessage); !ok {
+		t.Fatalf("Wrong metric type: got %T, want json.RawMessage", metric)
+	} else if s := string(got); s != `"`+metricValue+`"` {
+		t.Fatalf("Wrong metric value: got %q, want %q", s, metricValue)
 	}
 }
 
