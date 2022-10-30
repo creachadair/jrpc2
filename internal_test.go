@@ -98,7 +98,7 @@ func TestRequest_UnmarshalParams(t *testing.T) {
 
 	tests := []struct {
 		input   string
-		want    interface{}
+		want    any
 		pstring string
 		code    code.Code
 	}{
@@ -167,7 +167,7 @@ func TestClient_contextCancellation(t *testing.T) {
 	stopped := make(chan struct{})
 	cpipe, spipe := channel.Direct()
 	srv := NewServer(hmap{
-		"Hang": methodFunc(func(ctx context.Context, _ *Request) (interface{}, error) {
+		"Hang": methodFunc(func(ctx context.Context, _ *Request) (any, error) {
 			close(started) // signal that the method handler is running
 			select {
 			case <-stopped:
@@ -219,10 +219,10 @@ func TestServer_specialMethods(t *testing.T) {
 	defer leaktest.Check(t)()
 
 	s := NewServer(hmap{
-		"rpc.nonesuch": methodFunc(func(context.Context, *Request) (interface{}, error) {
+		"rpc.nonesuch": methodFunc(func(context.Context, *Request) (any, error) {
 			return "OK", nil
 		}),
-		"donkeybait": methodFunc(func(context.Context, *Request) (interface{}, error) {
+		"donkeybait": methodFunc(func(context.Context, *Request) (any, error) {
 			return true, nil
 		}),
 	}, nil)
@@ -243,7 +243,7 @@ func TestServer_disableBuiltinHook(t *testing.T) {
 	defer leaktest.Check(t)()
 
 	s := NewServer(hmap{
-		"rpc.nonesuch": methodFunc(func(context.Context, *Request) (interface{}, error) {
+		"rpc.nonesuch": methodFunc(func(context.Context, *Request) (any, error) {
 			return "OK", nil
 		}),
 	}, &ServerOptions{DisableBuiltin: true})
@@ -270,7 +270,7 @@ func TestBatchReply(t *testing.T) {
 
 	cpipe, spipe := channel.Direct()
 	srv := NewServer(hmap{
-		"test": methodFunc(func(_ context.Context, req *Request) (interface{}, error) {
+		"test": methodFunc(func(_ context.Context, req *Request) (any, error) {
 			return req.Method() + " OK", nil
 		}),
 	}, nil).Start(spipe)

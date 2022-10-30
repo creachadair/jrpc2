@@ -11,13 +11,13 @@ client over a channel.Channel, and dispatches client requests to user-defined
 method handlers.  Handlers satisfy the jrpc2.Handler interface by exporting a
 Handle method with this signature:
 
-	Handle(ctx Context.Context, req *jrpc2.Request) (interface{}, error)
+	Handle(ctx Context.Context, req *jrpc2.Request) (any, error)
 
 A server finds the handler for a request by looking up its method name in a
 jrpc2.Assigner provided when the server is set up. A Handler can decode the
 request parameters using the UnmarshalParams method on the request:
 
-	func (H) Handle(ctx context.Context, req *jrpc2.Request) (interface{}, error) {
+	func (H) Handle(ctx context.Context, req *jrpc2.Request) (any, error) {
 	   var args ArgType
 	   if err := req.UnmarshalParams(&args); err != nil {
 	      return nil, err

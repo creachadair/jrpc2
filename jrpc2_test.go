@@ -47,7 +47,7 @@ var testService = handler.Map{
 type dummy struct{}
 
 // Add is a request-based method.
-func (dummy) Add(_ context.Context, req *jrpc2.Request) (interface{}, error) {
+func (dummy) Add(_ context.Context, req *jrpc2.Request) (any, error) {
 	if req.IsNotification() {
 		return nil, errors.New("ignoring notification")
 	}
@@ -123,7 +123,7 @@ func methodStruct(ctx context.Context, arg *structArgs) int {
 
 var callTests = []struct {
 	method string
-	params interface{}
+	params any
 	want   int
 }{
 	{"Test.Add", []int{}, 0},
@@ -134,8 +134,8 @@ var callTests = []struct {
 	{"Test.Ctx", nil, 1},
 	{"Test.Nil", nil, 42},
 	{"Test.Nil", json.RawMessage("null"), 42},
-	{"Test.Echo", []interface{}{"foo", 4, 17}, 17},
-	{"Test.Echo", map[string]interface{}{"delta": 144, "ok": "yes"}, 144},
+	{"Test.Echo", []any{"foo", 4, 17}, 17},
+	{"Test.Echo", map[string]any{"delta": 144, "ok": "yes"}, 144},
 }
 
 func TestServerInfo_methodNames(t *testing.T) {
@@ -523,7 +523,7 @@ func TestClient_badCallParams(t *testing.T) {
 	defer leaktest.Check(t)()
 
 	loc := server.NewLocal(handler.Map{
-		"Test": handler.New(func(_ context.Context, v interface{}) error {
+		"Test": handler.New(func(_ context.Context, v any) error {
 			return jrpc2.Errorf(129, "this should not be reached")
 		}),
 	}, nil)
@@ -613,7 +613,7 @@ func TestServer_nonLibraryClient(t *testing.T) {
 	srv, cli := channel.Direct()
 	s := jrpc2.NewServer(handler.Map{
 		"X": testOK,
-		"Y": handler.New(func(context.Context) (interface{}, error) {
+		"Y": handler.New(func(context.Context) (any, error) {
 			return nil, nil
 		}),
 	}, nil).Start(srv)
@@ -829,7 +829,7 @@ func TestServer_Callback(t *testing.T) {
 	}, &server.LocalOptions{
 		Server: &jrpc2.ServerOptions{AllowPush: true},
 		Client: &jrpc2.ClientOptions{
-			OnCallback: func(ctx context.Context, req *jrpc2.Request) (interface{}, error) {
+			OnCallback: func(ctx context.Context, req *jrpc2.Request) (any, error) {
 				t.Logf("OnCallback invoked for method %q", req.Method())
 				switch req.Method() {
 				case "succeed":
@@ -1018,7 +1018,7 @@ func TestClient_concurrentCallbacks(t *testing.T) {
 	}, &server.LocalOptions{
 		Server: &jrpc2.ServerOptions{AllowPush: true},
 		Client: &jrpc2.ClientOptions{
-			OnCallback: handler.Func(func(ctx context.Context, req *jrpc2.Request) (interface{}, error) {
+			OnCallback: handler.Func(func(ctx context.Context, req *jrpc2.Request) (any, error) {
 				// A trivial callback that reports its method name.
 				// The name is used to select which invocation we are serving.
 				switch req.Method() {
@@ -1258,7 +1258,7 @@ func TestRequest_strictFields(t *testing.T) {
 
 	tests := []struct {
 		method string
-		params interface{}
+		params any
 		code   code.Code
 		want   string
 	}{

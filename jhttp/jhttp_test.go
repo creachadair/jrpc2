@@ -195,7 +195,7 @@ func TestBridge_parseGETRequest(t *testing.T) {
 		}, "lhs", "rhs"),
 	}
 	b := jhttp.NewBridge(mux, &jhttp.BridgeOptions{
-		ParseGETRequest: func(req *http.Request) (string, interface{}, error) {
+		ParseGETRequest: func(req *http.Request) (string, any, error) {
 			if err := req.ParseForm(); err != nil {
 				return "", nil, err
 			}
@@ -242,7 +242,7 @@ func TestChannel(t *testing.T) {
 	defer hsrv.Close()
 
 	tests := []struct {
-		params interface{}
+		params any
 		want   int
 	}{
 		{nil, 0},

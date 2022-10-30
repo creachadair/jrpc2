@@ -18,7 +18,7 @@ func BenchmarkRoundTrip(b *testing.B) {
 	// Benchmark the round-trip call cycle for a method that does no useful
 	// work, as a proxy for overhead for client and server maintenance.
 	voidService := handler.Map{
-		"void": handler.Func(func(context.Context, *jrpc2.Request) (interface{}, error) {
+		"void": handler.Func(func(context.Context, *jrpc2.Request) (any, error) {
 			return nil, nil
 		}),
 	}
@@ -58,7 +58,7 @@ func BenchmarkLoad(b *testing.B) {
 
 	// The load testing service has a no-op method to exercise server overhead.
 	loc := server.NewLocal(handler.Map{
-		"void": handler.Func(func(context.Context, *jrpc2.Request) (interface{}, error) {
+		"void": handler.Func(func(context.Context, *jrpc2.Request) (any, error) {
 			return nil, nil
 		}),
 	}, nil)

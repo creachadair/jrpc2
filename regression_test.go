@@ -82,7 +82,7 @@ func TestOnCallbackPanicRegression(t *testing.T) {
 			AllowPush: true,
 		},
 		Client: &jrpc2.ClientOptions{
-			OnCallback: func(ctx context.Context, req *jrpc2.Request) (interface{}, error) {
+			OnCallback: func(ctx context.Context, req *jrpc2.Request) (any, error) {
 				t.Log("Entering callback handler; about to panic")
 				panic(panicString)
 			},
@@ -211,7 +211,7 @@ func TestServer_NotificationCallbackDeadlock(t *testing.T) {
 	}, &server.LocalOptions{
 		Server: &jrpc2.ServerOptions{AllowPush: true},
 		Client: &jrpc2.ClientOptions{
-			OnCallback: func(ctx context.Context, req *jrpc2.Request) (interface{}, error) {
+			OnCallback: func(ctx context.Context, req *jrpc2.Request) (any, error) {
 				switch req.Method() {
 				case "succeed":
 					return true, nil

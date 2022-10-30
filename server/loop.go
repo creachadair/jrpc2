@@ -86,7 +86,7 @@ func (n netAccepter) Accept(ctx context.Context) (channel.Channel, error) {
 // have returned. In addition, if ctx ends, any active servers will be stopped.
 func Loop(ctx context.Context, lst Accepter, newService func() Service, opts *LoopOptions) error {
 	serverOpts := opts.serverOpts()
-	log := func(string, ...interface{}) {}
+	log := func(string, ...any) {}
 	if serverOpts != nil && serverOpts.Logger != nil {
 		log = serverOpts.Logger.Printf
 	}

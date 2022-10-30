@@ -16,7 +16,7 @@ type M struct {
 	mu      sync.Mutex
 	counter map[string]int64
 	maxVal  map[string]int64
-	label   map[string]interface{}
+	label   map[string]any
 }
 
 // New creates a new, empty metrics collector.
@@ -24,7 +24,7 @@ func New() *M {
 	return &M{
 		counter: make(map[string]int64),
 		maxVal:  make(map[string]int64),
-		label:   make(map[string]interface{}),
+		label:   make(map[string]any),
 	}
 }
 
@@ -68,10 +68,10 @@ func (m *M) CountAndSetMax(name string, n int64) {
 //
 // As a special case, if value has the concrete type
 //
-//	func() interface{}
+//	func() any
 //
 // then the value of the label is obtained by calling that function.
-func (m *M) SetLabel(name string, value interface{}) {
+func (m *M) SetLabel(name string, value any) {
 	if m != nil {
 		m.mu.Lock()
 		defer m.mu.Unlock()
@@ -87,7 +87,7 @@ func (m *M) SetLabel(name string, value interface{}) {
 // The value returned by edit replaces the contents of the label.
 // If edit returns nil, the label is removed from the set.
 // If the label did not exist, the argument to edit is nil.
-func (m *M) EditLabel(name string, edit func(interface{}) interface{}) {
+func (m *M) EditLabel(name string, edit func(any) any) {
 	if m != nil {
 		m.mu.Lock()
 		defer m.mu.Unlock()
@@ -119,7 +119,7 @@ func (m *M) Snapshot(snap Snapshot) {
 		}
 		if v := snap.Label; v != nil {
 			for name, val := range m.label {
-				if fn, ok := val.(func() interface{}); ok {
+				if fn, ok := val.(func() any); ok {
 					v[name] = fn()
 				} else {
 					v[name] = val
@@ -134,5 +134,5 @@ func (m *M) Snapshot(snap Snapshot) {
 type Snapshot struct {
 	Counter  map[string]int64
 	MaxValue map[string]int64
-	Label    map[string]interface{}
+	Label    map[string]any
 }
