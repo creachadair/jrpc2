@@ -21,7 +21,6 @@ import (
 	"github.com/creachadair/jrpc2/channel"
 	"github.com/creachadair/jrpc2/code"
 	"github.com/creachadair/jrpc2/handler"
-	"github.com/creachadair/jrpc2/metrics"
 	"github.com/creachadair/jrpc2/server"
 )
 
@@ -104,7 +103,6 @@ func main() {
 		ServerOptions: &jrpc2.ServerOptions{
 			Logger:      jrpc2.StdLogger(nil),
 			Concurrency: *maxTasks,
-			Metrics:     metrics.New(),
 			AllowPush:   true,
 		},
 	})
