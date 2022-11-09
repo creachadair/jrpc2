@@ -29,11 +29,11 @@ type Service interface {
 }
 
 // Static wraps a jrpc2.Assigner to trivially implement the Service interface.
-func Static(m jrpc2.Assigner) func() Service { return static{methods: m}.New }
+func Static(m jrpc2.Assigner) func() Service { return static{methods: m}.new }
 
 type static struct{ methods jrpc2.Assigner }
 
-func (s static) New() Service                            { return s }
+func (s static) new() Service                            { return s }
 func (s static) Assigner() (jrpc2.Assigner, error)       { return s.methods, nil }
 func (static) Finish(jrpc2.Assigner, jrpc2.ServerStatus) {}
 
