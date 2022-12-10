@@ -110,9 +110,9 @@ func TestFuncInfo_wrapDecode(t *testing.T) {
 			fmt.Sprintf(`{"jsonrpc":"2.0","id":1,"method":"x","params":%s}`, test.p))
 		got, err := test.fn(ctx, req)
 		if err != nil {
-			t.Errorf("Call %+v failed: %v", test.fn, err)
+			t.Errorf("Call %v failed: %v", test.fn, err)
 		} else if diff := cmp.Diff(test.want, got); diff != "" {
-			t.Errorf("Call %+v: wrong result (-want, +got)\n%s", test.fn, diff)
+			t.Errorf("Call %v: wrong result (-want, +got)\n%s", test.fn, diff)
 		}
 	}
 }
@@ -263,7 +263,7 @@ func TestFuncInfo_SetStrict(t *testing.T) {
 // introduce another pointer indirection.
 func TestNew_pointerRegression(t *testing.T) {
 	var got argStruct
-	call := handler.New(func(_ context.Context, arg *argStruct) error {
+	method := handler.New(func(_ context.Context, arg *argStruct) error {
 		got = *arg
 		t.Logf("Got argument struct: %+v", got)
 		return nil
@@ -276,8 +276,8 @@ func TestNew_pointerRegression(t *testing.T) {
       "alpha": "xyzzy",
       "bravo": 23
    }}`)
-	if _, err := call.Handle(context.Background(), req); err != nil {
-		t.Errorf("Handle failed: %v", err)
+	if _, err := method(context.Background(), req); err != nil {
+		t.Errorf("Handler failed: %v", err)
 	}
 	want := argStruct{A: "xyzzy", B: 23}
 	if diff := cmp.Diff(want, got); diff != "" {
