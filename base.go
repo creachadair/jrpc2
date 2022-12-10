@@ -28,10 +28,10 @@ type Namer interface {
 	Names() []string
 }
 
-// A Handler implements method given a request. The response value must be
-// JSON-marshalable or nil. In case of error, the handler can return a value of
-// type *jrpc2.Error to control the response code sent back to the caller;
-// otherwise the server will wrap the resulting value.
+// A Handler function implements a method given a request. The response value
+// must be JSON-marshalable or nil. In case of error, the handler can return a
+// value of type *jrpc2.Error to control the response code sent back to the
+// caller; otherwise the server will wrap the resulting value.
 //
 // The context passed to the handler by a *jrpc2.Server includes two special
 // values that the handler may extract.
