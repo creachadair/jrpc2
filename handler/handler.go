@@ -17,17 +17,12 @@ import (
 	"github.com/creachadair/jrpc2/code"
 )
 
-// A Func adapts a function having the correct signature to a jrpc2.Handler.
+// A Func is wrapper for a jrpc2.Handler function.
 type Func func(context.Context, *jrpc2.Request) (any, error)
 
-// Handle implements the jrpc2.Handler interface by calling m.
-func (m Func) Handle(ctx context.Context, req *jrpc2.Request) (any, error) {
-	return m(ctx, req)
-}
-
 // A Map is a trivial implementation of the jrpc2.Assigner interface that looks
-// up method names in a map of static jrpc2.Handler values.
-type Map map[string]jrpc2.Handler
+// up method names in a static map of function values.
+type Map map[string]Func
 
 // Assign implements part of the jrpc2.Assigner interface.
 func (m Map) Assign(_ context.Context, method string) jrpc2.Handler { return m[method] }
@@ -78,7 +73,7 @@ func (m ServiceMap) Names() []string {
 	return all
 }
 
-// New adapts a function to a jrpc2.Handler. The concrete value of fn must be
+// New adapts a function to a .Handler. The concrete value of fn must be
 // function accepted by Check. The resulting Func will handle JSON encoding and
 // decoding, call fn, and report appropriate errors.
 //
@@ -124,9 +119,9 @@ type FuncInfo struct {
 // for non-struct arguments.
 func (fi *FuncInfo) SetStrict(strict bool) *FuncInfo { fi.strictFields = strict; return fi }
 
-// Wrap adapts the function represented by fi in a Func that satisfies the
-// jrpc2.Handler interface.  The wrapped function can obtain the *jrpc2.Request
-// value from its context argument using the jrpc2.InboundRequest helper.
+// Wrap adapts the function represented by fi in a Func.  The wrapped function
+// can obtain the *jrpc2.Request value from its context argument using the
+// jrpc2.InboundRequest helper.
 //
 // This method panics if fi == nil or if it does not represent a valid function
 // type. A FuncInfo returned by a successful call to Check is always valid.

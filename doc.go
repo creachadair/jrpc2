@@ -8,10 +8,9 @@ defined by http://www.jsonrpc.org/specification.
 
 The *Server type implements a JSON-RPC server. A server communicates with a
 client over a channel.Channel, and dispatches client requests to user-defined
-method handlers.  Handlers satisfy the jrpc2.Handler interface by exporting a
-Handle method with this signature:
+method handlers.  Method handlers are functions with this signature:
 
-	Handle(ctx Context.Context, req *jrpc2.Request) (any, error)
+	func(ctx Context.Context, req *jrpc2.Request) (any, error)
 
 A server finds the handler for a request by looking up its method name in a
 jrpc2.Assigner provided when the server is set up. A Handler can decode the
@@ -26,8 +25,8 @@ request parameters using the UnmarshalParams method on the request:
 	}
 
 The handler package makes it easier to use functions that do not have this
-exact type signature as handlers, by using reflection to lift functions into
-the Handler interface.  For example, suppose we want to export this Add function:
+exact type signature as handlers, using reflection to wrap them in a Handler
+function.  For example, suppose we want to export this Add function:
 
 	// Add returns the sum of a slice of integers.
 	func Add(ctx context.Context, values []int) int {
@@ -38,8 +37,7 @@ the Handler interface.  For example, suppose we want to export this Add function
 	   return sum
 	}
 
-To convert Add to a handler, call handler.New, which wraps its argument in a a
-handler.Func, which satisfies the jrpc2.Handler interface:
+To convert Add to a handler, call handler.New, which returns a handler.Func:
 
 	h := handler.New(Add)  // h is now a handler.Func that calls Add
 

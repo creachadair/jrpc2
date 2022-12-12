@@ -233,7 +233,7 @@ func TestServer_specialMethods(t *testing.T) {
 		}
 	}
 	if got := s.assign(ctx, "rpc.nonesuch"); got != nil {
-		t.Errorf("s.assign(rpc.nonesuch): got %v, want nil", got)
+		t.Errorf("s.assign(rpc.nonesuch): got %p, want nil", got)
 	}
 }
 
@@ -252,7 +252,7 @@ func TestServer_disableBuiltinHook(t *testing.T) {
 	// With builtins disabled, the default rpc.* methods should not get assigned.
 	for _, name := range []string{rpcServerInfo} {
 		if got := s.assign(ctx, name); got != nil {
-			t.Errorf("s.assign(%s): got %+v, wanted nil", name, got)
+			t.Errorf("s.assign(%s): got %p, wanted nil", name, got)
 		}
 	}
 

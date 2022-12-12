@@ -381,7 +381,7 @@ func (s *Server) invoke(base context.Context, h Handler, req *Request) (json.Raw
 	defer s.sem.Release(1)
 
 	s.rpcLog.LogRequest(ctx, req)
-	v, err := h.Handle(ctx, req)
+	v, err := h(ctx, req)
 	if err != nil {
 		if req.IsNotification() {
 			s.log("Discarding error from notification to %q: %v", req.Method(), err)
