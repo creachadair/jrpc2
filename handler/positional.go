@@ -61,8 +61,7 @@ func structFieldNames(atype reflect.Type) (bool, []string) {
 			// handled by the cases above.
 			continue
 		}
-		name := strings.ToLower(fi.Name[:1]) + fi.Name[1:]
-		names = append(names, name)
+		names = append(names, fi.Name)
 	}
 	return true, names
 }
