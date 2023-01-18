@@ -167,11 +167,11 @@ func TestCheck_structArg(t *testing.T) {
 		B    int    `json:"-"`
 		C    bool   `json:",omitempty"`
 		D    byte   // unspecified, use default name
-		Evil int    `jrpc:"evil"`
+		Evil int    `json:"eee"`
 	}
 
 	const base = `{"jsonrpc":"2.0","id":1,"method":"M","params":%s}`
-	const inputObj = `{"apple":"1","c":true,"d":25,"evil":666}`
+	const inputObj = `{"apple":"1","c":true,"d":25,"eee":666}`
 	const inputArray = `["1", true, 25, 666]`
 	fail := errors.New("fail")
 

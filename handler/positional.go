@@ -56,10 +56,6 @@ func structFieldNames(atype reflect.Type) (bool, []string) {
 			}
 			// fall through to other cases
 		}
-		if tag, ok := fi.Tag.Lookup("jrpc"); ok {
-			names = append(names, tag)
-			continue
-		}
 		if fi.Anonymous {
 			// This is an untagged anonymous field. Tagged anonymous fields are
 			// handled by the cases above.

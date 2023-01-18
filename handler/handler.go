@@ -261,11 +261,6 @@ func (fi *FuncInfo) Wrap() Func {
 // Otherwise, if the field has a `json:"name"` tag and the name is not empty,
 // "name" is used.
 //
-// Otherwise, if the field nas a `jrpc:"name"` tag, "name" is used.  Note: This
-// case is meant to support types with custom implementations of UnmarshalJSON.
-// Assigning a name that does not match the field name can cause json.Unmarshal
-// to report an error.
-//
 // Otherwise, if the field is anonymous (embedded) it is skipped. To include an
 // anonymous field, ensure it is tagged for one of the previous rules.
 //
