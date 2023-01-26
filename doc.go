@@ -16,7 +16,7 @@ A server finds the handler for a request by looking up its method name in a
 jrpc2.Assigner provided when the server is set up. A Handler can decode the
 request parameters using the UnmarshalParams method on the request:
 
-	func (H) Handle(ctx context.Context, req *jrpc2.Request) (any, error) {
+	func Handle(ctx context.Context, req *jrpc2.Request) (any, error) {
 	   var args ArgType
 	   if err := req.UnmarshalParams(&args); err != nil {
 	      return nil, err
