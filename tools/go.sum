@@ -1,7 +1,7 @@
 github.com/creachadair/jrpc2 v0.43.0 h1:sgYSOoAWXZ5cx9pd2pYH8dkrjCNdDpFwhO4ucMeUz7U=
 github.com/creachadair/jrpc2 v0.43.0/go.mod h1:oOdNFoMQQpSirGcSujG10NYl05K/IYrIUUNbh+/Xcd8=
-github.com/creachadair/wschannel v0.0.0-20230116215421-97aca2118f2b h1:HHIT9f+p0aP0ozejT6mC0vBaIJKx8Ofr9RkOgxq99wc=
-github.com/creachadair/wschannel v0.0.0-20230116215421-97aca2118f2b/go.mod h1:yuk0URJlrmgJQ5fLfyjEEIDIy4gYVioUm5jWhSqQTeU=
+github.com/creachadair/wschannel v0.0.0-20230205181850-4a879ce1fd92 h1:ESxF/GhGHuAJ3sgmUjuQTRi5LR+OW5gf+RLnWxQZ6F0=
+github.com/creachadair/wschannel v0.0.0-20230205181850-4a879ce1fd92/go.mod h1:FReLrrwFcxqkBo8KaC4PZqgFHsIPLRH6K1+MLuxNyu0=
 github.com/fortytw2/leaktest v1.3.0 h1:u8491cBMTQ8ft8aeV+adlcytMZylmA5nnwwkRZjI8vw=
 github.com/google/go-cmp v0.5.9 h1:O2Tfq5qg4qc4AmwVlvv0oLiVAGB7enBSJ2x2DqQFi38=
 github.com/gorilla/websocket v1.5.0 h1:PPwGk2jz7EePpoHN/+ClbZu8SPxiqlu12wZP/3sWmnc=
