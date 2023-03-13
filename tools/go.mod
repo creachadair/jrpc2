@@ -8,7 +8,7 @@ require (
 )
 
 require (
-	github.com/klauspost/compress v1.16.0 // indirect
+	github.com/klauspost/compress v1.16.3 // indirect
 	golang.org/x/sync v0.1.0 // indirect
 	nhooyr.io/websocket v1.8.7 // indirect
 )
