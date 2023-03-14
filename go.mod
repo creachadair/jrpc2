@@ -6,6 +6,8 @@ require (
 	golang.org/x/sync v0.1.0
 )
 
+require github.com/creachadair/mds v0.0.0-20230313153906-9788b6f60568
+
 go 1.19
 
 // A bug in handler.New could panic a wrapped handler on pointer arguments.
