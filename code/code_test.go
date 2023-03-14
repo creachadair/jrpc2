@@ -12,27 +12,6 @@ import (
 	"github.com/creachadair/jrpc2/code"
 )
 
-func TestRegistration(t *testing.T) {
-	const message = "fun for the whole family"
-	c := code.Register(-100, message)
-	if got := c.String(); got != message {
-		t.Errorf("Register(-100): got %q, want %q", got, message)
-	} else if c != -100 {
-		t.Errorf("Register(-100): got %d instead", c)
-	}
-}
-
-func TestRegistrationError(t *testing.T) {
-	defer func() {
-		if v := recover(); v != nil {
-			t.Logf("Register correctly panicked: %v", v)
-		} else {
-			t.Fatalf("Register should have panicked on input %d, but did not", code.ParseError)
-		}
-	}()
-	code.Register(int32(code.ParseError), "bogus")
-}
-
 type testCoder code.Code
 
 func (t testCoder) ErrCode() code.Code { return code.Code(t) }
@@ -91,12 +70,10 @@ func TestErr(t *testing.T) {
 		code code.Code
 		want error
 	}
-	code.Register(1, "look for the bear necessities")
-	code.Register(2, "the simple bear necessities")
 	tests := []test{
 		{code.NoError, nil},
 		{0, errors.New("error code 0")},
-		{1, errors.New("look for the bear necessities")},
+		{1, errors.New("error code 1")},
 		{-17, errors.New("error code -17")},
 	}
 

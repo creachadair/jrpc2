@@ -88,22 +88,6 @@ var stdError = map[Code]string{
 	DeadlineExceeded: "deadline exceeded",
 }
 
-// Register adds a new Code value with the specified message string.  This
-// function will panic if the proposed value is already registered with a
-// different string.
-//
-// Registering a code allows you to control the string returned by the String
-// method for the code value you specify.  It is not necessary to register a
-// code before using it. An unregistered code renders a generic string.
-func Register(value int32, message string) Code {
-	code := Code(value)
-	if s, ok := stdError[code]; ok && s != message {
-		panic(fmt.Sprintf("code %d is already registered for %q", code, s))
-	}
-	stdError[code] = message
-	return code
-}
-
 // FromError returns a Code to categorize the specified error.
 // If err == nil, it returns code.NoError.
 // If err is (or wraps) an ErrCoder, it returns the reported code value.
