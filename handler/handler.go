@@ -264,8 +264,7 @@ func (fi *FuncInfo) Wrap() Func {
 // Otherwise, if the field is anonymous (embedded) it is skipped. To include an
 // anonymous field, ensure it is tagged for one of the previous rules.
 //
-// Otherwise the name of the field is used with its first character converted
-// to lowercase.
+// Otherwise the name of the field is used as-written.
 //
 // For other (non-struct) argument types, the accepted format is whatever the
 // json.Unmarshal function can decode into the value.  Note, however, that the
