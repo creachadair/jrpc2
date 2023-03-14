@@ -36,8 +36,8 @@ type ErrCoder interface {
 // It also satisfies the ErrCoder interface, allowing the code to be recovered.
 type codeError Code
 
-// Error satisfies the error interface using the registered string for the
-// code, if one is defined, or else a placeholder that describes the value.
+// Error satisfies the error interface using the built-in string for the code,
+// if one is defined, or else a placeholder that describes the value.
 func (c codeError) Error() string { return Code(c).String() }
 
 // ErrCode trivially satisfies the ErrCoder interface.
@@ -51,7 +51,7 @@ func (c codeError) Is(err error) bool {
 
 // Err converts c to an error value, which is nil for code.NoError and
 // otherwise an error value whose code is c and whose text is based on the
-// registered string for c if one exists.
+// built-in string for c if one exists.
 func (c Code) Err() error {
 	if c == NoError {
 		return nil
