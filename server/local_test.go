@@ -31,8 +31,8 @@ func TestLocal(t *testing.T) {
 
 	loc := server.NewLocal(make(handler.Map), testOpts(t))
 	ctx := context.Background()
-	si, err := jrpc2.RPCServerInfo(ctx, loc.Client)
-	if err != nil {
+	var si jrpc2.ServerInfo
+	if err := loc.Client.CallResult(ctx, "rpc.serverInfo", nil, &si); err != nil {
 		t.Fatalf("rpc.serverInfo failed: %v", err)
 	}
 

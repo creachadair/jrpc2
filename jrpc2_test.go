@@ -1081,9 +1081,9 @@ func TestRPCServerInfo(t *testing.T) {
 	loc := server.NewLocal(handler.Map{"Test": testOK}, nil)
 	defer loc.Close()
 
-	si, err := jrpc2.RPCServerInfo(context.Background(), loc.Client)
-	if err != nil {
-		t.Errorf("RPCServerInfo failed: %v", err)
+	var si jrpc2.ServerInfo
+	if err := loc.Client.CallResult(context.Background(), "rpc.serverInfo", nil, &si); err != nil {
+		t.Errorf("rpc.serverInfo call failed: %v", err)
 	}
 	{
 		got, want := si.Methods, []string{"Test"}

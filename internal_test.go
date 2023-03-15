@@ -167,7 +167,7 @@ func TestClient_contextCancellation(t *testing.T) {
 	stopped := make(chan struct{})
 	cpipe, spipe := channel.Direct()
 	srv := NewServer(hmap{
-		"Hang": methodFunc(func(ctx context.Context, _ *Request) (any, error) {
+		"Hang": Handler(func(ctx context.Context, _ *Request) (any, error) {
 			close(started) // signal that the method handler is running
 			select {
 			case <-stopped:
@@ -219,10 +219,10 @@ func TestServer_specialMethods(t *testing.T) {
 	defer leaktest.Check(t)()
 
 	s := NewServer(hmap{
-		"rpc.nonesuch": methodFunc(func(context.Context, *Request) (any, error) {
+		"rpc.nonesuch": Handler(func(context.Context, *Request) (any, error) {
 			return "OK", nil
 		}),
-		"donkeybait": methodFunc(func(context.Context, *Request) (any, error) {
+		"donkeybait": Handler(func(context.Context, *Request) (any, error) {
 			return true, nil
 		}),
 	}, nil)
@@ -243,7 +243,7 @@ func TestServer_disableBuiltinHook(t *testing.T) {
 	defer leaktest.Check(t)()
 
 	s := NewServer(hmap{
-		"rpc.nonesuch": methodFunc(func(context.Context, *Request) (any, error) {
+		"rpc.nonesuch": Handler(func(context.Context, *Request) (any, error) {
 			return "OK", nil
 		}),
 	}, &ServerOptions{DisableBuiltin: true})
@@ -270,7 +270,7 @@ func TestBatchReply(t *testing.T) {
 
 	cpipe, spipe := channel.Direct()
 	srv := NewServer(hmap{
-		"test": methodFunc(func(_ context.Context, req *Request) (any, error) {
+		"test": Handler(func(_ context.Context, req *Request) (any, error) {
 			return req.Method() + " OK", nil
 		}),
 	}, nil).Start(spipe)

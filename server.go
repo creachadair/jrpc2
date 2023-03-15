@@ -19,6 +19,10 @@ import (
 	"golang.org/x/sync/semaphore"
 )
 
+const (
+	rpcServerInfo = "rpc.serverInfo"
+)
+
 var (
 	serverMetrics = new(expvar.Map)
 
@@ -714,7 +718,9 @@ func (s *Server) assign(ctx context.Context, name string) Handler {
 	if s.builtin && strings.HasPrefix(name, "rpc.") {
 		switch name {
 		case rpcServerInfo:
-			return methodFunc(s.handleRPCServerInfo)
+			return func(context.Context, *Request) (any, error) {
+				return s.ServerInfo(), nil
+			}
 		default:
 			return nil // reserved
 		}
@@ -826,4 +832,14 @@ func (ts tasks) numToDo() (todo, notes int) {
 		}
 	}
 	return
+}
+
+// CancelRequest instructs s to cancel the pending or in-flight request with
+// the specified ID. If no request exists with that ID, this is a no-op.
+func (s *Server) CancelRequest(id string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.cancel(id) {
+		s.log("Cancelled request %s by client order", id)
+	}
 }
