@@ -73,7 +73,7 @@ func (m ServiceMap) Names() []string {
 	return all
 }
 
-// New adapts a function to a .Handler. The concrete value of fn must be
+// New adapts a function to a jrpc2.Handler. The concrete value of fn must be
 // function accepted by Check. The resulting Func will handle JSON encoding and
 // decoding, call fn, and report appropriate errors.
 //
