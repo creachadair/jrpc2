@@ -250,21 +250,10 @@ func (fi *FuncInfo) Wrap() Func {
 // If fn does not have one of these forms, Check reports an error.
 //
 // If the type of X is a struct or a pointer to a struct, the generated wrapper
-// accepts JSON parameters as either an object or an array.  The names used to
-// map array elements to struct fields are chosen by examining the fields of X
-// in order of their declaration.  Unexported fields are skipped, and the
-// parameter name for each exported field is chosen by following these rules,
-// in order:
-//
-// If the field has a `json:"-"` tag, the field is skipped.
-//
-// Otherwise, if the field has a `json:"name"` tag and the name is not empty,
-// "name" is used.
-//
-// Otherwise, if the field is anonymous (embedded) it is skipped. To include an
-// anonymous field, ensure it is tagged for one of the previous rules.
-//
-// Otherwise the name of the field is used as-written.
+// accepts JSON parameters as either an object or an array.  Array parameters
+// are mapped to the fields of X in the order of field declaration, save that
+// unexported fields are skipped. If a field has a `json:"-"` tag, it is also
+// skipped. Anonymous fields are skipped unless they are tagged.
 //
 // For other (non-struct) argument types, the accepted format is whatever the
 // json.Unmarshal function can decode into the value.  Note, however, that the
