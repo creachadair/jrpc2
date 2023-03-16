@@ -83,8 +83,9 @@ func structFieldNames(atype reflect.Type) (bool, []string) {
 // type whose fields correspond to the non-context arguments of fn.  The names
 // are used as the JSON field keys for the corresponding parameters.
 //
-// When converted into a handler.Func, the wrapped function accepts a JSON
-// object with the field keys named. For example, given:
+// When converted into a handler.Func, the wrapped function accepts either a
+// JSON array with exactly n members, or a JSON object with the field keys
+// named. For example, given:
 //
 //	func add(ctx context.Context, x, y int) int { return x + y }
 //
@@ -92,21 +93,21 @@ func structFieldNames(atype reflect.Type) (bool, []string) {
 //	// ...
 //	call := fi.Wrap()
 //
-// the resulting JSON-RPC handler accepts a parameter object like:
-//
-//	{"first": 17, "second": 23}
-//
-// where "first" is mapped to argument x and "second" to argument y.  Unknown
-// field keys generate an error. The field names are not required to match the
-// parameter names declared by the function; it is the names assigned here that
-// determine which object keys are accepted.
-//
-// The wrapped function will also accept a JSON array with with (exactly) the
-// same number of elements as the positional parameters:
+// the resulting handler accepts a JSON array with with (exactly) the same
+// number of elements as the positional parameters:
 //
 //	[17, 23]
 //
-// Unlike the object format, no arguments can be omitted in this format.
+// No arguments can be omitted in this format, but the caller can use a JSON
+// "null" in place of any argument.  The handler will also accept a parameter
+// object like:
+//
+//	{"first": 17, "second": 23}
+//
+// where "first" is mapped to argument x and "second" to argument y.  In this
+// form, fields may be omitted, but unknown field keys generate an error. The
+// object keys are taken from the arguments to Positional, not the parameter
+// names declared on the function.
 func Positional(fn any, names ...string) (*FuncInfo, error) {
 	if fn == nil {
 		return nil, errors.New("nil function")
