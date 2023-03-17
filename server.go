@@ -526,8 +526,9 @@ func (s *Server) pushReq(ctx context.Context, wantID bool, method string, params
 	return rsp, err
 }
 
-// Stop shuts down the server. It is safe to call this method multiple times or
-// from concurrent goroutines; it will only take effect once.
+// Stop shuts down the server. All in-progress call handlers are cancelled. It
+// is safe to call this method multiple times or from concurrent goroutines; it
+// will only take effect once.
 func (s *Server) Stop() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
