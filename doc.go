@@ -13,8 +13,8 @@ method handlers.  Method handlers are functions with this signature:
 	func(ctx Context.Context, req *jrpc2.Request) (any, error)
 
 A server finds the handler for a request by looking up its method name in a
-jrpc2.Assigner provided when the server is set up. A Handler can decode the
-request parameters using the UnmarshalParams method on the request:
+jrpc2.Assigner.  A Handler decodes request parameters using the UnmarshalParams
+method on the Request:
 
 	func Handle(ctx context.Context, req *jrpc2.Request) (any, error) {
 	   var args ArgType
@@ -24,9 +24,8 @@ request parameters using the UnmarshalParams method on the request:
 	   return usefulStuffWith(args)
 	}
 
-The handler package makes it easier to use functions that do not have this
-exact type signature as handlers, using reflection to wrap them in a Handler
-function.  For example, suppose we want to export this Add function:
+The handler package uses reflection to adapt functions that do not have this
+type to handlers.  For example, given:
 
 	// Add returns the sum of a slice of integers.
 	func Add(ctx context.Context, values []int) int {
@@ -37,7 +36,7 @@ function.  For example, suppose we want to export this Add function:
 	   return sum
 	}
 
-To convert Add to a handler, call handler.New, which returns a handler.Func:
+call handler.New to convert Add to a handler function:
 
 	h := handler.New(Add)  // h is now a handler.Func that calls Add
 
@@ -55,8 +54,10 @@ Equipped with an Assigner we can now construct a Server:
 To start the server, we need a channel.Channel. Implementations of the Channel
 interface handle the framing, transmission, and receipt of JSON messages.  The
 channel package implements some common framing disciplines for byte streams
-like pipes and sockets.  For this example, we'll use a channel that
-communicates over stdin and stdout, with messages delimited by newlines:
+like pipes and sockets.
+
+For this example, we'll use a channel that communicates over stdin and stdout,
+with messages delimited by newlines:
 
 	ch := channel.Line(os.Stdin, os.Stdout)
 
@@ -64,13 +65,13 @@ Now we can start the server:
 
 	srv.Start(ch)
 
-The Start method does not block.  The server runs until the channel closes, or
-until it is stopped explicitly by calling srv.Stop(). To wait for the server to
-finish, call:
+The Start method does not block.  A server runs until its channel closes or it
+is stopped explicitly by calling srv.Stop(). To wait for the server to finish,
+call:
 
 	err := srv.Wait()
 
-This will report the error that led to the server exiting.  The code for this
+This reports the error that led to the server exiting.  The code for this
 example is available from tools/examples/adder/adder.go:
 
 	$ go run tools/examples/adder/adder.go
@@ -118,9 +119,9 @@ same order as the Spec values, save that notifications are omitted.
 
 To decode the result from a successful response, use its UnmarshalResult method:
 
-	var result int
-	if err := rsp.UnmarshalResult(&result); err != nil {
-	   log.Fatalln("UnmarshalResult:", err)
+		var result int
+		if err := rsp.UnmarshalResult(&result); err != nil {
+		   log.Fatalln("UnmarshalResult:", err)
 	}
 
 To close a client and discard all its pending work, call cli.Close().
@@ -131,8 +132,9 @@ A JSON-RPC notification is a one-way request: The client sends the request to
 the server, but the server does not reply. Use the Notify method of a client to
 send a notification:
 
-	note := handler.Obj{"message": "A fire is burning!"}
-	err := cli.Notify(ctx, "Alert", note)
+		err := cli.Notify(ctx, "Alert", handler.Obj{
+	      "message": "A fire is burning!",
+	   })
 
 A notification is complete once it has been sent. Notifications can also be sent
 as part of a batch request:
@@ -161,15 +163,15 @@ number of distinctly-named methods:
 	   "Mul": handler.New(Mul),
 	}
 
-Maps may be further combined with the handler.ServiceMap type to allow multiple
-services to be exported from the same server:
+Maps may be combined with the handler.ServiceMap type to export multiple
+services from the same server:
 
 	func getStatus(context.Context) string { return "all is well" }
 
 	assigner := handler.ServiceMap{
 	   "Math":   mathService,
 	   "Status": handler.Map{
-	     "Get": handler.New(Status),
+	     "Get": handler.New(getStatus),
 	   },
 	}
 
