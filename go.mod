@@ -6,7 +6,7 @@ require (
 	golang.org/x/sync v0.1.0
 )
 
-require github.com/creachadair/mds v0.0.0-20230313153906-9788b6f60568
+require github.com/creachadair/mds v0.0.0-20230319162523-c2ef70fc176d
 
 go 1.19
 

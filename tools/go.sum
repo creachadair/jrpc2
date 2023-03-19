@@ -1,9 +1,9 @@
 github.com/creachadair/jrpc2 v0.46.0 h1:ahMNQN8Q6oJDC6Zn/TPK1YRAP5alFQ5hk2h5tzBVifE=
 github.com/creachadair/jrpc2 v0.46.0/go.mod h1:O7R/rmcUivGXUkfmbuWevcLv6f1xbKVSoMvmhW4/fr8=
-github.com/creachadair/mds v0.0.0-20230313153906-9788b6f60568 h1:LzMDPh2FLXEHnQNTjGJT+vInPSDVOUTuzqE4GskHTNg=
-github.com/creachadair/mds v0.0.0-20230313153906-9788b6f60568/go.mod h1:caBACU+n1Q/rZ252FTzfnG0/H+ZUi+UnIQtEOraMv/g=
-github.com/creachadair/wschannel v0.0.0-20230226191131-7aa9a71379df h1:hONVtXPlLCi5PO8zd0a0F2H7nXY0TEldNxTuU8bS1Lk=
-github.com/creachadair/wschannel v0.0.0-20230226191131-7aa9a71379df/go.mod h1:JZ+y37wuh2sjGk4l5cV2uCiC+BvCynqUeYmQpyE1/nk=
+github.com/creachadair/mds v0.0.0-20230319162523-c2ef70fc176d h1:WIvSzW0rx1LAEVqE4oLLfYmqwrxY9aytyooR2rOUhB0=
+github.com/creachadair/mds v0.0.0-20230319162523-c2ef70fc176d/go.mod h1:caBACU+n1Q/rZ252FTzfnG0/H+ZUi+UnIQtEOraMv/g=
+github.com/creachadair/wschannel v0.0.0-20230319190233-ae24c7893f94 h1:yv9Yc8x+kZwMu4+AAGBeV7yf/Nj+elpPVUbEK/T7u6k=
+github.com/creachadair/wschannel v0.0.0-20230319190233-ae24c7893f94/go.mod h1:XTwc7WQyjjAAtsZ/z70vs9bahOE0E5TuYNzwalB0MRI=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/fortytw2/leaktest v1.3.0 h1:u8491cBMTQ8ft8aeV+adlcytMZylmA5nnwwkRZjI8vw=
