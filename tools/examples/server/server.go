@@ -19,7 +19,6 @@ import (
 
 	"github.com/creachadair/jrpc2"
 	"github.com/creachadair/jrpc2/channel"
-	"github.com/creachadair/jrpc2/code"
 	"github.com/creachadair/jrpc2/handler"
 	"github.com/creachadair/jrpc2/server"
 )
@@ -47,7 +46,7 @@ func Mul(ctx context.Context, x, y int) int { return x * y }
 // Div converts its arguments to floating point and returns their ratio.
 func Div(ctx context.Context, arg binop) (float64, error) {
 	if arg.Y == 0 {
-		return 0, jrpc2.Errorf(code.InvalidParams, "zero divisor")
+		return 0, jrpc2.Errorf(jrpc2.InvalidParams, "zero divisor")
 	}
 	return float64(arg.X) / float64(arg.Y), nil
 }
