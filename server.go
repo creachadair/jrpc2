@@ -72,11 +72,11 @@ type Server struct {
 
 	mu *sync.Mutex // protects the fields below
 
-	nbar sync.WaitGroup          // notification barrier (see the dispatch method)
-	err  error                   // error from a previous operation
-	work chan struct{}           // for signaling message availability
-	inq  *mlink.Queue[jmessages] // inbound requests awaiting processing
-	ch   channel.Channel         // the channel to the client
+	nbar sync.WaitGroup         // notification barrier (see the dispatch method)
+	err  error                  // error from a previous operation
+	work chan struct{}          // for signaling message availability
+	inq  mlink.Queue[jmessages] // inbound requests awaiting processing
+	ch   channel.Channel        // the channel to the client
 
 	// For each request ID currently in-flight, this map carries a cancel
 	// function attached to the context that was sent to the handler.
@@ -109,7 +109,6 @@ func NewServer(mux Assigner, opts *ServerOptions) *Server {
 		mu:      new(sync.Mutex),
 		start:   opts.startTime(),
 		builtin: opts.allowBuiltin(),
-		inq:     mlink.NewQueue[jmessages](),
 		used:    make(map[string]context.CancelFunc),
 		call:    make(map[string]*Response),
 		callID:  1,
