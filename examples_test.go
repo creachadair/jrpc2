@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/creachadair/jrpc2"
-	"github.com/creachadair/jrpc2/code"
 	"github.com/creachadair/jrpc2/handler"
 	"github.com/creachadair/jrpc2/internal/testutil"
 	"github.com/creachadair/jrpc2/server"
@@ -119,14 +118,14 @@ func ExampleRequest_UnmarshalParams() {
 	//
 	// Solution 1: Use the jrpc2.StrictFields helper.
 	err = req.UnmarshalParams(jrpc2.StrictFields(&t))
-	if code.FromError(err) != code.InvalidParams {
+	if jrpc2.ErrorCode(err) != jrpc2.InvalidParams {
 		log.Fatalf("UnmarshalParams strict: %v", err)
 	}
 
 	// Solution 2: Implement a DisallowUnknownFields method.
 	var p strictParams
 	err = req.UnmarshalParams(&p)
-	if code.FromError(err) != code.InvalidParams {
+	if jrpc2.ErrorCode(err) != jrpc2.InvalidParams {
 		log.Fatalf("UnmarshalParams strict: %v", err)
 	}
 

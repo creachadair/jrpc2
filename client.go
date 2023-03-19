@@ -11,7 +11,6 @@ import (
 	"sync"
 
 	"github.com/creachadair/jrpc2/channel"
-	"github.com/creachadair/jrpc2/code"
 )
 
 // A Client is a JSON-RPC 2.0 client. The client sends requests and receives
@@ -210,7 +209,7 @@ func (c *Client) send(ctx context.Context, reqs jmessages) ([]*Response, error) 
 	// on a closing path.
 	b, err := reqs.toJSON()
 	if err != nil {
-		return nil, Errorf(code.InternalError, "marshaling request failed: %v", err)
+		return nil, Errorf(InternalError, "marshaling request failed: %v", err)
 	}
 
 	var pends []*Response
@@ -266,9 +265,9 @@ func (c *Client) waitComplete(pctx context.Context, id string, p *Response) {
 
 	var jerr *Error
 	if c.err != nil && !isUninteresting(c.err) {
-		jerr = &Error{Code: code.InternalError, Message: c.err.Error()}
+		jerr = &Error{Code: InternalError, Message: c.err.Error()}
 	} else if err != nil {
-		jerr = &Error{Code: code.FromError(err), Message: err.Error()}
+		jerr = &Error{Code: ErrorCode(err), Message: err.Error()}
 	}
 
 	p.ch <- &jmessage{
@@ -427,7 +426,7 @@ func (c *Client) marshalParams(ctx context.Context, method string, params any) (
 	if fb := firstByte(pbits); fb != '[' && fb != '{' && !isNull(pbits) {
 		// JSON-RPC requires that if parameters are provided at all, they are
 		// an array or an object.
-		return nil, &Error{Code: code.InvalidRequest, Message: "invalid parameters: array or object required"}
+		return nil, &Error{Code: InvalidRequest, Message: "invalid parameters: array or object required"}
 	}
 	return pbits, nil
 }

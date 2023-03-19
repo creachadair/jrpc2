@@ -14,7 +14,6 @@ import (
 	"strings"
 
 	"github.com/creachadair/jrpc2"
-	"github.com/creachadair/jrpc2/code"
 )
 
 // A Func is wrapper for a jrpc2.Handler function.
@@ -96,7 +95,7 @@ var (
 
 	strictType = reflect.TypeOf((*interface{ DisallowUnknownFields() })(nil)).Elem()
 
-	errNoParameters = &jrpc2.Error{Code: code.InvalidParams, Message: "no parameters accepted"}
+	errNoParameters = &jrpc2.Error{Code: jrpc2.InvalidParams, Message: "no parameters accepted"}
 )
 
 // FuncInfo captures type signature information from a valid handler function.
@@ -179,7 +178,7 @@ func (fi *FuncInfo) Wrap() Func {
 		newInput = func(ctx reflect.Value, req *jrpc2.Request) ([]reflect.Value, error) {
 			in := reflect.New(arg.Elem())
 			if err := req.UnmarshalParams(wrapArg(in)); err != nil {
-				return nil, jrpc2.Errorf(code.InvalidParams, "invalid parameters: %v", err)
+				return nil, jrpc2.Errorf(jrpc2.InvalidParams, "invalid parameters: %v", err)
 			}
 			return []reflect.Value{ctx, in}, nil
 		}
@@ -188,7 +187,7 @@ func (fi *FuncInfo) Wrap() Func {
 		newInput = func(ctx reflect.Value, req *jrpc2.Request) ([]reflect.Value, error) {
 			in := reflect.New(arg) // we still need a pointer to unmarshal
 			if err := req.UnmarshalParams(wrapArg(in)); err != nil {
-				return nil, jrpc2.Errorf(code.InvalidParams, "invalid parameters: %v", err)
+				return nil, jrpc2.Errorf(jrpc2.InvalidParams, "invalid parameters: %v", err)
 			}
 			// Indirect the pointer back off for the callee.
 			return []reflect.Value{ctx, in.Elem()}, nil
@@ -333,7 +332,7 @@ func (s *arrayStub) translate(data []byte) ([]byte, error) {
 	if err := json.Unmarshal(data, &arr); err != nil {
 		return nil, err
 	} else if len(arr) != len(s.posNames) {
-		return nil, jrpc2.Errorf(code.InvalidParams, "got %d parameters, want %d",
+		return nil, jrpc2.Errorf(jrpc2.InvalidParams, "got %d parameters, want %d",
 			len(arr), len(s.posNames))
 	}
 

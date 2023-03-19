@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/creachadair/jrpc2"
-	"github.com/creachadair/jrpc2/code"
 	"github.com/creachadair/jrpc2/server"
 )
 
@@ -67,7 +66,7 @@ func (g Getter) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	method, params, err := g.parseHTTPRequest(req)
 	if err != nil {
 		writeJSON(w, http.StatusBadRequest, &jrpc2.Error{
-			Code:    code.ParseError,
+			Code:    jrpc2.ParseError,
 			Message: err.Error(),
 		})
 		return
@@ -76,8 +75,8 @@ func (g Getter) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	var result json.RawMessage
 	if err := g.local.Client.CallResult(req.Context(), method, params, &result); err != nil {
 		var status int
-		switch code.FromError(err) {
-		case code.MethodNotFound:
+		switch jrpc2.ErrorCode(err) {
+		case jrpc2.MethodNotFound:
 			status = http.StatusNotFound
 		default:
 			status = http.StatusInternalServerError

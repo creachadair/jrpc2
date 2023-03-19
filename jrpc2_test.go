@@ -16,7 +16,6 @@ import (
 
 	"github.com/creachadair/jrpc2"
 	"github.com/creachadair/jrpc2/channel"
-	"github.com/creachadair/jrpc2/code"
 	"github.com/creachadair/jrpc2/handler"
 	"github.com/creachadair/jrpc2/server"
 	"github.com/fortytw2/leaktest"
@@ -25,7 +24,7 @@ import (
 
 // Static type assertions.
 var (
-	_ code.ErrCoder = (*jrpc2.Error)(nil)
+	_ jrpc2.ErrCoder = (*jrpc2.Error)(nil)
 )
 
 var testOK = handler.New(func(ctx context.Context) (string, error) {
@@ -71,7 +70,7 @@ func (dummy) Mul(_ context.Context, req struct{ X, Y int }) (int, error) {
 // Max takes a slice of arguments.
 func (dummy) Max(_ context.Context, vs []int) (int, error) {
 	if len(vs) == 0 {
-		return 0, jrpc2.Errorf(code.InvalidParams, "cannot compute max of no elements")
+		return 0, jrpc2.Errorf(jrpc2.InvalidParams, "cannot compute max of no elements")
 	}
 	max := vs[0]
 	for _, v := range vs[1:] {
@@ -406,8 +405,8 @@ func TestServer_stopCancelsHandlers(t *testing.T) {
 	case <-time.After(30 * time.Second):
 		t.Error("Timed out waiting for service handler to fail")
 	case err := <-stopped:
-		if ec := code.FromError(err); ec != code.Cancelled {
-			t.Errorf("Client error: got %v (%v), wanted code %v", err, ec, code.Cancelled)
+		if ec := jrpc2.ErrorCode(err); ec != jrpc2.Cancelled {
+			t.Errorf("Client error: got %v (%v), wanted code %v", err, ec, jrpc2.Cancelled)
 		}
 	}
 }
@@ -456,9 +455,9 @@ func TestServer_CancelRequest(t *testing.T) {
 	}
 
 	err := <-errc
-	got := code.FromError(err)
-	if got != code.Cancelled {
-		t.Errorf("Stall: got %v (%v), want %v", err, got, code.Cancelled)
+	got := jrpc2.ErrorCode(err)
+	if got != jrpc2.Cancelled {
+		t.Errorf("Stall: got %v (%v), want %v", err, got, jrpc2.Cancelled)
 	} else {
 		t.Logf("Cancellation succeeded, got expected error: %v", err)
 	}
@@ -480,7 +479,7 @@ func TestError_withData(t *testing.T) {
 			return false, jrpc2.ServerFromContext(ctx).Notify(ctx, "PushBack", nil)
 		}),
 		"Code": handler.New(func(ctx context.Context) error {
-			return code.Code(12345).Err()
+			return jrpc2.Code(12345).Err()
 		}),
 	}, &server.LocalOptions{
 		Client: &jrpc2.ClientOptions{
@@ -533,7 +532,7 @@ func TestClient_badCallParams(t *testing.T) {
 	rsp, err := loc.Client.Call(context.Background(), "Test", "bogus")
 	if err == nil {
 		t.Errorf("Call(Test): got %+v, wanted error", rsp)
-	} else if got, want := code.FromError(err), code.InvalidRequest; got != want {
+	} else if got, want := jrpc2.ErrorCode(err), jrpc2.InvalidRequest; got != want {
 		t.Errorf("Call(Test): got code %v, want %v", got, want)
 	}
 }
@@ -869,7 +868,7 @@ func TestClient_onCancelHook(t *testing.T) {
 		"computerSaysNo": handler.New(func(ctx context.Context, ids []string) error {
 			defer close(hooked)
 			if req := jrpc2.InboundRequest(ctx); !req.IsNotification() {
-				return jrpc2.Errorf(code.MethodNotFound, "no such method %q", req.Method())
+				return jrpc2.Errorf(jrpc2.MethodNotFound, "no such method %q", req.Method())
 			}
 			srv := jrpc2.ServerFromContext(ctx)
 			for _, id := range ids {
@@ -1069,8 +1068,8 @@ func TestHandler_noParams(t *testing.T) {
 	var rsp string
 	if err := loc.Client.CallResult(context.Background(), "Test", []int{1, 2, 3}, &rsp); err == nil {
 		t.Errorf("Call(Test): got %q, wanted error", rsp)
-	} else if ec := code.FromError(err); ec != code.InvalidParams {
-		t.Errorf("Call(Test): got code %v, wanted %v", ec, code.InvalidParams)
+	} else if ec := jrpc2.ErrorCode(err); ec != jrpc2.InvalidParams {
+		t.Errorf("Call(Test): got code %v, wanted %v", ec, jrpc2.InvalidParams)
 	}
 }
 
@@ -1233,17 +1232,17 @@ func TestRequest_strictFields(t *testing.T) {
 	tests := []struct {
 		method string
 		params any
-		code   code.Code
+		code   jrpc2.Code
 		want   string
 	}{
-		{"Strict", handler.Obj{"alpha": "aiuto"}, code.NoError, "aiuto"},
-		{"Strict", handler.Obj{"alpha": "selva me", "charlie": true}, code.NoError, "selva me"},
-		{"Strict", handler.Obj{"alpha": "OK", "nonesuch": true}, code.InvalidParams, ""},
-		{"Normal", handler.Obj{"alpha": "OK", "nonesuch": true}, code.NoError, "OK"},
+		{"Strict", handler.Obj{"alpha": "aiuto"}, jrpc2.NoError, "aiuto"},
+		{"Strict", handler.Obj{"alpha": "selva me", "charlie": true}, jrpc2.NoError, "selva me"},
+		{"Strict", handler.Obj{"alpha": "OK", "nonesuch": true}, jrpc2.InvalidParams, ""},
+		{"Normal", handler.Obj{"alpha": "OK", "nonesuch": true}, jrpc2.NoError, "OK"},
 	}
 	for _, test := range tests {
 		name := test.method + "/"
-		if test.code == code.NoError {
+		if test.code == jrpc2.NoError {
 			name += "OK"
 		} else {
 			name += test.code.String()
@@ -1251,10 +1250,10 @@ func TestRequest_strictFields(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			var res string
 			err := loc.Client.CallResult(ctx, test.method, test.params, &res)
-			if err == nil && test.code != code.NoError {
+			if err == nil && test.code != jrpc2.NoError {
 				t.Errorf("CallResult: got %+v, want error code %v", res, test.code)
 			} else if err != nil {
-				if c := code.FromError(err); c != test.code {
+				if c := jrpc2.ErrorCode(err); c != test.code {
 					t.Errorf("CallResult: got error %v, wanted code %v", err, test.code)
 				}
 			} else if res != test.want {

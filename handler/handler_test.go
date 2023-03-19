@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"github.com/creachadair/jrpc2"
-	"github.com/creachadair/jrpc2/code"
 	"github.com/creachadair/jrpc2/handler"
 	"github.com/creachadair/jrpc2/internal/testutil"
 	"github.com/google/go-cmp/cmp"
@@ -254,7 +253,7 @@ func TestFuncInfo_SetStrict(t *testing.T) {
       "Z": 25
    }}`)
 	rsp, err := fn(context.Background(), req)
-	if got := code.FromError(err); got != code.InvalidParams {
+	if got := jrpc2.ErrorCode(err); got != jrpc2.InvalidParams {
 		t.Errorf("Handler returned (%+v, %v), want InvalidParms", rsp, err)
 	}
 }
