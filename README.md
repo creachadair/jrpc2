@@ -7,11 +7,9 @@ There is also a working [example in the Go playground](https://go.dev/play/p/Gdd
 
 ## Packages
 
-*  Package [jrpc2](http://godoc.org/github.com/creachadair/jrpc2) implements the base client and server.
+*  Package [jrpc2](http://godoc.org/github.com/creachadair/jrpc2) implements the base client and server and standard error codes.
 
 *  Package [channel](http://godoc.org/github.com/creachadair/jrpc2/channel) defines the communication channel abstraction used by the server & client.
-
-*  Package [code](http://godoc.org/github.com/creachadair/jrpc2/code) defines standard error codes as defined by the JSON-RPC 2.0 protocol.
 
 *  Package [handler](http://godoc.org/github.com/creachadair/jrpc2/handler) defines support for adapting functions to service methods.
 

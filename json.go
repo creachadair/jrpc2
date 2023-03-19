@@ -5,8 +5,6 @@ package jrpc2
 import (
 	"bytes"
 	"encoding/json"
-
-	"github.com/creachadair/jrpc2/code"
 )
 
 // ParseRequests parses a single request or a batch of requests from JSON.
@@ -151,7 +149,7 @@ func isValidID(v json.RawMessage) bool {
 // isValidVersion reports whether v is a valid JSON-RPC version string.
 func isValidVersion(v string) bool { return v == Version }
 
-func (j *jmessage) fail(code code.Code, msg string) {
+func (j *jmessage) fail(code Code, msg string) {
 	if j.err == nil {
 		j.err = &Error{Code: code, Message: msg}
 	}
@@ -203,7 +201,7 @@ func (j *jmessage) parseJSON(data []byte) error {
 
 	var obj map[string]json.RawMessage
 	if err := json.Unmarshal(data, &obj); err != nil {
-		j.fail(code.ParseError, "request is not a JSON object")
+		j.fail(ParseError, "request is not a JSON object")
 		return j.err
 	}
 
@@ -213,17 +211,17 @@ func (j *jmessage) parseJSON(data []byte) error {
 		switch key {
 		case "jsonrpc":
 			if json.Unmarshal(val, &j.V) != nil {
-				j.fail(code.ParseError, "invalid version key")
+				j.fail(ParseError, "invalid version key")
 			}
 		case "id":
 			if isValidID(val) {
 				j.ID = val
 			} else {
-				j.fail(code.InvalidRequest, "invalid request ID")
+				j.fail(InvalidRequest, "invalid request ID")
 			}
 		case "method":
 			if json.Unmarshal(val, &j.M) != nil {
-				j.fail(code.ParseError, "invalid method name")
+				j.fail(ParseError, "invalid method name")
 			}
 		case "params":
 			// As a special case, reduce "null" to nil in the parameters.
@@ -232,11 +230,11 @@ func (j *jmessage) parseJSON(data []byte) error {
 				j.P = val
 			}
 			if fb := firstByte(j.P); fb != 0 && fb != '[' && fb != '{' {
-				j.fail(code.InvalidRequest, "parameters must be array or object")
+				j.fail(InvalidRequest, "parameters must be array or object")
 			}
 		case "error":
 			if json.Unmarshal(val, &j.E) != nil {
-				j.fail(code.ParseError, "invalid error value")
+				j.fail(ParseError, "invalid error value")
 			}
 		case "result":
 			j.R = val
@@ -247,17 +245,17 @@ func (j *jmessage) parseJSON(data []byte) error {
 
 	// Report an error for an invalid version marker
 	if !isValidVersion(j.V) {
-		j.fail(code.InvalidRequest, "invalid version marker")
+		j.fail(InvalidRequest, "invalid version marker")
 	}
 
 	// Report an error if request/response fields overlap.
 	if j.M != "" && (j.E != nil || j.R != nil) {
-		j.fail(code.InvalidRequest, "mixed request and reply fields")
+		j.fail(InvalidRequest, "mixed request and reply fields")
 	}
 
 	// Report an error for extraneous fields.
 	if j.err == nil && len(extra) != 0 {
-		j.err = Errorf(code.InvalidRequest, "extra fields in request").WithData(extra)
+		j.err = Errorf(InvalidRequest, "extra fields in request").WithData(extra)
 	}
 	return nil
 }

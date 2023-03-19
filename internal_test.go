@@ -13,13 +13,12 @@ import (
 	"time"
 
 	"github.com/creachadair/jrpc2/channel"
-	"github.com/creachadair/jrpc2/code"
 	"github.com/fortytw2/leaktest"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
-var errInvalidVersion = &Error{Code: code.InvalidRequest, Message: "invalid version marker"}
+var errInvalidVersion = &Error{Code: InvalidRequest, Message: "invalid version marker"}
 
 func TestParseRequests(t *testing.T) {
 	tests := []struct {
@@ -62,10 +61,10 @@ func TestParseRequests(t *testing.T) {
 		}, nil},
 
 		// A broken request.
-		{`{`, nil, Errorf(code.ParseError, "invalid request value")},
+		{`{`, nil, Errorf(ParseError, "invalid request value")},
 
 		// A broken batch.
-		{`["bad"{]`, nil, Errorf(code.ParseError, "invalid request value")},
+		{`["bad"{]`, nil, Errorf(ParseError, "invalid request value")},
 	}
 	for _, test := range tests {
 		got, err := ParseRequests([]byte(test.input))
@@ -87,7 +86,7 @@ func errEQ(x, y error) bool {
 	} else if y == nil {
 		return false
 	}
-	return code.FromError(x) == code.FromError(y) && x.Error() == y.Error()
+	return ErrorCode(x) == ErrorCode(y) && x.Error() == y.Error()
 }
 
 func TestRequest_UnmarshalParams(t *testing.T) {
@@ -100,24 +99,24 @@ func TestRequest_UnmarshalParams(t *testing.T) {
 		input   string
 		want    any
 		pstring string
-		code    code.Code
+		code    Code
 	}{
 		// If parameters are set, the target should be updated.
-		{`{"jsonrpc":"2.0", "id":1, "method":"X", "params":[1,2]}`, []int{1, 2}, "[1,2]", code.NoError},
+		{`{"jsonrpc":"2.0", "id":1, "method":"X", "params":[1,2]}`, []int{1, 2}, "[1,2]", NoError},
 
 		// If parameters are null, the target should not be modified.
-		{`{"jsonrpc":"2.0", "id":2, "method":"Y", "params":null}`, "", "", code.NoError},
+		{`{"jsonrpc":"2.0", "id":2, "method":"Y", "params":null}`, "", "", NoError},
 
 		// If parameters are not set, the target should not be modified.
-		{`{"jsonrpc":"2.0", "id":2, "method":"Y"}`, 0, "", code.NoError},
+		{`{"jsonrpc":"2.0", "id":2, "method":"Y"}`, 0, "", NoError},
 
 		// Unmarshaling should work into a struct as long as the fields match.
-		{`{"jsonrpc":"2.0", "id":3, "method":"Z", "params":{}}`, xy{}, "{}", code.NoError},
-		{`{"jsonrpc":"2.0", "id":4, "method":"Z", "params":{"x":17}}`, xy{X: 17}, `{"x":17}`, code.NoError},
+		{`{"jsonrpc":"2.0", "id":3, "method":"Z", "params":{}}`, xy{}, "{}", NoError},
+		{`{"jsonrpc":"2.0", "id":4, "method":"Z", "params":{"x":17}}`, xy{X: 17}, `{"x":17}`, NoError},
 		{`{"jsonrpc":"2.0", "id":5, "method":"Z", "params":{"x":23, "y":true}}`,
-			xy{X: 23, Y: true}, `{"x":23, "y":true}`, code.NoError},
+			xy{X: 23, Y: true}, `{"x":23, "y":true}`, NoError},
 		{`{"jsonrpc":"2.0", "id":6, "method":"Z", "params":{"x":23, "z":"wat"}}`,
-			xy{X: 23}, `{"x":23, "z":"wat"}`, code.NoError},
+			xy{X: 23}, `{"x":23, "z":"wat"}`, NoError},
 	}
 	for _, test := range tests {
 		var reqs jmessages
@@ -132,7 +131,7 @@ func TestRequest_UnmarshalParams(t *testing.T) {
 		target := reflect.New(reflect.TypeOf(test.want)).Interface()
 		{
 			err := req.UnmarshalParams(target)
-			if got := code.FromError(err); got != test.code {
+			if got := ErrorCode(err); got != test.code {
 				t.Errorf("UnmarshalParams error: got code %d, want %d [%v]", got, test.code, err)
 			}
 			if err != nil {
@@ -207,8 +206,8 @@ func TestClient_contextCancellation(t *testing.T) {
 	rsp.wait()
 	close(stopped)
 	if err := rsp.Error(); err != nil {
-		if err.Code != code.Cancelled {
-			t.Errorf("Response error for %q: got %v, want %v", rsp.ID(), err, code.Cancelled)
+		if err.Code != Cancelled {
+			t.Errorf("Response error for %q: got %v, want %v", rsp.ID(), err, Cancelled)
 		}
 	} else {
 		t.Errorf("Response for %q: unexpectedly succeeded", rsp.ID())
@@ -310,7 +309,7 @@ func TestMarshalResponse(t *testing.T) {
 	}{
 		{"", nil, "", `{"jsonrpc":"2.0"}`},
 		{"null", nil, "", `{"jsonrpc":"2.0","id":null}`},
-		{"123", Errorf(code.ParseError, "failed"), "",
+		{"123", Errorf(ParseError, "failed"), "",
 			`{"jsonrpc":"2.0","id":123,"error":{"code":-32700,"message":"failed"}}`},
 		{"456", nil, `{"ok":true,"values":[4,5,6]}`,
 			`{"jsonrpc":"2.0","id":456,"result":{"ok":true,"values":[4,5,6]}}`},

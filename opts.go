@@ -9,8 +9,6 @@ import (
 	"log"
 	"runtime"
 	"time"
-
-	"github.com/creachadair/jrpc2/code"
 )
 
 // ServerOptions control the behaviour of a server created by NewServer.
@@ -177,7 +175,7 @@ func (c *ClientOptions) handleCallback() func(context.Context, *jmessage) []byte
 			if e, ok := err.(*Error); ok {
 				rsp.E = e
 			} else {
-				rsp.E = &Error{Code: code.FromError(err), Message: err.Error()}
+				rsp.E = &Error{Code: ErrorCode(err), Message: err.Error()}
 			}
 		}
 		bits, _ := rsp.toJSON()

@@ -8,8 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-
-	"github.com/creachadair/jrpc2/code"
 )
 
 // An Assigner assigns a Handler to handle the specified method name, or nil if
@@ -236,9 +234,9 @@ func isServiceName(s string) bool {
 // error types. If err is not a context error, it is returned unchanged.
 func filterError(e *Error) error {
 	switch e.Code {
-	case code.Cancelled:
+	case Cancelled:
 		return context.Canceled
-	case code.DeadlineExceeded:
+	case DeadlineExceeded:
 		return context.DeadlineExceeded
 	}
 	return e

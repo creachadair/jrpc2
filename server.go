@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/creachadair/jrpc2/channel"
-	"github.com/creachadair/jrpc2/code"
 	"github.com/creachadair/mds/mlink"
 	"golang.org/x/sync/semaphore"
 )
@@ -475,7 +474,7 @@ func (s *Server) waitCallback(pctx context.Context, id string, p *Response) {
 
 	p.ch <- &jmessage{
 		ID: json.RawMessage(id),
-		E:  &Error{Code: code.FromError(err), Message: err.Error()},
+		E:  &Error{Code: ErrorCode(err), Message: err.Error()},
 	}
 }
 
@@ -737,7 +736,7 @@ func (s *Server) pushError(err error) {
 	if e, ok := err.(*Error); ok {
 		jerr = e
 	} else {
-		jerr = &Error{Code: code.FromError(err), Message: err.Error()}
+		jerr = &Error{Code: ErrorCode(err), Message: err.Error()}
 	}
 
 	nw, err := encode(s.ch, jmessages{{
@@ -789,7 +788,7 @@ func (ts tasks) responses(rpcLog RPCLogger) jmessages {
 			//
 			// However, parse and validation errors must still be reported, with
 			// an ID of null if the request ID was not resolvable.
-			if c := code.FromError(task.err); c != code.ParseError && c != code.InvalidRequest {
+			if c := ErrorCode(task.err); c != ParseError && c != InvalidRequest {
 				continue
 			}
 		}
@@ -805,10 +804,10 @@ func (ts tasks) responses(rpcLog RPCLogger) jmessages {
 			rsp.R = task.val
 		} else if e, ok := task.err.(*Error); ok {
 			rsp.E = e
-		} else if c := code.FromError(task.err); c != code.NoError {
+		} else if c := ErrorCode(task.err); c != NoError {
 			rsp.E = &Error{Code: c, Message: task.err.Error()}
 		} else {
-			rsp.E = &Error{Code: code.InternalError, Message: task.err.Error()}
+			rsp.E = &Error{Code: InternalError, Message: task.err.Error()}
 		}
 		rpcLog.LogResponse(task.ctx, &Response{
 			id:     string(rsp.ID),
