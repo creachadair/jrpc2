@@ -1,6 +1,5 @@
 // Copyright (C) 2017 Michael J. Fromberger. All Rights Reserved.
 
-// Package code defines error code values used by the jrpc2 package.
 package jrpc2
 
 import (
@@ -9,9 +8,9 @@ import (
 	"fmt"
 )
 
-// A Code is an error response.
+// A Code is an error code included in the JSON-RPC error object.
 //
-// Code values from and including -32768 to -32000 are reserved for pre-defined
+// Code values from and including -32768 to -32000 are reserved for predefined
 // JSON-RPC errors.  Any code within this range, but not defined explicitly
 // below is reserved for future use.  The remainder of the space is available
 // for application defined errors.
@@ -89,11 +88,12 @@ var stdError = map[Code]string{
 }
 
 // ErrorCode returns a Code to categorize the specified error.
-// If err == nil, it returns jrpc2.NoError.
-// If err is (or wraps) an ErrCoder, it returns the reported code value.
-// If err is context.Canceled, it returns jrpc2.Cancelled.
-// If err is context.DeadlineExceeded, it returns jrpc2.DeadlineExceeded.
-// Otherwise it returns jrpc2.SystemError.
+//
+//   - If err == nil, it returns jrpc2.NoError.
+//   - If err is (or wraps) an ErrCoder, it returns the reported code value.
+//   - If err is context.Canceled, it returns jrpc2.Cancelled.
+//   - If err is context.DeadlineExceeded, it returns jrpc2.DeadlineExceeded.
+//   - Otherwise it returns jrpc2.SystemError.
 func ErrorCode(err error) Code {
 	if err == nil {
 		return NoError

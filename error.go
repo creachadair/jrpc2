@@ -9,13 +9,14 @@ import (
 )
 
 // Error is the concrete type of errors returned from RPC calls.
+// It also represents the JSON encoding of the JSON-RPC error object.
 type Error struct {
 	Code    Code            `json:"code"`              // the machine-readable error code
 	Message string          `json:"message,omitempty"` // the human-readable error message
 	Data    json.RawMessage `json:"data,omitempty"`    // optional ancillary error data
 }
 
-// Error renders e to a human-readable string for the error interface.
+// Error returns a human-readable description of e.
 func (e Error) Error() string { return fmt.Sprintf("[%d] %s", e.Code, e.Message) }
 
 // ErrCode trivially satisfies the ErrCoder interface for an *Error.

@@ -1,10 +1,10 @@
 // Copyright (C) 2017 Michael J. Fromberger. All Rights Reserved.
 
-// Package channel defines a basic communications channel.
+// Package channel defines a communications channel.
 //
-// A Channel encodes/transmits and decodes/receives data records over an
-// unstructured stream, using a configurable framing discipline. This package
-// provides some basic framing implementations.
+// A Channel encodes/transmits and decodes/receives data records. The types in
+// this package support sending and receiving over an unstructured stream using
+// a configurable framing discipline.
 //
 // # Channels
 //
@@ -42,7 +42,7 @@ import (
 
 // A Channel represents the ability to transmit and receive data records.  A
 // channel does not interpret the contents of a record, but may add and remove
-// framing so that records can be embedded in higher-level protocols.
+// framing so that records can be embedded in lower-level protocols.
 //
 // One sender and one receiver may use a Channel concurrently, but the methods
 // of a Channel are not otherwise required to be safe for concurrent use.  The

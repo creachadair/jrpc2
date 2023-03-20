@@ -14,7 +14,7 @@ import (
 )
 
 // A Client is a JSON-RPC 2.0 client. The client sends requests and receives
-// responses on a channel.Channel provided by the caller.
+// responses on a channel.Channel provided by the constructor.
 type Client struct {
 	done *sync.WaitGroup // done when the reader is finished at shutdown time
 
@@ -23,8 +23,8 @@ type Client struct {
 	scall func(context.Context, *jmessage) []byte
 	chook func(*Client, *Response)
 
-	cbctx    context.Context // terminates when the client is closed
-	cbcancel func()          // cancels cbctx
+	cbctx    context.Context    // terminates when the client is closed
+	cbcancel context.CancelFunc // cancels cbctx
 
 	mu      sync.Mutex           // protects the fields below
 	ch      channel.Channel      // channel to the server
@@ -82,7 +82,7 @@ func (c *Client) accept(ch receiver) error {
 			c.log("Decoding error: %v", err)
 		}
 		c.mu.Lock()
-		c.stop(err)
+		c.stopLocked(err)
 		c.mu.Unlock()
 		return err
 	}
@@ -94,16 +94,16 @@ func (c *Client) accept(ch receiver) error {
 		c.mu.Lock()
 		defer c.mu.Unlock()
 		for _, rsp := range in {
-			c.deliver(rsp)
+			c.deliverLocked(rsp)
 		}
 	}()
 	return nil
 }
 
-// handleRequest handles a callback or notification from the server. The
+// handleRequestLocked handles a callback or notification from the server.  The
 // caller must hold c.mu. This function does not block for the handler.
 // Precondition: msg is a request or notification, not a response or error.
-func (c *Client) handleRequest(msg *jmessage) {
+func (c *Client) handleRequestLocked(msg *jmessage) {
 	if msg.isNotification() {
 		if c.snote == nil {
 			c.log("Discarding notification: %v", msg)
@@ -134,14 +134,14 @@ func (c *Client) handleRequest(msg *jmessage) {
 	}
 }
 
-// For each response, find the request pending on its ID and deliver it.  The
-// caller must hold c.mu.  Unknown response IDs are logged and discarded.  As
-// we are under the lock, we do not wait for the pending receiver to pick up
-// the response; we just drop it in their channel.  The channel is buffered so
-// we don't need to rendezvous.
-func (c *Client) deliver(rsp *jmessage) {
+// deliverLocked delivers rsp to the request pending on its ID.  The caller
+// must hold c.mu.  Unknown response IDs are logged and discarded.  As we are
+// under the lock, we do not wait for the pending receiver to pick up the
+// response; we just drop it in their channel.  The channel is buffered so we
+// don't need to rendezvous.
+func (c *Client) deliverLocked(rsp *jmessage) {
 	if rsp.isRequestOrNotification() {
-		c.handleRequest(rsp)
+		c.handleRequestLocked(rsp)
 		return
 	}
 
@@ -285,9 +285,9 @@ func (c *Client) waitComplete(pctx context.Context, id string, p *Response) {
 	}
 }
 
-// Call initiates a single request and blocks until the response returns.
-// A successful call reports a nil error and a non-nil response. Errors from
-// the server have concrete type *jrpc2.Error.
+// Call initiates a single request and blocks until the response returns or ctx
+// ends.  A successful call reports a nil error and a non-nil response. Errors
+// from the server have concrete type *jrpc2.Error.
 //
 //	rsp, err := c.Call(ctx, method, params)
 //	if e, ok := err.(*jrpc2.Error); ok {
@@ -324,8 +324,8 @@ func (c *Client) CallResult(ctx context.Context, method string, params, result a
 }
 
 // Batch initiates a batch of concurrent requests, and blocks until all the
-// responses return. The responses are returned in the same order as the
-// original specs, omitting notifications.
+// responses return or ctx ends. The responses are returned in the same order
+// as the original specs, omitting notifications.
 //
 // Any error reported by Batch represents an error in encoding or sending the
 // batch to the server. Errors reported by the server in response to requests
@@ -356,7 +356,7 @@ func (c *Client) Batch(ctx context.Context, specs []Spec) ([]*Response, error) {
 }
 
 // A Spec combines a method name and parameter value as part of a Batch.  If
-// the Notify field is true, the request is sent as a notification.
+// the Notify flag is true, the request is sent as a notification.
 type Spec struct {
 	Method string
 	Params any
@@ -364,7 +364,7 @@ type Spec struct {
 }
 
 // Notify transmits a notification to the specified method and parameters.  It
-// blocks until the notification has been sent.
+// blocks until the notification has been sent or ctx ends.
 func (c *Client) Notify(ctx context.Context, method string, params any) error {
 	req, err := c.note(ctx, method, params)
 	if err != nil {
@@ -377,7 +377,7 @@ func (c *Client) Notify(ctx context.Context, method string, params any) error {
 // Close shuts down the client, terminating any pending in-flight requests.
 func (c *Client) Close() error {
 	c.mu.Lock()
-	c.stop(errClientStopped)
+	c.stopLocked(errClientStopped)
 	c.mu.Unlock()
 	c.done.Wait()
 
@@ -392,10 +392,10 @@ func isUninteresting(err error) bool {
 	return err == io.EOF || channel.IsErrClosing(err) || err == errClientStopped
 }
 
-// stop closes down the reader for c and records err as its final state.  The
-// caller must hold c.mu. If multiple callers invoke stop, only the first will
-// successfully record its error status.
-func (c *Client) stop(err error) {
+// stopLocked closes down the reader for c and records err as its final state.
+// The caller must hold c.mu. If multiple callers invoke stop, only the first
+// will successfully record its error status.
+func (c *Client) stopLocked(err error) {
 	if c.ch == nil {
 		return // nothing is running
 	}

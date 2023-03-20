@@ -53,8 +53,8 @@ func init() {
 // expvar.Publish or similar.
 func ServerMetrics() *expvar.Map { return serverMetrics }
 
-// A Server is a JSON-RPC 2.0 server. The server receives requests and sends
-// responses on a channel.Channel provided by the caller, and dispatches
+// Server implements a JSON-RPC 2.0 server. The server receives requests and
+// sends responses on a channel.Channel provided by the caller, and dispatches
 // requests to user-defined Handlers.
 type Server struct {
 	wg  sync.WaitGroup      // ready when workers are done at shutdown time
@@ -90,10 +90,9 @@ type Server struct {
 // NewServer returns a new unstarted server that will dispatch incoming
 // JSON-RPC requests according to mux. To start serving, call Start.
 //
-// N.B. It is only safe to modify mux after the server has been started if mux
-// itself is safe for concurrent use by multiple goroutines.
-//
-// This function will panic if mux == nil.
+// This function will panic if mux == nil.  It is not safe to modify mux after
+// the server has been started unless mux itself is safe for concurrent use by
+// multiple goroutines.
 func NewServer(mux Assigner, opts *ServerOptions) *Server {
 	if mux == nil {
 		panic("nil assigner")
@@ -115,9 +114,9 @@ func NewServer(mux Assigner, opts *ServerOptions) *Server {
 	return s
 }
 
-// Start enables processing of requests from c and returns. Start does not
-// block while the server runs. This function will panic if the server is
-// already running. It returns s to allow chaining with construction.
+// Start initiates processing of requests from c and returns. Start does not
+// block while the server runs. Start will panic if the server is already
+// running. It returns s to allow chaining with construction.
 func (s *Server) Start(c channel.Channel) *Server {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -213,7 +212,7 @@ func (s *Server) nextRequest() (func() error, error) {
 	s.log("Dequeued request batch of length %d (qlen=%d)", len(next), s.inq.Len())
 
 	// Construct a dispatcher to run the handlers outside the lock.
-	return s.dispatch(next, ch), nil
+	return s.dispatchLocked(next, ch), nil
 }
 
 // waitForBarrier blocks until all notification handlers that have been issued
@@ -230,18 +229,19 @@ func (s *Server) waitForBarrier(n int) {
 	s.nbar.Add(n)
 }
 
-// dispatch constructs a function that invokes each of the specified tasks.
-// The caller must hold s.mu when calling dispatch, but the returned function
-// should be executed outside the lock to wait for the handlers to return.
+// dispatchLocked constructs a function that invokes each of the specified
+// tasks.  The caller must hold s.mu when calling dispatchLocked, but the
+// returned function should be executed outside the lock to wait for the
+// handlers to return.
 //
-// dispatch blocks until any notification received prior to this batch has
-// completed, to ensure that notifications are processed in a partial order
+// dispatchLocked blocks until any notification received prior to this batch
+// has completed, to ensure that notifications are processed in a partial order
 // that respects order of receipt. Notifications within a batch are handled
 // concurrently.
-func (s *Server) dispatch(next jmessages, ch sender) func() error {
+func (s *Server) dispatchLocked(next jmessages, ch sender) func() error {
 	// Resolve all the task handlers or record errors.
 	start := time.Now()
-	tasks := s.checkAndAssign(next)
+	tasks := s.checkAndAssignLocked(next)
 
 	// Ensure all notifications already issued have completed; see #24.
 	todo, notes := tasks.numToDo()
@@ -294,7 +294,7 @@ func (s *Server) deliver(rsps jmessages, ch sender, elapsed time.Duration) error
 	// cancelling its valid predecessor in that ID.
 	for _, rsp := range rsps {
 		if rsp.err == nil {
-			s.cancel(string(rsp.ID))
+			s.cancelLocked(string(rsp.ID))
 		}
 	}
 
@@ -303,9 +303,9 @@ func (s *Server) deliver(rsps jmessages, ch sender, elapsed time.Duration) error
 	return err
 }
 
-// checkAndAssign resolves all the task handlers for the given batch, or
+// checkAndAssignLocked resolves all the task handlers for the given batch, or
 // records errors for them as appropriate. The caller must hold s.mu.
-func (s *Server) checkAndAssign(next jmessages) tasks {
+func (s *Server) checkAndAssignLocked(next jmessages) tasks {
 	var ts tasks
 	var ids []string
 	dup := make(map[string]*task) // :: id ⇒ first task in batch with id
@@ -345,7 +345,7 @@ func (s *Server) checkAndAssign(next jmessages) tasks {
 			t.err = errEmptyMethod
 		} else {
 			s.setContext(t, id)
-			t.m = s.assign(t.ctx, t.hreq.method)
+			t.m = s.assignLocked(t.ctx, t.hreq.method)
 			if t.m == nil {
 				t.err = errNoSuchMethod.WithData(t.hreq.method)
 			}
@@ -530,7 +530,7 @@ func (s *Server) pushReq(ctx context.Context, wantID bool, method string, params
 func (s *Server) Stop() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.stop(errServerStopped)
+	s.stopLocked(errServerStopped)
 }
 
 // ServerStatus describes the status of a stopped server.
@@ -575,10 +575,10 @@ func (s *Server) WaitStatus() ServerStatus {
 // It is equivalent to s.WaitStatus().Err.
 func (s *Server) Wait() error { return s.WaitStatus().Err }
 
-// stop shuts down the connection and records err as its final state.  The
-// caller must hold s.mu. If multiple callers invoke stop, only the first will
-// successfully record its error status.
-func (s *Server) stop(err error) {
+// stopLocked shuts down the connection and records err as its final state.
+// The caller must hold s.mu. If multiple callers invoke stop, only the first
+// will successfully record its error status.
+func (s *Server) stopLocked(err error) {
 	if s.ch == nil {
 		return // nothing is running
 	}
@@ -596,7 +596,7 @@ func (s *Server) stop(err error) {
 				keep = append(keep, req)
 				s.log("Retaining notification %p", req)
 			} else {
-				s.cancel(string(req.ID))
+				s.cancelLocked(string(req.ID))
 			}
 		}
 		return true
@@ -646,17 +646,17 @@ func (s *Server) read(ch receiver) {
 		}
 		s.mu.Lock()
 		if err != nil { // receive failure; shut down
-			s.stop(err)
+			s.stopLocked(err)
 			s.mu.Unlock()
 			return
 		} else if derr != nil { // parse failure; report and continue
-			s.pushError(derr)
+			s.pushErrorLocked(derr)
 		} else if len(in) == 0 {
-			s.pushError(errEmptyBatch)
+			s.pushErrorLocked(errEmptyBatch)
 		} else {
 			// Filter out response messages. It's possible that the entire batch
 			// was responses, so re-check the length after doing this.
-			keep := s.filterBatch(in)
+			keep := s.filterBatchLocked(in)
 			if len(keep) != 0 {
 				s.log("Received request batch of size %d (qlen=%d)", len(keep), s.inq.Len())
 				s.inq.Add(keep)
@@ -669,10 +669,11 @@ func (s *Server) read(ch receiver) {
 	}
 }
 
-// filterBatch removes and handles any response messages from next, dispatching
-// replies to pending callbacks as required. The remainder is returned.
-// The caller must hold s.mu, and must re-check that the result is not empty.
-func (s *Server) filterBatch(next jmessages) jmessages {
+// filterBatchLocked removes and handles any response messages from next,
+// dispatching replies to pending callbacks as required. The remainder is
+// returned.  The caller must hold s.mu, and must re-check that the result is
+// not empty.
+func (s *Server) filterBatchLocked(next jmessages) jmessages {
 	keep := make(jmessages, 0, len(next))
 	for _, req := range next {
 		if req.isRequestOrNotification() {
@@ -711,9 +712,9 @@ type ServerInfo struct {
 	StartTime time.Time `json:"startTime,omitempty"`
 }
 
-// assign returns a Handler to handle the specified name, or nil.
-// The caller must hold s.mu.
-func (s *Server) assign(ctx context.Context, name string) Handler {
+// assignLocked returns a Handler to handle the specified name, or nil.  The
+// caller must hold s.mu.
+func (s *Server) assignLocked(ctx context.Context, name string) Handler {
 	if s.builtin && strings.HasPrefix(name, "rpc.") {
 		switch name {
 		case rpcServerInfo:
@@ -727,10 +728,10 @@ func (s *Server) assign(ctx context.Context, name string) Handler {
 	return s.mux.Assign(ctx, name)
 }
 
-// pushError reports an error for the given request ID directly back to the
-// client, bypassing the normal request handling mechanism.  The caller must
-// hold s.mu when calling this method.
-func (s *Server) pushError(err error) {
+// pushErrorLocked reports an error for the given request ID directly back to
+// the client, bypassing the normal request handling mechanism.  The caller
+// must hold s.mu when calling this method.
+func (s *Server) pushErrorLocked(err error) {
 	s.log("Invalid request: %v", err)
 	var jerr *Error
 	if e, ok := err.(*Error); ok {
@@ -750,10 +751,10 @@ func (s *Server) pushError(err error) {
 	}
 }
 
-// cancel reports whether id is an active call.  If so, it also calls the
+// cancelLocked reports whether id is an active call.  If so, it also calls the
 // cancellation function associated with id and removes it from the
 // reservations. The caller must hold s.mu.
-func (s *Server) cancel(id string) bool {
+func (s *Server) cancelLocked(id string) bool {
 	cancel, ok := s.used[id]
 	if ok {
 		cancel()
@@ -838,7 +839,7 @@ func (ts tasks) numToDo() (todo, notes int) {
 func (s *Server) CancelRequest(id string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.cancel(id) {
+	if s.cancelLocked(id) {
 		s.log("Cancelled request %s by client order", id)
 	}
 }

@@ -7,9 +7,10 @@ import (
 	"encoding/json"
 )
 
-// ParseRequests parses a single request or a batch of requests from JSON.
-// This function reports an error only if msg is not valid JSON. The caller
-// must check the individual results for their validity.
+// ParseRequests parses either a single request or a batch of requests from
+// JSON.  It reports an error only if msg is not valid JSON. The caller must
+// check the Error field results to determine whether the individual requests
+// are valid.
 func ParseRequests(msg []byte) ([]*ParsedRequest, error) {
 	var reqs jmessages
 	if err := reqs.parseJSON(msg); err != nil {
