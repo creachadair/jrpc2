@@ -16,6 +16,9 @@ import (
 	"github.com/creachadair/jrpc2"
 )
 
+// Func is a convenience alias for jrpc2.Handler.
+type Func = jrpc2.Handler
+
 // A Map is a trivial implementation of the jrpc2.Assigner interface that looks
 // up method names in a static map of function values.
 type Map map[string]jrpc2.Handler
