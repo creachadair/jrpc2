@@ -21,9 +21,9 @@ There is also a working [example in the Go playground](https://go.dev/play/p/Gdd
 
 ### Versioning
 
-This module is currently still at v0 and subject to change. To the extent practical, I try to avoid breaking changes to the API, but when I do make a breaking change I will update the minor version. For bug fixes and non-breaking minor changes I update only the patch. Hence, when going from (say) `v0.11.3` to `v0.12.0`, be advised that some API changes may occur.
+From v1.0.0 onward, the API of this module is considered stable, and I intend to merge no breaking changes to the API without increasing the major version number. Following the conventions of semantic versioning, the minor version will be used to signify the presence of backward-compatible new features (for example, new methods, options, or types), while the patch version will be reserved for bug fixes, documentation updates, and other changes that do not modify the API surface.
 
-I am planning to commit to a stable v1 at some point. If you have opinions about what that should mean, please feel free to comment on https://github.com/creachadair/jrpc2/issues/46.
+Note, however, that this intent is limited to the package APIs as seen by the Go compiler: Changes to the implementation that change observable behaviour in ways not promised by the documentation, e.g., changing performance characteristics or the order of internal operations, are not protected. Breakage that results from reliance on undocumented side-effects of the current implementation are the caller's responsibility.
 
 ## Implementation Notes
 
