@@ -991,7 +991,7 @@ func TestClient_concurrentCallbacks(t *testing.T) {
 	}, &server.LocalOptions{
 		Server: &jrpc2.ServerOptions{AllowPush: true},
 		Client: &jrpc2.ClientOptions{
-			OnCallback: handler.Func(func(ctx context.Context, req *jrpc2.Request) (any, error) {
+			OnCallback: func(ctx context.Context, req *jrpc2.Request) (any, error) {
 				// A trivial callback that reports its method name.
 				// The name is used to select which invocation we are serving.
 				switch req.Method() {
@@ -1004,7 +1004,7 @@ func TestClient_concurrentCallbacks(t *testing.T) {
 				}
 				<-release
 				return req.Method(), nil
-			}),
+			},
 		},
 	})
 	defer loc.Close()

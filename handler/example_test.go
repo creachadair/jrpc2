@@ -26,7 +26,7 @@ func ExampleCheck() {
 	// Argument type: []string
 	// Result type:   int
 	// Reports error? false
-	// Wrapped type:  handler.Func
+	// Wrapped type:  func(context.Context, *jrpc2.Request) (interface {}, error)
 }
 
 func ExampleArgs_unmarshal() {

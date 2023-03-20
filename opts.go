@@ -111,7 +111,7 @@ type ClientOptions struct {
 	// report a system error back to the server describing the error.
 	//
 	// Server callbacks are a non-standard extension of JSON-RPC.
-	OnCallback func(context.Context, *Request) (any, error)
+	OnCallback Handler
 
 	// If set, this function is called when the context for a request terminates.
 	// The function receives the client and the response that was cancelled.

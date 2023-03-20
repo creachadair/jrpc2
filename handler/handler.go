@@ -16,12 +16,9 @@ import (
 	"github.com/creachadair/jrpc2"
 )
 
-// A Func is wrapper for a jrpc2.Handler function.
-type Func func(context.Context, *jrpc2.Request) (any, error)
-
 // A Map is a trivial implementation of the jrpc2.Assigner interface that looks
 // up method names in a static map of function values.
-type Map map[string]Func
+type Map map[string]jrpc2.Handler
 
 // Assign implements part of the jrpc2.Assigner interface.
 func (m Map) Assign(_ context.Context, method string) jrpc2.Handler { return m[method] }
@@ -73,14 +70,14 @@ func (m ServiceMap) Names() []string {
 }
 
 // New adapts a function to a jrpc2.Handler. The concrete value of fn must be
-// function accepted by Check. The resulting Func will handle JSON encoding and
-// decoding, call fn, and report appropriate errors.
+// function accepted by Check. The resulting jrpc2.Handler will handle JSON
+// encoding and decoding, call fn, and report appropriate errors.
 //
 // New is intended for use during program initialization, and will panic if the
 // type of fn does not have one of the accepted forms. Programs that need to
 // check for possible errors should call handler.Check directly, and use the
 // Wrap method of the resulting FuncInfo to obtain the wrapper.
-func New(fn any) Func {
+func New(fn any) jrpc2.Handler {
 	fi, err := Check(fn)
 	if err != nil {
 		panic(err)
@@ -118,21 +115,21 @@ type FuncInfo struct {
 // for non-struct arguments.
 func (fi *FuncInfo) SetStrict(strict bool) *FuncInfo { fi.strictFields = strict; return fi }
 
-// Wrap adapts the function represented by fi in a Func.  The wrapped function
-// can obtain the *jrpc2.Request value from its context argument using the
-// jrpc2.InboundRequest helper.
+// Wrap adapts the function represented by fi to a jrpc2.Handler.  The wrapped
+// function can obtain the *jrpc2.Request value from its context argument using
+// the jrpc2.InboundRequest helper.
 //
 // This method panics if fi == nil or if it does not represent a valid function
 // type. A FuncInfo returned by a successful call to Check is always valid.
-func (fi *FuncInfo) Wrap() Func {
+func (fi *FuncInfo) Wrap() jrpc2.Handler {
 	if fi == nil || fi.fn == nil {
 		panic("handler: invalid FuncInfo value")
 	}
 
 	// Although it is not possible to completely eliminate reflection, the
 	// intent here is to hoist as much work as possible out of the body of the
-	// constructed Func wrapper, since that will be executed every time the
-	// handler is invoked.
+	// constructed wrapper, since that will be executed every time the handler
+	// is invoked.
 	//
 	// To do this, we "pre-compile" helper functions to unmarshal JSON into the
 	// input arguments (newInput) and to convert the results from reflectors
@@ -144,8 +141,8 @@ func (fi *FuncInfo) Wrap() Func {
 
 	// Special case: If fn has the exact signature of the Handle method, don't do
 	// any (additional) reflection at all.
-	if f, ok := fi.fn.(func(context.Context, *jrpc2.Request) (any, error)); ok {
-		return Func(f)
+	if f, ok := fi.fn.(jrpc2.Handler); ok {
+		return f
 	}
 
 	// If strict field checking or positional decoding are enabled, ensure
@@ -222,13 +219,13 @@ func (fi *FuncInfo) Wrap() Func {
 	}
 
 	call := reflect.ValueOf(fi.fn).Call
-	return Func(func(ctx context.Context, req *jrpc2.Request) (any, error) {
+	return func(ctx context.Context, req *jrpc2.Request) (any, error) {
 		args, ierr := newInput(reflect.ValueOf(ctx), req)
 		if ierr != nil {
 			return nil, ierr
 		}
 		return decodeOut(call(args))
-	})
+	}
 }
 
 // Check checks whether fn can serve as a jrpc2.Handler.  The concrete value of
