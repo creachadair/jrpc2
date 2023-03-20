@@ -12,7 +12,7 @@ import (
 )
 
 // ServerOptions control the behaviour of a server created by NewServer.
-// A nil *ServerOptions provides sensible defaults.
+// A nil *ServerOptions is valid and provides sensible defaults.
 // It is safe to share server options among multiple server instances.
 type ServerOptions struct {
 	// If not nil, send debug text logs here.
@@ -88,7 +88,7 @@ func (s *ServerOptions) rpcLog() RPCLogger {
 }
 
 // ClientOptions control the behaviour of a client created by NewClient.
-// A nil *ClientOptions provides sensible defaults.
+// A nil *ClientOptions is valid and provides sensible defaults.
 type ClientOptions struct {
 	// If not nil, send debug text logs here.
 	Logger Logger

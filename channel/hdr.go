@@ -12,7 +12,7 @@ import (
 	"strings"
 )
 
-// StrictHeader defines a framing that transmits and receives messages using a
+// StrictHeader defines a Framing that transmits and receives messages using a
 // header prefix similar to HTTP, in which mimeType describes the content type.
 //
 // Specifically, each message is sent in the format:

@@ -10,10 +10,11 @@ import (
 	"strings"
 )
 
-// An Assigner assigns a Handler to handle the specified method name, or nil if
-// no method is available to handle the request.
+// An Assigner maps method names to Handler functions.
 type Assigner interface {
-	// Assign returns the handler for the named method, or nil.
+	// Assign returns the handler for the named method, or returns nil to
+	// indicate that the method is not known.
+	//
 	// The implementation can obtain the complete request from ctx using the
 	// jrpc2.InboundRequest function.
 	Assign(ctx context.Context, method string) Handler
@@ -26,10 +27,11 @@ type Namer interface {
 	Names() []string
 }
 
-// A Handler function implements a method given a request. The response value
-// must be JSON-marshalable or nil. In case of error, the handler can return a
-// value of type *jrpc2.Error to control the response code sent back to the
-// caller; otherwise the server will wrap the resulting value.
+// A Handler function implements a method. The request contains the method
+// name, request ID, and parameters sent by the client. The result value must
+// be JSON-marshalable or nil. In case of error, the handler can return a value
+// of type *jrpc2.Error to control the response code sent back to the caller;
+// otherwise the server will wrap the resulting value.
 //
 // The context passed to the handler by a *jrpc2.Server includes two special
 // values that the handler may extract.
@@ -153,7 +155,7 @@ func (r *Response) UnmarshalResult(v any) error {
 	return json.Unmarshal(r.result, v)
 }
 
-// ResultString returns the encoded result message of r as a string.
+// ResultString returns the encoded result value of r as a string.
 // If r has no result, for example if r is an error response, it returns "".
 func (r *Response) ResultString() string { return string(r.result) }
 
