@@ -227,7 +227,7 @@ func (c *Client) send(ctx context.Context, reqs jmessages) ([]*Response, error) 
 	if c.err != nil {
 		return nil, c.err
 	}
-	c.log("Outgoing batch: %s", string(b))
+	c.log("Outgoing batch: count=%d, bytes=%d", len(reqs), len(b))
 	if err := c.ch.Send(b); err != nil {
 		return nil, err
 	}
