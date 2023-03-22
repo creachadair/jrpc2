@@ -178,7 +178,7 @@ func (fi *FuncInfo) Wrap() jrpc2.Handler {
 		newInput = func(ctx reflect.Value, req *jrpc2.Request) ([]reflect.Value, error) {
 			in := reflect.New(arg.Elem())
 			if err := req.UnmarshalParams(wrapArg(in)); err != nil {
-				return nil, jrpc2.Errorf(jrpc2.InvalidParams, "invalid parameters: %v", err)
+				return nil, jrpc2Error(jrpc2.InvalidParams, "invalid parameters: %v", err)
 			}
 			return []reflect.Value{ctx, in}, nil
 		}
@@ -187,7 +187,7 @@ func (fi *FuncInfo) Wrap() jrpc2.Handler {
 		newInput = func(ctx reflect.Value, req *jrpc2.Request) ([]reflect.Value, error) {
 			in := reflect.New(arg) // we still need a pointer to unmarshal
 			if err := req.UnmarshalParams(wrapArg(in)); err != nil {
-				return nil, jrpc2.Errorf(jrpc2.InvalidParams, "invalid parameters: %v", err)
+				return nil, jrpc2Error(jrpc2.InvalidParams, "invalid parameters: %v", err)
 			}
 			// Indirect the pointer back off for the callee.
 			return []reflect.Value{ctx, in.Elem()}, nil
@@ -382,4 +382,12 @@ func (fi *FuncInfo) argWrapper() func(reflect.Value) any {
 	default:
 		return reflect.Value.Interface
 	}
+}
+
+func jrpc2Error(code jrpc2.Code, tag string, err error) error {
+	var jerr *jrpc2.Error
+	if errors.As(err, &jerr) {
+		return jerr
+	}
+	return jrpc2.Errorf(code, tag, err)
 }
