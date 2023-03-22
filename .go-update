@@ -1,3 +1,4 @@
 cleanup() {
+    go install github.com/creachadair/jrpc2/tools/jcall
     ( cd "$GOBIN" && rm -vf -- adder client http server wshttp )
 }
