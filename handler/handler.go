@@ -1,7 +1,7 @@
 // Copyright (C) 2017 Michael J. Fromberger. All Rights Reserved.
 
 // Package handler provides implementations of the jrpc2.Assigner interface,
-// and support for adapting functions to the jrpc2.Handler interface.
+// and support for adapting functions to jrpc2.Handler signature.
 package handler
 
 import (
