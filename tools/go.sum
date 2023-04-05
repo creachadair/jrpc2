@@ -2,8 +2,8 @@ github.com/creachadair/jrpc2 v1.0.0 h1:MJecUFNbda24o0Qa4CYru5NJvs6BEnmzupdAx3f7+
 github.com/creachadair/jrpc2 v1.0.0/go.mod h1:VNiDz7Qbua37RrefUJdMki9dVmsbrQPIQOPy907UvtE=
 github.com/creachadair/mds v0.0.1 h1:2nX6Sww4dXpScx3b6aYjH1n7iuEH715+jj+cKkKw9BY=
 github.com/creachadair/mds v0.0.1/go.mod h1:caBACU+n1Q/rZ252FTzfnG0/H+ZUi+UnIQtEOraMv/g=
-github.com/creachadair/wschannel v0.0.0-20230322180446-6d5773b4aa3c h1:RsPkgejep0Odd/5ENmEEfCJrGrgeGl8eXHpXO1j5Tas=
-github.com/creachadair/wschannel v0.0.0-20230322180446-6d5773b4aa3c/go.mod h1:FpptEyHDO9CHThYURlHxpLXO64WnIxtE0eQDYq3r41U=
+github.com/creachadair/wschannel v0.0.0-20230405150828-570a5a84f5c4 h1:5hNgxCq+FnglyL+FKtn+VUYIi782pAeNPTuRRcK6uOs=
+github.com/creachadair/wschannel v0.0.0-20230405150828-570a5a84f5c4/go.mod h1:YfvRjwXfrbjSOWmjDeNXUkMzapLWUw1+C2O7eOsWpVg=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/fortytw2/leaktest v1.3.0 h1:u8491cBMTQ8ft8aeV+adlcytMZylmA5nnwwkRZjI8vw=
@@ -35,8 +35,8 @@ github.com/gorilla/websocket v1.5.0 h1:PPwGk2jz7EePpoHN/+ClbZu8SPxiqlu12wZP/3sWm
 github.com/json-iterator/go v1.1.9 h1:9yzud/Ht36ygwatGx56VwCZtlI/2AD15T1X2sjSuGns=
 github.com/json-iterator/go v1.1.9/go.mod h1:KdQUCv79m/52Kvf8AW2vK1V8akMuk1QjK/uOdHXbAo4=
 github.com/klauspost/compress v1.10.3/go.mod h1:aoV0uJVorq1K+umq18yTdKaF57EivdYsUV+/s2qKfXs=
-github.com/klauspost/compress v1.16.3 h1:XuJt9zzcnaz6a16/OU53ZjWp/v7/42WcR5t2a0PcNQY=
-github.com/klauspost/compress v1.16.3/go.mod h1:ntbaceVETuRiXiv4DpjP66DpAtAGkEQskQzEyD//IeE=
+github.com/klauspost/compress v1.16.4 h1:91KN02FnsOYhuunwU4ssRe8lc2JosWmizWa91B5v1PU=
+github.com/klauspost/compress v1.16.4/go.mod h1:ntbaceVETuRiXiv4DpjP66DpAtAGkEQskQzEyD//IeE=
 github.com/leodido/go-urn v1.2.0 h1:hpXL4XnriNwQ/ABnpepYM/1vCLWNDfUNts8dX3xTG6Y=
 github.com/leodido/go-urn v1.2.0/go.mod h1:+8+nEpDfqqsY+g338gtMEUOtuK+4dEMhiQEgxpxOKII=
 github.com/mattn/go-isatty v0.0.12 h1:wuysRhFDzyxgEmMf5xjvJ2M9dZoWAXNNr5LSBS7uHXY=
