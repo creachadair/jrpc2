@@ -119,9 +119,9 @@ same order as the Spec values, save that notifications are omitted.
 
 To decode the result from a successful response, use its UnmarshalResult method:
 
-		var result int
-		if err := rsp.UnmarshalResult(&result); err != nil {
-		   log.Fatalln("UnmarshalResult:", err)
+	var result int
+	if err := rsp.UnmarshalResult(&result); err != nil {
+	   log.Fatalln("UnmarshalResult:", err)
 	}
 
 To close a client and discard all its pending work, call cli.Close().
@@ -132,9 +132,9 @@ A JSON-RPC notification is a one-way request: The client sends the request to
 the server, but the server does not reply. Use the Notify method of a client to
 send a notification:
 
-		err := cli.Notify(ctx, "Alert", handler.Obj{
-	      "message": "A fire is burning!",
-	   })
+	err := cli.Notify(ctx, "Alert", handler.Obj{
+	   "message": "A fire is burning!",
+	})
 
 A notification is complete once it has been sent. Notifications can also be sent
 as part of a batch request:
