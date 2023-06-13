@@ -9,7 +9,7 @@ require (
 
 require (
 	github.com/creachadair/mds v0.0.1 // indirect
-	github.com/klauspost/compress v1.16.5 // indirect
+	github.com/klauspost/compress v1.16.6 // indirect
 	golang.org/x/sync v0.2.0 // indirect
 	nhooyr.io/websocket v1.8.7 // indirect
 )
