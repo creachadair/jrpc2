@@ -4,12 +4,12 @@ go 1.19
 
 require (
 	github.com/creachadair/jrpc2 v1.0.1
-	github.com/creachadair/wschannel v0.0.0-20230505142426-48929d99d2f1
+	github.com/creachadair/wschannel v0.0.0-20230613140811-3177234617df
 )
 
 require (
 	github.com/creachadair/mds v0.0.1 // indirect
 	github.com/klauspost/compress v1.16.6 // indirect
-	golang.org/x/sync v0.2.0 // indirect
+	golang.org/x/sync v0.3.0 // indirect
 	nhooyr.io/websocket v1.8.7 // indirect
 )
