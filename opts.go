@@ -120,6 +120,11 @@ type ClientOptions struct {
 	// Note that the hook does not receive the request context, which has
 	// already ended by the time the hook is called.
 	OnCancel func(cli *Client, rsp *Response)
+
+	// If set, this function is called when the client is stopped, either by
+	// calling its Close method or by disconnection of its channel.  The
+	// arguments are the client itself and the error that caused it to stop.
+	OnStop func(cli *Client, err error)
 }
 
 func (c *ClientOptions) logFunc() func(string, ...any) {
@@ -142,6 +147,13 @@ func (c *ClientOptions) handleCancel() func(*Client, *Response) {
 		return nil
 	}
 	return c.OnCancel
+}
+
+func (c *ClientOptions) handleStop() func(*Client, error) {
+	if c == nil || c.OnStop == nil {
+		return func(*Client, error) {}
+	}
+	return c.OnStop
 }
 
 func (c *ClientOptions) handleCallback() func(context.Context, *jmessage) []byte {
