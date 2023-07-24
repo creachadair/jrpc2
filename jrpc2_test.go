@@ -1348,3 +1348,32 @@ func TestServer_newContext(t *testing.T) {
 		t.Errorf("Call failed: %v", err)
 	}
 }
+
+func TestClient_IsStopped(t *testing.T) {
+	clich := make(chan *jrpc2.Client, 1)
+	loc := server.NewLocal(handler.Map{}, &server.LocalOptions{
+		Client: &jrpc2.ClientOptions{
+			OnStop: func(cli *jrpc2.Client, _ error) { clich <- cli },
+		},
+	})
+
+	// A client should not be initially stopped.
+	if loc.Client.IsStopped() {
+		t.Error("IsStopped is true, want false")
+	}
+
+	// Closing the client should trigger its callback and leave it stopped.
+	loc.Client.Close()
+	loc.Server.Wait() // ensure callbacks have settled
+	close(clich)      // unblock
+
+	// A closed client should appear stopped.
+	if !loc.Client.IsStopped() {
+		t.Error("IsStopped is false, want true")
+	}
+
+	// The stop hook should have populated the same client value.
+	if cli := <-clich; cli != loc.Client {
+		t.Errorf("OnStop did not work: got %v, want %v", cli, loc.Client)
+	}
+}

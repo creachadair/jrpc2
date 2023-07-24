@@ -22,6 +22,7 @@ type Client struct {
 	snote func(*jmessage)
 	scall func(context.Context, *jmessage) []byte
 	chook func(*Client, *Response)
+	shook func(*Client, error)
 
 	cbctx    context.Context    // terminates when the client is closed
 	cbcancel context.CancelFunc // cancels cbctx
@@ -42,6 +43,7 @@ func NewClient(ch channel.Channel, opts *ClientOptions) *Client {
 		snote: opts.handleNotification(),
 		scall: opts.handleCallback(),
 		chook: opts.handleCancel(),
+		shook: opts.handleStop(),
 
 		cbctx:    cbctx,
 		cbcancel: cbcancel,
@@ -82,7 +84,7 @@ func (c *Client) accept(ch receiver) error {
 			c.log("Decoding error: %v", err)
 		}
 		c.mu.Lock()
-		c.stopLocked(err)
+		defer c.stopLocked(err)()
 		c.mu.Unlock()
 		return err
 	}
@@ -377,7 +379,7 @@ func (c *Client) Notify(ctx context.Context, method string, params any) error {
 // Close shuts down the client, terminating any pending in-flight requests.
 func (c *Client) Close() error {
 	c.mu.Lock()
-	c.stopLocked(errClientStopped)
+	defer c.stopLocked(errClientStopped)()
 	c.mu.Unlock()
 	c.done.Wait()
 
@@ -388,6 +390,14 @@ func (c *Client) Close() error {
 	return c.err
 }
 
+// IsStopped reports whether the client has been stopped, either by a call to
+// its Close method or by a failure of the channel to the server.
+func (c *Client) IsStopped() bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.err != nil
+}
+
 func isUninteresting(err error) bool {
 	return err == io.EOF || channel.IsErrClosing(err) || err == errClientStopped
 }
@@ -395,9 +405,10 @@ func isUninteresting(err error) bool {
 // stopLocked closes down the reader for c and records err as its final state.
 // The caller must hold c.mu. If multiple callers invoke stop, only the first
 // will successfully record its error status.
-func (c *Client) stopLocked(err error) {
+// The caller should defer a call to the returned function.
+func (c *Client) stopLocked(err error) func() {
 	if c.ch == nil {
-		return // nothing is running
+		return func() {} // nothing is running
 	}
 	c.ch.Close()
 
@@ -411,6 +422,7 @@ func (c *Client) stopLocked(err error) {
 
 	c.err = err
 	c.ch = nil
+	return func() { c.shook(c, err) }
 }
 
 // marshalParams validates and marshals params to JSON for a request.  The
