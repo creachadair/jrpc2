@@ -235,6 +235,29 @@ requests are delivered, if they are set.
 Since not all clients support server push, handlers should set a timeout when
 using the server Callback method; otherwise the callback may block forever for
 a client response that will never arrive.
+
+# Contexts and Cancellation
+
+Both the Server and the Client use the standard context package to plumb
+cancellation and other request-specific metadata in handlers and calls.
+
+On the server, the context passed to a handler is automatically cancelled when
+the server shuts down or when the server's CancelRequest method is invoked for
+that request. In addition, the NewContext server option can be used to supply
+default timeouts or other context metadata.
+
+On the client, the context passed to the Call and CallResult methods governs
+the lifetime of the call. If the context ends before the call is complete, the
+client will terminate the call and report an error.
+
+Note that cancellation on the client is not automatically propagated to the
+server, as JSON-RPC does not define a standard mechanism to do so.  One typical
+approach (used by LSP, for example) is to define a separate method on the
+server to handle cancellation requests.
+
+If an OnCancel hook is set in the ClientOptions, the client calls it when the
+context for a Call ends before the server has responded.  This can be used to
+forward cancellation to the server separately.
 */
 package jrpc2
 
