@@ -8,7 +8,7 @@ require (
 
 require github.com/creachadair/mds v0.1.0
 
-go 1.19
+go 1.20
 
 // A bug in handler.New could panic a wrapped handler on pointer arguments.
 retract [v0.21.2, v0.22.0]
