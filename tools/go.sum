@@ -2,8 +2,8 @@ github.com/creachadair/jrpc2 v1.1.0 h1:SgpJf0v1rVCZx68+4APv6dgsTFsIHlpgFD1NlQAWA
 github.com/creachadair/jrpc2 v1.1.0/go.mod h1:5jN7MKwsm8qvgfTsTzLX3JIfidsAkZ1c8DZSQmp+g38=
 github.com/creachadair/mds v0.1.0 h1:XgPCNnq1T+IW+HaiIufqQMRuqenKoZAZXkVShj/m/Wg=
 github.com/creachadair/mds v0.1.0/go.mod h1:caBACU+n1Q/rZ252FTzfnG0/H+ZUi+UnIQtEOraMv/g=
-github.com/creachadair/wschannel v0.0.0-20230724152029-5f03c3ba9f53 h1:w/PmzMtDfJuiwBskKb/mGURCxruGtIKa83UYX2jNFfc=
-github.com/creachadair/wschannel v0.0.0-20230724152029-5f03c3ba9f53/go.mod h1:RroiJIf98A/bEXbEi1D7WpABF3c12zqOFEGBV26m5Hk=
+github.com/creachadair/wschannel v0.0.0-20230813170156-9c32b8109d66 h1:G6MyD7iTBNuXkaM97sXhFPMxy6NdmoPC7GuC0SN0Aec=
+github.com/creachadair/wschannel v0.0.0-20230813170156-9c32b8109d66/go.mod h1:6pUd2GbnoatP3ObaMhcBTN2LdIfEdNs/vynWG0amZfY=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/fortytw2/leaktest v1.3.0 h1:u8491cBMTQ8ft8aeV+adlcytMZylmA5nnwwkRZjI8vw=
