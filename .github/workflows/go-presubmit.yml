@@ -26,4 +26,4 @@ jobs:
       with:
         go-version: ${{ matrix.go-version }}
         cache: true
-    - uses: creachadair/go-presubmit-action@578e9d6c3de545e258030ad5e49eedb1c045cfb6
+    - uses: creachadair/go-presubmit-action@436b024ef3325515d897cad721f0875b13bfe868
