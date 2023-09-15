@@ -1,5 +1,5 @@
-github.com/creachadair/mds v0.2.2 h1:paXdgOcO//VwILhrnbU80RPrUESZLGeSPftmHfrBpf4=
-github.com/creachadair/mds v0.2.2/go.mod h1:PmXHgspUECelJVsAgDxWvjblna5BGjPxdEpr7SIEvNs=
+github.com/creachadair/mds v0.2.3 h1:Svuw/AXrUUMxGHdRyuDsWJ36oFJRprqP8+iI86XzZjM=
+github.com/creachadair/mds v0.2.3/go.mod h1:PmXHgspUECelJVsAgDxWvjblna5BGjPxdEpr7SIEvNs=
 github.com/fortytw2/leaktest v1.3.0 h1:u8491cBMTQ8ft8aeV+adlcytMZylmA5nnwwkRZjI8vw=
 github.com/fortytw2/leaktest v1.3.0/go.mod h1:jDsjWgpAGjm2CA7WthBh/CdZYEPF31XHquHwclZch5g=
 github.com/google/go-cmp v0.5.9 h1:O2Tfq5qg4qc4AmwVlvv0oLiVAGB7enBSJ2x2DqQFi38=
