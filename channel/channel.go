@@ -57,8 +57,7 @@ type Channel interface {
 	// fetches a single complete record.
 	Recv() ([]byte, error)
 
-	// Close shuts down the channel, after which no further records may be
-	// sent or received.
+	// Close shuts down the channel, after which no further records may be sent.
 	Close() error
 }
 
