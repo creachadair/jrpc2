@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime"
 	"net/http"
 
 	"github.com/creachadair/jrpc2"
@@ -57,8 +58,12 @@ func (b Bridge) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
-		if req.Header.Get("Content-Type") != "application/json" {
-			w.WriteHeader(http.StatusUnsupportedMediaType)
+		mt, params, _ := mime.ParseMediaType(req.Header.Get("Content-Type"))
+		if mt != "application/json" {
+			http.Error(w, "content-type must be application/json", http.StatusUnsupportedMediaType)
+			return
+		} else if cs, ok := params["charset"]; ok && cs != "utf-8" && cs != "utf8" {
+			http.Error(w, "invalid content-type charset", http.StatusUnsupportedMediaType)
 			return
 		}
 	}

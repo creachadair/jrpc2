@@ -40,22 +40,24 @@ func TestBridge(t *testing.T) {
 
 	// Verify that a valid POST request succeeds.
 	t.Run("PostOK", func(t *testing.T) {
-		got := mustPost(t, hsrv.URL, `{
+		for _, charset := range []string{"", "utf8", "utf-8"} {
+			got := mustPost(t, hsrv.URL, charset, `{
 		  "jsonrpc": "2.0",
 		  "id": 1,
 		  "method": "Test1",
 		  "params": ["a", "foolish", "consistency", "is", "the", "hobgoblin"]
 		}`, http.StatusOK)
 
-		const want = `{"jsonrpc":"2.0","id":1,"result":6}`
-		if got != want {
-			t.Errorf("POST body: got %#q, want %#q", got, want)
+			const want = `{"jsonrpc":"2.0","id":1,"result":6}`
+			if got != want {
+				t.Errorf("POST body: got %#q, want %#q", got, want)
+			}
 		}
 	})
 
 	// Verify that the bridge will accept a batch.
 	t.Run("PostBatchOK", func(t *testing.T) {
-		got := mustPost(t, hsrv.URL, `[
+		got := mustPost(t, hsrv.URL, "", `[
 		  {"jsonrpc":"2.0", "id": 3, "method": "Test1", "params": ["first"]},
 		  {"jsonrpc":"2.0", "id": 7, "method": "Test1", "params": ["among", "equals"]}
 		]`, http.StatusOK)
@@ -88,9 +90,19 @@ func TestBridge(t *testing.T) {
 		}
 	})
 
+	// Verify that the charset, if provided, is utf-8.
+	t.Run("PostInvalidCharset", func(t *testing.T) {
+		rsp, err := http.Post(hsrv.URL, "application/json; charset=iso-8859-1", strings.NewReader(`{}`))
+		if err != nil {
+			t.Fatalf("POST request failed: %v", err)
+		} else if got, want := rsp.StatusCode, http.StatusUnsupportedMediaType; got != want {
+			t.Errorf("POST response code: got %v, want %v", got, want)
+		}
+	})
+
 	// Verify that a POST that generates a JSON-RPC error succeeds.
 	t.Run("PostErrorReply", func(t *testing.T) {
-		got := mustPost(t, hsrv.URL, `{
+		got := mustPost(t, hsrv.URL, "utf-8", `{
 		  "id": 1,
 		  "jsonrpc": "2.0"
 		}`, http.StatusOK)
@@ -103,7 +115,7 @@ func TestBridge(t *testing.T) {
 
 	// Verify that an invalid ID is not swallowed by the remapping process (see #80).
 	t.Run("PostInvalidID", func(t *testing.T) {
-		got := mustPost(t, hsrv.URL, `{
+		got := mustPost(t, hsrv.URL, "", `{
         "jsonrpc": "2.0",
         "id": ["this is totally bogus"],
         "method": "Test1"
@@ -117,7 +129,7 @@ func TestBridge(t *testing.T) {
 
 	// Verify that a notification returns an empty success.
 	t.Run("PostNotification", func(t *testing.T) {
-		got := mustPost(t, hsrv.URL, `{
+		got := mustPost(t, hsrv.URL, "", `{
 		  "jsonrpc": "2.0",
 		  "method": "TakeNotice",
 		  "params": []
@@ -224,7 +236,7 @@ func TestBridge_parseGETRequest(t *testing.T) {
 	})
 	t.Run("POST", func(t *testing.T) {
 		const req = `{"jsonrpc":"2.0", "id":1, "method":"str/eq", "params":["foo","foo"]}`
-		got := mustPost(t, hsrv.URL, req, http.StatusOK)
+		got := mustPost(t, hsrv.URL, "", req, http.StatusOK)
 
 		const want = `{"jsonrpc":"2.0","id":1,"result":true}`
 		if got != want {
@@ -302,9 +314,13 @@ func checkClose(t *testing.T, c io.Closer) {
 	}
 }
 
-func mustPost(t *testing.T, url, req string, code int) string {
+func mustPost(t *testing.T, url, charset, req string, code int) string {
 	t.Helper()
-	rsp, err := http.Post(url, "application/json", strings.NewReader(req))
+	ctype := "application/json"
+	if charset != "" {
+		ctype += "; charset=" + charset
+	}
+	rsp, err := http.Post(url, ctype, strings.NewReader(req))
 	if err != nil {
 		t.Fatalf("POST request failed: %v", err)
 	} else if got := rsp.StatusCode; got != code {
