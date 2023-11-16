@@ -92,11 +92,10 @@ func TestBridge(t *testing.T) {
 
 	// Verify that the charset, if provided, is utf-8.
 	t.Run("PostInvalidCharset", func(t *testing.T) {
-		rsp, err := http.Post(hsrv.URL, "application/json; charset=iso-8859-1", strings.NewReader(`{}`))
-		if err != nil {
-			t.Fatalf("POST request failed: %v", err)
-		} else if got, want := rsp.StatusCode, http.StatusUnsupportedMediaType; got != want {
-			t.Errorf("POST response code: got %v, want %v", got, want)
+		got := mustPost(t, hsrv.URL, "iso-8859-1", "{}", http.StatusUnsupportedMediaType)
+		const want = "invalid content-type charset\n"
+		if got != want {
+			t.Errorf("POST response body: got %q, want %q", got, want)
 		}
 	})
 
