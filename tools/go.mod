@@ -5,7 +5,7 @@ go 1.21
 toolchain go1.21.0
 
 require (
-	github.com/creachadair/jrpc2 v1.1.1
+	github.com/creachadair/jrpc2 v1.1.2
 	github.com/creachadair/wschannel v0.0.0-20231031152512-10b1d3c7a6ce
 )
 
