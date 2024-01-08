@@ -106,6 +106,7 @@ type FuncInfo struct {
 	ReportsError bool         // true if the function reports an error
 
 	strictFields bool     // enforce strict field checking
+	allowArray   bool     // allow decoding from array format
 	posNames     []string // positional field names
 
 	fn any // the original function value
@@ -117,6 +118,13 @@ type FuncInfo struct {
 // contains fields unknown by the struct. Strict field checking has no effect
 // for non-struct arguments.
 func (fi *FuncInfo) SetStrict(strict bool) *FuncInfo { fi.strictFields = strict; return fi }
+
+// AllowArray sets the flag on fi that determines whethe the wrapper it
+// generates allows struct arguments to be sent in array notation.  If true, a
+// parameter array is decoded into corresponding fields of the struct argument
+// in declaration order; if false, array arguments report an error. The default
+// value is currently true. This option has no effect for non-struct arguments.
+func (fi *FuncInfo) AllowArray(ok bool) *FuncInfo { fi.allowArray = ok; return fi }
 
 // Wrap adapts the function represented by fi to a jrpc2.Handler.  The wrapped
 // function can obtain the *jrpc2.Request value from its context argument using
@@ -274,7 +282,7 @@ func Check(fn any) (*FuncInfo, error) {
 		return nil, errors.New("nil function")
 	}
 
-	info := &FuncInfo{Type: reflect.TypeOf(fn), fn: fn}
+	info := &FuncInfo{Type: reflect.TypeOf(fn), fn: fn, allowArray: true}
 	if info.Type.Kind() != reflect.Func {
 		return nil, errors.New("not a function")
 	}
@@ -365,7 +373,7 @@ func (s *strictStub) UnmarshalJSON(data []byte) error {
 func (fi *FuncInfo) argWrapper() func(reflect.Value) any {
 	strict := fi.strictFields && fi.Argument != nil && !fi.Argument.Implements(strictType)
 	names := fi.posNames // capture so the wrapper does not pin fi
-	array := len(names) != 0
+	array := len(names) != 0 && fi.allowArray
 	switch {
 	case strict && array:
 		return func(v reflect.Value) any {

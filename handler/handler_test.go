@@ -258,6 +258,42 @@ func TestFuncInfo_SetStrict(t *testing.T) {
 	}
 }
 
+func TestFuncInfo_AllowArray(t *testing.T) {
+	type arg struct {
+		A, B string
+	}
+	fi, err := handler.Check(func(ctx context.Context, arg *arg) error {
+		if arg.A != "x" || arg.B != "y" {
+			return fmt.Errorf("a=%q, b=%q", arg.A, arg.B)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("Check failed: %v", err)
+	}
+
+	req := testutil.MustParseRequest(t, `{
+   "jsonrpc": "2.0",
+   "id":      101,
+   "method":  "f",
+   "params":  ["x", "y"]
+   }`)
+
+	t.Run("true", func(t *testing.T) {
+		fn := fi.AllowArray(true).Wrap()
+		if _, err := fn(context.Background(), req); err != nil {
+			t.Fatalf("Handler unexpectedly failed: %v", err)
+		}
+	})
+	t.Run("false", func(t *testing.T) {
+		fn := fi.AllowArray(false).Wrap()
+		rsp, err := fn(context.Background(), req)
+		if got := jrpc2.ErrorCode(err); got != jrpc2.InvalidParams {
+			t.Errorf("Handler returned (%+v, %v), want InvalidParams", rsp, err)
+		}
+	})
+}
+
 // Verify that the handling of pointer-typed arguments does not incorrectly
 // introduce another pointer indirection.
 func TestNew_pointerRegression(t *testing.T) {
