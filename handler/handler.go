@@ -119,7 +119,7 @@ type FuncInfo struct {
 // for non-struct arguments.
 func (fi *FuncInfo) SetStrict(strict bool) *FuncInfo { fi.strictFields = strict; return fi }
 
-// AllowArray sets the flag on fi that determines whethe the wrapper it
+// AllowArray sets the flag on fi that determines whether the wrapper it
 // generates allows struct arguments to be sent in array notation.  If true, a
 // parameter array is decoded into corresponding fields of the struct argument
 // in declaration order; if false, array arguments report an error. The default
