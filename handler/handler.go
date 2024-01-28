@@ -257,10 +257,11 @@ func (fi *FuncInfo) Wrap() jrpc2.Handler {
 // If fn does not have one of these forms, Check reports an error.
 //
 // If the type of X is a struct or a pointer to a struct, the generated wrapper
-// accepts JSON parameters as either an object or an array.  Array parameters
-// are mapped to the fields of X in the order of field declaration, save that
-// unexported fields are skipped. If a field has a `json:"-"` tag, it is also
-// skipped. Anonymous fields are skipped unless they are tagged.
+// accepts JSON parameters as either an object or an array.  The caller may
+// disable array support by calling AllowArray(false).  When enabled, array
+// parameters are mapped to the fields of X in the order of field declaration,
+// save that unexported fields are skipped. If a field has a `json:"-"` tag, it
+// is also skipped. Anonymous fields are skipped unless they are tagged.
 //
 // For other (non-struct) argument types, the accepted format is whatever the
 // json.Unmarshal function can decode into the value.  Note, however, that the
