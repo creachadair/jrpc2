@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/creachadair/jrpc2/channel"
-	"github.com/creachadair/mds/mlink"
+	"github.com/creachadair/mds/queue"
 	"golang.org/x/sync/semaphore"
 )
 
@@ -74,7 +74,7 @@ type Server struct {
 	nbar sync.WaitGroup         // notification barrier (see the dispatch method)
 	err  error                  // error from a previous operation
 	work chan struct{}          // for signaling message availability
-	inq  mlink.Queue[jmessages] // inbound requests awaiting processing
+	inq  queue.Queue[jmessages] // inbound requests awaiting processing
 	ch   channel.Channel        // the channel to the client
 
 	// For each request ID currently in-flight, this map carries a cancel
