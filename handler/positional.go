@@ -95,14 +95,16 @@ func structFieldNames(atype reflect.Type) (bool, []string) {
 //	// ...
 //	call := fi.Wrap()
 //
-// the resulting handler accepts a JSON array with with (exactly) the same
-// number of elements as the positional parameters:
+// the resulting handler by default accepts a JSON array with with (exactly)
+// the same number of elements as the positional parameters:
 //
 //	[17, 23]
 //
 // No arguments can be omitted in this format, but the caller can use a JSON
-// "null" in place of any argument.  The handler will also accept a parameter
-// object like:
+// "null" in place of any argument. The caller may also disable array support
+// by setting AllowArray(false) on the resulting FuncInfo.
+//
+// The handler will also accept a parameter object like:
 //
 //	{"first": 17, "second": 23}
 //
