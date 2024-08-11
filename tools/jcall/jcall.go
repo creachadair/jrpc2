@@ -214,7 +214,7 @@ func issueCalls(ctx context.Context, cli *jrpc2.Client, args []string) (time.Dur
 	return issueSequential(ctx, cli, specs)
 }
 
-func tprintf(msg string, args ...interface{}) {
+func tprintf(msg string, args ...any) {
 	if !*doTiming {
 		return
 	}
@@ -278,7 +278,7 @@ func newSpecs(args []string) []jrpc2.Spec {
 	return specs
 }
 
-func param(s string) interface{} {
+func param(s string) any {
 	if s == "" {
 		return nil
 	}
