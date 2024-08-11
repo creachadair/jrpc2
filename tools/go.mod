@@ -10,7 +10,7 @@ require (
 )
 
 require (
-	github.com/creachadair/mds v0.15.5 // indirect
-	golang.org/x/sync v0.7.0 // indirect
-	nhooyr.io/websocket v1.8.11 // indirect
+	github.com/creachadair/mds v0.16.0 // indirect
+	golang.org/x/sync v0.8.0 // indirect
+	nhooyr.io/websocket v1.8.17 // indirect
 )
