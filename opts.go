@@ -73,11 +73,11 @@ func (s *ServerOptions) startTime() time.Time {
 	return s.StartTime
 }
 
-func (o *ServerOptions) newContext() func() context.Context {
-	if o == nil || o.NewContext == nil {
+func (s *ServerOptions) newContext() func() context.Context {
+	if s == nil || s.NewContext == nil {
 		return context.Background
 	}
-	return o.NewContext
+	return s.NewContext
 }
 
 func (s *ServerOptions) rpcLog() RPCLogger {
