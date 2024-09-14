@@ -6,11 +6,11 @@ require (
 	golang.org/x/sync v0.8.0
 )
 
-require github.com/creachadair/mds v0.20.0
+require github.com/creachadair/mds v0.21.1
 
-go 1.22
+go 1.23
 
-toolchain go1.23.0
+toolchain go1.23.1
 
 // A bug in handler.New could panic a wrapped handler on pointer arguments.
 retract [v0.21.2, v0.22.0]
