@@ -1,7 +1,7 @@
 github.com/coder/websocket v1.8.12 h1:5bUXkEPPIbewrnkU8LTCLVaxi4N4J8ahufH2vlo4NAo=
 github.com/coder/websocket v1.8.12/go.mod h1:LNVeNrXQZfe5qhS9ALED3uA+l5pPqvwXg3CKoDBB2gs=
-github.com/creachadair/jrpc2 v1.2.1 h1:eIgmguoqLbEjn4Pb/XYMg5U1PhVpAClGdhI/Q4gfC5o=
-github.com/creachadair/jrpc2 v1.2.1/go.mod h1:RvEKAYVpDBKn3YWlTVQJIFmxG5GuLD7ztp9FMTJx8eI=
+github.com/creachadair/jrpc2 v1.3.0 h1:CALlqNxD3u16U+gzNGoSQMYAr9uLCxjrB3D6Yu9+e/4=
+github.com/creachadair/jrpc2 v1.3.0/go.mod h1:rOu1u3LG86IEhMlG/N6FaHuP/leA5PjyuTQvDjE/G9k=
 github.com/creachadair/mds v0.21.4 h1:osKuLbjkV7YswBnhuTJh1lCDkqZMQnNfFVn0j8wLpz8=
 github.com/creachadair/mds v0.21.4/go.mod h1:1ltMWZd9yXhaHEoZwBialMaviWVUpRPvMwVP7saFAzM=
 github.com/creachadair/wschannel v0.0.0-20240812143019-767d903641b9 h1:RmzgVZNFyAkv9ogYygr4+8a7ohY2AFIIr5mcxJITh3I=
