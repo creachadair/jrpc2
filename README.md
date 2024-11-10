@@ -4,7 +4,7 @@
 [![CI](https://github.com/creachadair/jrpc2/actions/workflows/go-presubmit.yml/badge.svg?event=push&branch=main)](https://github.com/creachadair/jrpc2/actions/workflows/go-presubmit.yml)
 
 This repository provides a Go module that implements a [JSON-RPC 2.0][spec] client and server.
-There is also a working [example in the Go playground](https://go.dev/play/p/Nhg0smrxsoM).
+There is also a working [example in the Go playground](https://go.dev/play/p/JWgZOVJh0nZ).
 
 ## Packages
 
