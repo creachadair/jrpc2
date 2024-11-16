@@ -1350,6 +1350,8 @@ func TestServer_newContext(t *testing.T) {
 }
 
 func TestClient_IsStopped(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	clich := make(chan *jrpc2.Client, 1)
 	loc := server.NewLocal(handler.Map{}, &server.LocalOptions{
 		Client: &jrpc2.ClientOptions{
