@@ -20,8 +20,8 @@ func (l Local) Close() error {
 	return l.Server.Wait()
 }
 
-// NewLocal constructs a *jrpc2.Server and a *jrpc2.Client connected to it via
-// an in-memory pipe, using the specified assigner and options.
+// NewLocal constructs a [*jrpc2.Server] and a [*jrpc2.Client] connected to it
+// via an in-memory pipe, using the specified assigner and options.
 // If opts == nil, it behaves as if the client and server options are also nil.
 func NewLocal(assigner jrpc2.Assigner, opts *LocalOptions) Local {
 	if opts == nil {
@@ -35,7 +35,7 @@ func NewLocal(assigner jrpc2.Assigner, opts *LocalOptions) Local {
 }
 
 // LocalOptions control the behaviour of the server and client constructed by
-// the NewLocal function.
+// the [NewLocal] function.
 type LocalOptions struct {
 	Client *jrpc2.ClientOptions
 	Server *jrpc2.ServerOptions

@@ -28,7 +28,7 @@ import (
 //	Method not found        404 (Not found)
 //	(other errors)          500 (Internal server error)
 //
-// By default, a Getter uses ParseBasic to convert the HTTP request. The URL
+// By default, a Getter uses [ParseBasic] to convert the HTTP request. The URL
 // path identifies the JSON-RPC method, and the URL query parameters are
 // converted into a JSON object for the parameters.  Query values are sent as
 // JSON strings.  For example, this URL:
@@ -39,8 +39,8 @@ import (
 //
 //	{"param1":"xyzzy", "param2":"apple"}
 //
-// To override the default behaviour, set a ParseRequest hook in GetterOptions.
-// See also the jhttp.ParseQuery function for a more expressive translation.
+// To override the default behaviour, set a ParseRequest hook in [GetterOptions].
+// See also the [ParseQuery] function for a more expressive translation.
 type Getter struct {
 	local    server.Local
 	parseReq func(*http.Request) (string, any, error)
@@ -61,7 +61,7 @@ func NewGetter(mux jrpc2.Assigner, opts *GetterOptions) Getter {
 	}
 }
 
-// ServeHTTP implements the required method of http.Handler.
+// ServeHTTP implements the required method of [http.Handler].
 func (g Getter) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	method, params, err := g.parseHTTPRequest(req)
 	if err != nil {
@@ -154,8 +154,8 @@ func writeJSON(w http.ResponseWriter, code int, obj any) {
 // and parameters. The URL path identifies the method name, with leading and
 // trailing slashes removed. Query values are packed into a map[string]string.
 //
-// This is the default query parser used by a Getter if none is specified in
-// its GetterOptions.
+// This is the default query parser used by a [Getter] if none is specified in
+// its [GetterOptions].
 func ParseBasic(req *http.Request) (string, any, error) {
 	if err := req.ParseForm(); err != nil {
 		return "", nil, err

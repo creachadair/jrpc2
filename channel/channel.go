@@ -2,9 +2,9 @@
 
 // Package channel defines a communications channel.
 //
-// A Channel encodes/transmits and decodes/receives data records. The types in
-// this package support sending and receiving over an unstructured stream using
-// a configurable framing discipline.
+// A [Channel] encodes/transmits and decodes/receives data records. The types
+// in this package support sending and receiving over an unstructured stream
+// using a configurable framing discipline.
 //
 // # Channels
 //
@@ -23,7 +23,7 @@
 //
 // # Framing
 //
-// A Framing function adapts a pair of io.Reader and io.WriteCloser to a
+// A [Framing] function adapts a pair of [io.Reader] and [io.WriteCloser] to a
 // Channel by imposing a particular message-framing discipline. This package
 // provides several framing implementations, for example:
 //

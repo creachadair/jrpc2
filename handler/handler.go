@@ -1,7 +1,7 @@
 // Copyright (C) 2017 Michael J. Fromberger. All Rights Reserved.
 
-// Package handler provides implementations of the jrpc2.Assigner interface,
-// and support for adapting functions to jrpc2.Handler signature.
+// Package handler provides implementations of the [jrpc2.Assigner] interface,
+// and support for adapting functions to [jrpc2.Handler] signature.
 package handler
 
 import (
@@ -19,8 +19,8 @@ import (
 // Func is a convenience alias for jrpc2.Handler.
 type Func = jrpc2.Handler
 
-// A Map is a trivial implementation of the jrpc2.Assigner interface that looks
-// up method names in a static map of function values.
+// A Map is a trivial implementation of the [jrpc2.Assigner] interface that
+// looks up method names in a static map of function values.
 type Map map[string]jrpc2.Handler
 
 // Assign implements part of the jrpc2.Assigner interface.
@@ -72,14 +72,14 @@ func (m ServiceMap) Names() []string {
 	return all
 }
 
-// New adapts a function to a jrpc2.Handler. The concrete value of fn must be
-// function accepted by Check. The resulting jrpc2.Handler will handle JSON
+// New adapts a function to a [jrpc2.Handler]. The concrete value of fn must be
+// function accepted by [Check]. The resulting handler will handle JSON
 // encoding and decoding, call fn, and report appropriate errors.
 //
 // New is intended for use during program initialization, and will panic if the
 // type of fn does not have one of the accepted forms. Programs that need to
-// check for possible errors should call handler.Check directly, and use the
-// Wrap method of the resulting FuncInfo to obtain the wrapper.
+// check for possible errors should call [Check] directly, and use the Wrap
+// method of the resulting [FuncInfo] to obtain the wrapper.
 func New(fn any) jrpc2.Handler {
 	fi, err := Check(fn)
 	if err != nil {
@@ -126,12 +126,12 @@ func (fi *FuncInfo) SetStrict(strict bool) *FuncInfo { fi.strictFields = strict;
 // value is currently true. This option has no effect for non-struct arguments.
 func (fi *FuncInfo) AllowArray(ok bool) *FuncInfo { fi.allowArray = ok; return fi }
 
-// Wrap adapts the function represented by fi to a jrpc2.Handler.  The wrapped
-// function can obtain the *jrpc2.Request value from its context argument using
-// the jrpc2.InboundRequest helper.
+// Wrap adapts the function represented by fi to a [jrpc2.Handler].  The
+// wrapped function can obtain the [*jrpc2.Request] value from its context
+// argument using the [jrpc2.InboundRequest] helper.
 //
 // This method panics if fi == nil or if it does not represent a valid function
-// type. A FuncInfo returned by a successful call to Check is always valid.
+// type. A FuncInfo returned by a successful call to [Check] is always valid.
 func (fi *FuncInfo) Wrap() jrpc2.Handler {
 	if fi == nil || fi.fn == nil {
 		panic("handler: invalid FuncInfo value")
@@ -239,9 +239,9 @@ func (fi *FuncInfo) Wrap() jrpc2.Handler {
 	}
 }
 
-// Check checks whether fn can serve as a jrpc2.Handler.  The concrete value of
-// fn must be a function with one of the following type signature schemes, for
-// JSON-marshalable types X and Y:
+// Check checks whether fn can serve as a [jrpc2.Handler].  The concrete value
+// of fn must be a function with one of the following type signature schemes,
+// for JSON-marshalable types X and Y:
 //
 //	func(context.Context) error
 //	func(context.Context) Y
@@ -277,7 +277,7 @@ func (fi *FuncInfo) Wrap() jrpc2.Handler {
 //	   // ...
 //	}
 //
-// For more complex positional signatures, see also handler.Positional.
+// For more complex positional signatures, see also [Positional].
 func Check(fn any) (*FuncInfo, error) {
 	if fn == nil {
 		return nil, errors.New("nil function")

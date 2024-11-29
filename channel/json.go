@@ -28,7 +28,7 @@ type jsonc struct {
 	buf json.RawMessage
 }
 
-// Send implements part of the Channel interface.
+// Send implements part of the [Channel] interface.
 func (c jsonc) Send(msg []byte) error {
 	if len(msg) == 0 || isNull(msg) {
 		_, err := io.WriteString(c.wc, "null\n")
@@ -38,9 +38,9 @@ func (c jsonc) Send(msg []byte) error {
 	return err
 }
 
-// Recv implements part of the Channel interface. It reports an error if the
+// Recv implements part of the [Channel] interface. It reports an error if the
 // message is not a structurally valid JSON value. It is safe for the caller to
-// treat any record returned as a json.RawMessage.
+// treat any record returned as a [json.RawMessage].
 func (c jsonc) Recv() ([]byte, error) {
 	c.buf = c.buf[:0] // reset
 	if err := c.dec.Decode(&c.buf); err != nil {
@@ -51,7 +51,7 @@ func (c jsonc) Recv() ([]byte, error) {
 	return c.buf, nil
 }
 
-// Close implements part of the Channel interface.
+// Close implements part of the [Channel] interface.
 func (c jsonc) Close() error { return c.wc.Close() }
 
 func isNull(msg json.RawMessage) bool {

@@ -30,7 +30,7 @@ type Service interface {
 	Finish(jrpc2.Assigner, jrpc2.ServerStatus)
 }
 
-// Static wraps a jrpc2.Assigner to trivially implement the Service interface.
+// Static wraps a [jrpc2.Assigner] to trivially implement the Service interface.
 func Static(m jrpc2.Assigner) func() Service { return static{methods: m}.new }
 
 type static struct{ methods jrpc2.Assigner }
@@ -47,8 +47,8 @@ type Accepter interface {
 	Accept(ctx context.Context) (channel.Channel, error)
 }
 
-// NetAccepter adapts a net.Listener to the Accepter interface, using f as the
-// channel framing.
+// NetAccepter adapts a [net.Listener] to the Accepter interface, using f as
+// the channel framing.
 func NetAccepter(lst net.Listener, f channel.Framing) Accepter {
 	return netAccepter{Listener: lst, newChannel: f}
 }

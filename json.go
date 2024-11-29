@@ -39,8 +39,8 @@ type ParsedRequest struct {
 	Error  *Error
 }
 
-// ToRequest converts p to an equivalent server Request. If p.Error is not nil,
-// ToRequest returns nil.
+// ToRequest converts p to an equivalent server [Request]. If p.Error is not
+// nil, ToRequest returns nil.
 //
 // This method does not check validity. If p is from a successful call of
 // ParseRequests, the result will be valid; otherwise the caller must ensure

@@ -19,7 +19,7 @@ type Error struct {
 // Error returns a human-readable description of e.
 func (e Error) Error() string { return fmt.Sprintf("[%d] %s", e.Code, e.Message) }
 
-// ErrCode trivially satisfies the ErrCoder interface for an *Error.
+// ErrCode trivially satisfies the [ErrCoder] interface.
 func (e Error) ErrCode() Code { return e.Code }
 
 // WithData marshals v as JSON and constructs a copy of e whose Data field
@@ -67,8 +67,7 @@ var errTaskNotExecuted = new(Error)
 // called after the client connection is closed.
 var ErrConnClosed = errors.New("client connection is closed")
 
-// Errorf returns an error value of concrete type *Error having the specified
-// code and formatted message string.
+// Errorf returns an Error with the specified code and formatted message.
 func Errorf(code Code, msg string, args ...any) *Error {
 	return &Error{Code: code, Message: fmt.Sprintf(msg, args...)}
 }

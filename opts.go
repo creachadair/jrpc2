@@ -11,9 +11,9 @@ import (
 	"time"
 )
 
-// ServerOptions control the behaviour of a server created by NewServer.
-// A nil *ServerOptions is valid and provides sensible defaults.
-// It is safe to share server options among multiple server instances.
+// ServerOptions control the behaviour of a server created by [NewServer].  A
+// nil *ServerOptions is valid and provides sensible defaults.  It is safe to
+// share server options among multiple server instances.
 type ServerOptions struct {
 	// If not nil, send debug text logs here.
 	Logger Logger
@@ -87,7 +87,7 @@ func (s *ServerOptions) rpcLog() RPCLogger {
 	return s.RPCLog
 }
 
-// ClientOptions control the behaviour of a client created by NewClient.
+// ClientOptions control the behaviour of a client created by [NewClient].
 // A nil *ClientOptions is valid and provides sensible defaults.
 type ClientOptions struct {
 	// If not nil, send debug text logs here.
@@ -216,8 +216,8 @@ func (lg Logger) Printf(msg string, args ...any) {
 	}
 }
 
-// StdLogger adapts a *log.Logger to a Logger. If logger == nil, the returned
-// function sends logs to the default logger.
+// StdLogger adapts a [*log.Logger] to a [Logger]. If logger == nil, the
+// returned function sends logs to the default logger.
 func StdLogger(logger *log.Logger) Logger {
 	if logger == nil {
 		return func(text string) { log.Output(2, text) }

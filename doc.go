@@ -6,15 +6,15 @@ defined by http://www.jsonrpc.org/specification.
 
 # Servers
 
-The *Server type implements a JSON-RPC server. A server communicates with a
-client over a channel.Channel, and dispatches client requests to user-defined
+The [*Server] type implements a JSON-RPC server. A server communicates with a
+client over a [channel.Channel], and dispatches client requests to user-defined
 method handlers.  Method handlers are functions with this signature:
 
 	func(ctx Context.Context, req *jrpc2.Request) (any, error)
 
-A server finds the handler for a request by looking up its method name in a
-jrpc2.Assigner.  A Handler decodes request parameters using the UnmarshalParams
-method on the Request:
+A server finds the handler for a request by looking up its method name in an
+[Assigner].  A [Handler] decodes request parameters using the UnmarshalParams
+method on the [Request]:
 
 	func Handle(ctx context.Context, req *jrpc2.Request) (any, error) {
 	   var args ArgType
@@ -24,8 +24,8 @@ method on the Request:
 	   return usefulStuffWith(args)
 	}
 
-The handler package uses reflection to adapt functions that do not have this
-type to handlers.  For example, given:
+The [github.com/creachadair/jrpc2/handler] package uses reflection to adapt
+functions that do not have this type to handlers.  For example, given:
 
 	// Add returns the sum of a slice of integers.
 	func Add(ctx context.Context, values []int) int {
@@ -47,14 +47,14 @@ interface with a Go map. To advertise this function under the name "Add":
 	   "Add": handler.New(Add),
 	}
 
-Equipped with an Assigner we can now construct a Server:
+Equipped with an Assigner we can now construct a [Server]:
 
 	srv := jrpc2.NewServer(assigner, nil)  // nil for default options
 
-To start the server, we need a channel.Channel. Implementations of the Channel
-interface handle the framing, transmission, and receipt of JSON messages.  The
-channel package implements some common framing disciplines for byte streams
-like pipes and sockets.
+To start the server, we need a [channel.Channel]. Implementations of the
+Channel interface handle the framing, transmission, and receipt of JSON
+messages.  The channel package implements some common framing disciplines for
+byte streams like pipes and sockets.
 
 For this example, we'll use a channel that communicates over stdin and stdout,
 with messages delimited by newlines:
@@ -83,8 +83,8 @@ example:
 
 # Clients
 
-The *Client type implements a JSON-RPC client. A client communicates with a
-server over a channel.Channel, and is safe for concurrent use by multiple
+The [*Client] type implements a JSON-RPC client. A client communicates with a
+server over a [channel.Channel], and is safe for concurrent use by multiple
 goroutines. It supports batched requests and may have arbitrarily many pending
 requests in flight simultaneously.
 
@@ -102,7 +102,7 @@ To send a single RPC, use the Call method:
 	rsp, err := cli.Call(ctx, "Math.Add", []int{1, 3, 5, 7})
 
 Call blocks until the response is received. Errors returned by the server have
-concrete type *jrpc2.Error.
+concrete type [*Error].
 
 To issue a batch of concurrent requests, use the Batch method:
 
@@ -115,7 +115,7 @@ To issue a batch of concurrent requests, use the Batch method:
 Batch blocks until all the responses are received.  An error from the Batch
 call reflects an error in sending the request: The caller must check each
 response separately for errors from the server. Responses are returned in the
-same order as the Spec values, save that notifications are omitted.
+same order as the [Spec] values, save that notifications are omitted.
 
 To decode the result from a successful response, use its UnmarshalResult method:
 
@@ -155,15 +155,15 @@ want to do anything for a notification, it can query the request:
 
 # Services with Multiple Methods
 
-The example above shows a server with one method.  A handler.Map works for any
-number of distinctly-named methods:
+The example above shows a server with one method.  A [handler.Map] works for
+any number of distinctly-named methods:
 
 	mathService := handler.Map{
 	   "Add": handler.New(Add),
 	   "Mul": handler.New(Mul),
 	}
 
-Maps may be combined with the handler.ServiceMap type to export multiple
+Maps may be combined with the [handler.ServiceMap] type to export multiple
 services from the same server:
 
 	func getStatus(context.Context) string { return "all is well" }
@@ -182,7 +182,7 @@ require a more complex hierarchy.
 
 # Concurrency
 
-A Server issues concurrent requests to handlers in parallel, up to the limit
+A [Server] issues concurrent requests to handlers in parallel, up to the limit
 given by the Concurrency field in ServerOptions.
 
 Two requests (either calls or notifications) are concurrent if they arrive as
@@ -227,7 +227,7 @@ Otherwise, those methods will report an error:
 	  // server push is not enabled
 	}
 
-A method handler may use jrpc2.ServerFromContext to access the server from its
+A method handler may use [ServerFromContext] to access the server from its
 context, and then invoke these methods on it.  On the client side, the OnNotify
 and OnCallback options in jrpc2.ClientOptions provide hooks to which any server
 requests are delivered, if they are set.
@@ -238,7 +238,7 @@ a client response that will never arrive.
 
 # Contexts and Cancellation
 
-Both the Server and the Client use the standard context package to plumb
+Both the [Server] and the [Client] use the standard context package to plumb
 cancellation and other request-specific metadata in handlers and calls.
 
 On the server, the context passed to a handler is automatically cancelled when
@@ -255,7 +255,7 @@ server, as JSON-RPC does not define a standard mechanism to do so.  One typical
 approach (used by LSP, for example) is to define a separate method on the
 server to handle cancellation requests.
 
-If an OnCancel hook is set in the ClientOptions, the client calls it when the
+If an OnCancel hook is set in the [ClientOptions], the client calls it when the
 context for a Call ends before the server has responded.  This can be used to
 forward cancellation to the server separately.
 */

@@ -48,9 +48,9 @@ func (c codeError) Is(err error) bool {
 	return ok && v.ErrCode() == Code(c)
 }
 
-// Err converts c to an error value, which is nil for NoError and otherwise an
-// error value whose code is c and whose text is based on the built-in string
-// for c if one exists.
+// Err converts c to an error value, which is nil for [NoError] and otherwise
+// an error value whose code is c and whose text is based on the built-in
+// string for c if one exists.
 func (c Code) Err() error {
 	if c == NoError {
 		return nil

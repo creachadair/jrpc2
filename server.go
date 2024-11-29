@@ -50,12 +50,12 @@ func init() {
 // that such changes will affect all servers.
 //
 // The caller is responsible for publishing the metrics to the exporter via
-// expvar.Publish or similar.
+// [expvar.Publish] or similar.
 func ServerMetrics() *expvar.Map { return serverMetrics }
 
 // Server implements a JSON-RPC 2.0 server. The server receives requests and
-// sends responses on a channel.Channel provided by the caller, and dispatches
-// requests to user-defined Handlers.
+// sends responses on a [channel.Channel] provided by the caller, and
+// dispatches requests to user-defined Handlers.
 type Server struct {
 	wg  sync.WaitGroup      // ready when workers are done at shutdown time
 	mux Assigner            // associates method names with handlers
@@ -419,9 +419,9 @@ var ErrPushUnsupported = errors.New("server push is not enabled")
 //
 // This is a non-standard extension of JSON-RPC, and may not be supported by
 // all clients.  Unless s was constructed with the AllowPush option set true,
-// this method will always report an error (ErrPushUnsupported) without sending
-// anything.  If Notify is called after the client connection is closed, it
-// returns ErrConnClosed.
+// this method will always report an error ([ErrPushUnsupported]) without
+// sending anything.  If Notify is called after the client connection is
+// closed, it returns [ErrConnClosed].
 func (s *Server) Notify(ctx context.Context, method string, params any) error {
 	if !s.allowP {
 		return ErrPushUnsupported
@@ -433,7 +433,7 @@ func (s *Server) Notify(ctx context.Context, method string, params any) error {
 // Callback posts a single server-side call to the client. It blocks until a
 // reply is received, ctx ends, or the client connection terminates.  A
 // successful callback reports a nil error and a non-nil response. Errors
-// returned by the client have concrete type *jrpc2.Error.
+// returned by the client have concrete type [*Error].
 //
 // This is a non-standard extension of JSON-RPC, and may not be supported by
 // all clients. If you are not sure whether the client supports push calls, you
@@ -441,9 +441,9 @@ func (s *Server) Notify(ctx context.Context, method string, params any) error {
 // client response that will never arrive.
 //
 // Unless s was constructed with the AllowPush option set true, this method
-// will always report an error (ErrPushUnsupported) without sending
+// will always report an error ([ErrPushUnsupported]) without sending
 // anything. If Callback is called after the client connection is closed, it
-// returns ErrConnClosed.
+// returns [ErrConnClosed].
 func (s *Server) Callback(ctx context.Context, method string, params any) (*Response, error) {
 	if !s.allowP {
 		return nil, ErrPushUnsupported

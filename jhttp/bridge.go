@@ -15,7 +15,7 @@ import (
 	"github.com/creachadair/jrpc2/server"
 )
 
-// A Bridge is a http.Handler that bridges requests to a JSON-RPC server.
+// A Bridge is a [http.Handler] that bridges requests to a JSON-RPC server.
 //
 // By default, the bridge accepts only HTTP POST requests with the complete
 // JSON-RPC request message in the body, with Content-Type application/json.
@@ -40,7 +40,7 @@ type Bridge struct {
 	getter   *Getter
 }
 
-// ServeHTTP implements the required method of http.Handler.
+// ServeHTTP implements the required method of [http.Handler].
 func (b Bridge) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// If a GET hook is defined, allow GET requests.
 	if req.Method == "GET" && b.getter != nil {

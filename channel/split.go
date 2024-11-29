@@ -30,7 +30,7 @@ type split struct {
 	buf   *bufio.Reader
 }
 
-// Send implements part of the Channel interface.  It reports an error if msg
+// Send implements part of the [Channel] interface.  It reports an error if msg
 // contains a split byte.
 func (c split) Send(msg []byte) error {
 	if bytes.IndexByte(msg, c.split) >= 0 {
@@ -41,7 +41,7 @@ func (c split) Send(msg []byte) error {
 	return err
 }
 
-// Recv implements part of the Channel interface.
+// Recv implements part of the [Channel] interface.
 func (c split) Recv() ([]byte, error) {
 	var buf bytes.Buffer
 	for {
@@ -58,5 +58,5 @@ func (c split) Recv() ([]byte, error) {
 	}
 }
 
-// Close implements part of the Channel interface.
+// Close implements part of the [Channel] interface.
 func (c split) Close() error { return c.wc.Close() }

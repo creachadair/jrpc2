@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-// An Assigner maps method names to Handler functions.
+// An Assigner maps method names to [Handler] functions.
 type Assigner interface {
 	// Assign returns the handler for the named method, or returns nil to
 	// indicate that the method is not known.
@@ -20,8 +20,8 @@ type Assigner interface {
 	Assign(ctx context.Context, method string) Handler
 }
 
-// Namer is an optional interface that an Assigner may implement to expose the
-// names of its methods to the ServerInfo method.
+// Namer is an optional interface that an [Assigner] may implement to expose
+// the names of its methods to the ServerInfo method.
 type Namer interface {
 	// Names returns all known method names in lexicographic order.
 	Names() []string
@@ -33,8 +33,8 @@ type Namer interface {
 // of type *jrpc2.Error to control the response code sent back to the caller;
 // otherwise the server will wrap the resulting value.
 //
-// The context passed to the handler by a *jrpc2.Server includes two special
-// values that the handler may extract.
+// The context passed to the handler by a [Server] includes two special values
+// that the handler may extract.
 //
 // To obtain the server instance running the handler, write:
 //
@@ -75,10 +75,10 @@ func (r *Request) HasParams() bool { return len(r.params) != 0 }
 // By default, unknown object keys are ignored and discarded when unmarshaling
 // into a v of struct type. If the type of v implements a DisallowUnknownFields
 // method, unknown fields will instead generate an InvalidParams error.  The
-// jrpc2.StrictFields helper adapts existing struct values to this interface.
-// For more specific behaviour, implement a custom json.Unmarshaler.
+// [StrictFields] helper adapts existing struct values to this interface.  For
+// more specific behaviour, implement a custom [json.Unmarshaler].
 //
-// If v has type *json.RawMessage, unmarshaling will never report an error.
+// If v has type [*json.RawMessage], unmarshaling will never report an error.
 func (r *Request) UnmarshalParams(v any) error {
 	if len(r.params) == 0 {
 		return nil
@@ -134,11 +134,11 @@ func (r *Response) Error() *Error { return r.err }
 //
 // By default, unknown object keys are ignored and discarded when unmarshaling
 // into a v of struct type. If the type of v implements a DisallowUnknownFields
-// method, unknown fields will instead generate an error.  The
-// jrpc2.StrictFields helper adapts existing struct values to this interface.
-// For more specific behaviour, implement a custom json.Unmarshaler.
+// method, unknown fields will instead generate an error.  The [StrictFields]
+// helper adapts existing struct values to this interface.  For more specific
+// behaviour, implement a custom [json.Unmarshaler].
 //
-// If v has type *json.RawMessage, unmarshaling will never report an error.
+// If v has type [*json.RawMessage], unmarshaling will never report an error.
 func (r *Response) UnmarshalResult(v any) error {
 	if r.err != nil {
 		return r.err

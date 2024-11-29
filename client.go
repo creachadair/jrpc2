@@ -14,7 +14,7 @@ import (
 )
 
 // A Client is a JSON-RPC 2.0 client. The client sends requests and receives
-// responses on a channel.Channel provided by the constructor.
+// responses on a [channel.Channel] provided by the constructor.
 type Client struct {
 	done *sync.WaitGroup // done when the reader is finished at shutdown time
 
@@ -289,7 +289,7 @@ func (c *Client) waitComplete(pctx context.Context, id string, p *Response) {
 
 // Call initiates a single request and blocks until the response returns or ctx
 // ends.  A successful call reports a nil error and a non-nil response. Errors
-// from the server have concrete type *jrpc2.Error.
+// from the server have concrete type [*Error].
 //
 //	rsp, err := c.Call(ctx, method, params)
 //	if e, ok := err.(*jrpc2.Error); ok {

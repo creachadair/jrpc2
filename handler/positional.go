@@ -11,9 +11,9 @@ import (
 	"github.com/creachadair/jrpc2"
 )
 
-// NewPos adapts a function to a jrpc2.Handler. The concrete value of fn must
-// be a function accepted by Positional. The resulting handler will handle JSON
-// encoding and decoding, call fn, and report appropriate errors.
+// NewPos adapts a function to a [jrpc2.Handler]. The concrete value of fn must
+// be a function accepted by [Positional]. The resulting handler will handle
+// JSON encoding and decoding, call fn, and report appropriate errors.
 //
 // NewPos is intended for use during program initialization, and will panic if
 // the type of fn does not have one of the accepted forms. Programs that need
@@ -68,7 +68,7 @@ func structFieldNames(atype reflect.Type) (bool, []string) {
 	return true, names
 }
 
-// Positional checks whether fn can serve as a jrpc2.Handler. The concrete
+// Positional checks whether fn can serve as a [jrpc2.Handler]. The concrete
 // value of fn must be a function with one of the following type signature
 // schemes:
 //
@@ -80,12 +80,12 @@ func structFieldNames(atype reflect.Type) (bool, []string) {
 // forms, Positional reports an error. The given names must match the number of
 // non-context arguments exactly. Variadic functions are not supported.
 //
-// In contrast to Check, this function allows any number of arguments, but the
-// caller must provide names for them. Positional creates an anonymous struct
-// type whose fields correspond to the non-context arguments of fn.  The names
-// are used as the JSON field keys for the corresponding parameters.
+// In contrast to [Check], this function allows any number of arguments, but
+// the caller must provide names for them. Positional creates an anonymous
+// struct type whose fields correspond to the non-context arguments of fn.  The
+// names are used as the JSON field keys for the corresponding parameters.
 //
-// When converted into a jrpc2.Handler, the wrapped function accepts either a
+// When converted into a [jrpc2.Handler], the wrapped function accepts either a
 // JSON array with exactly n members, or a JSON object with the field keys
 // named. For example, given:
 //
