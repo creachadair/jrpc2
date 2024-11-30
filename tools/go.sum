@@ -2,8 +2,8 @@ github.com/coder/websocket v1.8.12 h1:5bUXkEPPIbewrnkU8LTCLVaxi4N4J8ahufH2vlo4NA
 github.com/coder/websocket v1.8.12/go.mod h1:LNVeNrXQZfe5qhS9ALED3uA+l5pPqvwXg3CKoDBB2gs=
 github.com/creachadair/jrpc2 v1.3.0 h1:CALlqNxD3u16U+gzNGoSQMYAr9uLCxjrB3D6Yu9+e/4=
 github.com/creachadair/jrpc2 v1.3.0/go.mod h1:rOu1u3LG86IEhMlG/N6FaHuP/leA5PjyuTQvDjE/G9k=
-github.com/creachadair/mds v0.21.4 h1:osKuLbjkV7YswBnhuTJh1lCDkqZMQnNfFVn0j8wLpz8=
-github.com/creachadair/mds v0.21.4/go.mod h1:1ltMWZd9yXhaHEoZwBialMaviWVUpRPvMwVP7saFAzM=
+github.com/creachadair/mds v0.22.0 h1:IRm4fWRKF9Pi4k3DEfgdlhMMYVxyef9FFall4r0GP4A=
+github.com/creachadair/mds v0.22.0/go.mod h1:ArfS0vPHoLV/SzuIzoqTEZfoYmac7n9Cj8XPANHocvw=
 github.com/creachadair/wschannel v0.0.0-20241109184048-225ae55119e4 h1:1IFc+mRoTEaZkBgXPnZRLJIP/LY9Nmjh4DMaaKPx3OQ=
 github.com/creachadair/wschannel v0.0.0-20241109184048-225ae55119e4/go.mod h1:O6n2aiFhUF5mRG7byZE70aQyVQgfbG0/oI1s8WxWpLI=
 github.com/fortytw2/leaktest v1.3.0 h1:u8491cBMTQ8ft8aeV+adlcytMZylmA5nnwwkRZjI8vw=
