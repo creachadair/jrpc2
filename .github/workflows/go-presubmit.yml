@@ -18,7 +18,7 @@ jobs:
     strategy:
       matrix:
         go-version: ['stable']
-        os: ['ubuntu-latest']
+        os: ['ubuntu-24.04']
     steps:
     - uses: actions/checkout@v4
     - name: Install Go ${{ matrix.go-version }}
