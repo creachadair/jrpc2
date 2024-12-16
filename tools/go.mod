@@ -6,11 +6,11 @@ toolchain go1.23.1
 
 require (
 	github.com/creachadair/jrpc2 v1.3.0
-	github.com/creachadair/wschannel v0.0.0-20241109184048-225ae55119e4
+	github.com/creachadair/wschannel v0.0.0-20241211163321-bde1b849562a
 )
 
 require (
 	github.com/coder/websocket v1.8.12 // indirect
 	github.com/creachadair/mds v0.22.0 // indirect
-	golang.org/x/sync v0.9.0 // indirect
+	golang.org/x/sync v0.10.0 // indirect
 )
