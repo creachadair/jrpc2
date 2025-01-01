@@ -7,7 +7,7 @@ require (
 )
 
 require (
-	github.com/creachadair/mds v0.22.0
+	github.com/creachadair/mds v0.22.1
 	honnef.co/go/tools v0.5.1
 )
 
