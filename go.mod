@@ -3,7 +3,7 @@ module github.com/creachadair/jrpc2
 require (
 	github.com/fortytw2/leaktest v1.3.0
 	github.com/google/go-cmp v0.6.0
-	golang.org/x/sync v0.10.0
+	golang.org/x/sync v0.11.0
 )
 
 require (
