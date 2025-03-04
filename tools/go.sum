@@ -2,10 +2,10 @@ github.com/coder/websocket v1.8.12 h1:5bUXkEPPIbewrnkU8LTCLVaxi4N4J8ahufH2vlo4NA
 github.com/coder/websocket v1.8.12/go.mod h1:LNVeNrXQZfe5qhS9ALED3uA+l5pPqvwXg3CKoDBB2gs=
 github.com/creachadair/jrpc2 v1.3.1 h1:4B2R9050CYdhCKepbFVWQVG0/EFqRa9MuuM1Thd7tZo=
 github.com/creachadair/jrpc2 v1.3.1/go.mod h1:GtMp2RXHMnrdOY8hWWlbBpjWXSVDXhuO/LMRJAtRFno=
-github.com/creachadair/mds v0.23.0 h1:cANHIuKZwbfIoo/zEWA2sn+uGYjqYHuWvpoApkdjGpg=
-github.com/creachadair/mds v0.23.0/go.mod h1:ArfS0vPHoLV/SzuIzoqTEZfoYmac7n9Cj8XPANHocvw=
-github.com/creachadair/wschannel v0.0.0-20241211163321-bde1b849562a h1:CRj4zZWjsU9G0stHSIjEuVd3LIE4u93mpblZfYy17Mw=
-github.com/creachadair/wschannel v0.0.0-20241211163321-bde1b849562a/go.mod h1:O6n2aiFhUF5mRG7byZE70aQyVQgfbG0/oI1s8WxWpLI=
+github.com/creachadair/mds v0.24.0 h1:/Pv4pxhob6oiqJhg8sRshm5wBEQLEoH8Nj/V8TRKFqY=
+github.com/creachadair/mds v0.24.0/go.mod h1:ArfS0vPHoLV/SzuIzoqTEZfoYmac7n9Cj8XPANHocvw=
+github.com/creachadair/wschannel v0.0.0-20250223205539-035e0ccc7301 h1:nO5iXkIcqqNRGq8a7rGoz6A4EyxeDm0ZxG9NhZPhX/Q=
+github.com/creachadair/wschannel v0.0.0-20250223205539-035e0ccc7301/go.mod h1:ivqO0bcyxmZwoDqcYdMEVJjSL5IuGiGIPBPvaoz4e/o=
 github.com/fortytw2/leaktest v1.3.0 h1:u8491cBMTQ8ft8aeV+adlcytMZylmA5nnwwkRZjI8vw=
 github.com/fortytw2/leaktest v1.3.0/go.mod h1:jDsjWgpAGjm2CA7WthBh/CdZYEPF31XHquHwclZch5g=
 github.com/google/go-cmp v0.6.0 h1:ofyhxvXcZhMsU5ulbFiLKl/XBFqE1GSq7atu8tAmTRI=
