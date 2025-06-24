@@ -89,11 +89,11 @@ func New(fn any) jrpc2.Handler {
 }
 
 var (
-	ctxType = reflect.TypeOf((*context.Context)(nil)).Elem() // type context.Context
-	errType = reflect.TypeOf((*error)(nil)).Elem()           // type error
-	reqType = reflect.TypeOf((*jrpc2.Request)(nil))          // type *jrpc2.Request
+	ctxType = reflect.TypeFor[context.Context]()
+	errType = reflect.TypeFor[error]()
+	reqType = reflect.TypeFor[*jrpc2.Request]()
 
-	strictType = reflect.TypeOf((*interface{ DisallowUnknownFields() })(nil)).Elem()
+	strictType = reflect.TypeFor[interface{ DisallowUnknownFields() }]()
 
 	errNoParameters = &jrpc2.Error{Code: jrpc2.InvalidParams, Message: "no parameters accepted"}
 )
