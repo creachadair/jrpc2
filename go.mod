@@ -6,7 +6,7 @@ require (
 	golang.org/x/sync v0.15.0
 )
 
-require github.com/creachadair/mds v0.24.3
+require github.com/creachadair/mds v0.25.1
 
 require (
 	golang.org/x/exp/typeparams v0.0.0-20231108232855-2478ac86f678 // indirect
