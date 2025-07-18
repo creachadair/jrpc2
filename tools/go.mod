@@ -1,8 +1,6 @@
 module github.com/creachadair/jrpc2/tools
 
-go 1.23.0
-
-toolchain go1.24.1
+go 1.24
 
 require (
 	github.com/creachadair/jrpc2 v1.3.1
