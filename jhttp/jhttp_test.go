@@ -69,6 +69,18 @@ func TestBridge(t *testing.T) {
 		}
 	})
 
+	// Verify that a single-request batch comes back as a batch too.
+	t.Run("PostBatchSingle", func(t *testing.T) {
+		got := mustPost(t, hsrv.URL, "", `[
+        {"jsonrpc":"2.0", "id": 11, "method": "Test1", "params": ["a", "solo", "request"]}
+      ]`, http.StatusOK)
+
+		const want = `[{"jsonrpc":"2.0","id":11,"result":3}]`
+		if got != want {
+			t.Errorf("POST body: got %#q, want %#q", got, want)
+		}
+	})
+
 	// Verify that a GET request reports an error.
 	t.Run("GetFail", func(t *testing.T) {
 		rsp, err := http.Get(hsrv.URL)
