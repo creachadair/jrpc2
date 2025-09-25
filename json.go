@@ -23,6 +23,7 @@ func ParseRequests(msg []byte) ([]*ParsedRequest, error) {
 			ID:     string(fixID(req.ID)),
 			Method: req.M,
 			Params: req.P,
+			Batch:  req.batch,
 			Error:  req.err,
 		}
 	}
@@ -36,6 +37,7 @@ type ParsedRequest struct {
 	ID     string
 	Method string
 	Params json.RawMessage
+	Batch  bool // whether the request was part of a batch request
 	Error  *Error
 }
 
