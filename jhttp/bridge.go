@@ -81,6 +81,7 @@ func (b Bridge) serveInternal(w http.ResponseWriter, req *http.Request) error {
 	if err != nil {
 		return err
 	}
+	isBatch := len(jreq) != 0 && jreq[0].Batch
 
 	// Because the bridge shares the JSON-RPC client between potentially many
 	// HTTP clients, we must virtualize the ID space for requests to preserve
@@ -144,7 +145,7 @@ func (b Bridge) serveInternal(w http.ResponseWriter, req *http.Request) error {
 		w.WriteHeader(http.StatusNoContent)
 		return nil
 	}
-	return b.encodeResponses(results, w)
+	return b.encodeResponses(isBatch, results, w)
 }
 
 func (b Bridge) parseHTTPRequest(req *http.Request) ([]*jrpc2.ParsedRequest, error) {
@@ -158,15 +159,8 @@ func (b Bridge) parseHTTPRequest(req *http.Request) ([]*jrpc2.ParsedRequest, err
 	return jrpc2.ParseRequests(body)
 }
 
-func (b Bridge) encodeResponses(rsps []json.RawMessage, w http.ResponseWriter) error {
-	// If there is only a single reply, send it alone; otherwise encode a batch.
-	// Per the spec (https://www.jsonrpc.org/specification#batch), this is OK;
-	// we are not required to respond to a batch with an array:
-	//
-	//   The Server SHOULD respond with an Array containing the corresponding
-	//   Response objects
-	//
-	if len(rsps) == 1 {
+func (b Bridge) encodeResponses(isBatch bool, rsps []json.RawMessage, w http.ResponseWriter) error {
+	if len(rsps) == 1 && !isBatch {
 		writeJSON(w, http.StatusOK, rsps[0])
 	} else {
 		writeJSON(w, http.StatusOK, rsps)

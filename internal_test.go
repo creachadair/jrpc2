@@ -51,13 +51,13 @@ func TestParseRequests(t *testing.T) {
 		// A valid mixed batch.
 		{`[ {"jsonrpc": "2.0", "id": 1, "method": "A", "params": {}},
           {"jsonrpc": "2.0", "params": [5], "method": "B"} ]`, []*ParsedRequest{
-			{Method: "A", ID: "1", Params: json.RawMessage(`{}`)},
-			{Method: "B", Params: json.RawMessage(`[5]`)},
+			{Method: "A", ID: "1", Params: json.RawMessage(`{}`), Batch: true},
+			{Method: "B", Params: json.RawMessage(`[5]`), Batch: true},
 		}, nil},
 
 		// An invalid batch.
 		{`[{"id": 37, "method": "complain", "params":[]}]`, []*ParsedRequest{
-			{Method: "complain", ID: "37", Params: json.RawMessage(`[]`), Error: errInvalidVersion},
+			{Method: "complain", ID: "37", Params: json.RawMessage(`[]`), Batch: true, Error: errInvalidVersion},
 		}, nil},
 
 		// A broken request.
