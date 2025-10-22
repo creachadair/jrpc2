@@ -42,8 +42,7 @@ func BenchmarkRoundTrip(b *testing.B) {
 			defer loc.Close()
 			ctx := context.Background()
 
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				if _, err := loc.Client.Call(ctx, "void", nil); err != nil {
 					b.Fatalf("Call void failed: %v", err)
 				}
@@ -65,15 +64,13 @@ func BenchmarkLoad(b *testing.B) {
 	ctx := context.Background()
 	b.Run("Call", func(b *testing.B) {
 		var wg sync.WaitGroup
-		for i := 0; i < b.N; i++ {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+		for range b.N {
+			wg.Go(func() {
 				_, err := loc.Client.Call(ctx, "void", nil)
 				if err != nil {
 					b.Errorf("Call failed: %v", err)
 				}
-			}()
+			})
 		}
 		wg.Wait()
 	})
@@ -81,15 +78,13 @@ func BenchmarkLoad(b *testing.B) {
 	// Exercise concurrent notifications.
 	b.Run("Notify", func(b *testing.B) {
 		var wg sync.WaitGroup
-		for i := 0; i < b.N; i++ {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+		for range b.N {
+			wg.Go(func() {
 				err := loc.Client.Notify(ctx, "void", nil)
 				if err != nil {
 					b.Errorf("Notify failed: %v", err)
 				}
-			}()
+			})
 		}
 		wg.Wait()
 	})
@@ -97,22 +92,20 @@ func BenchmarkLoad(b *testing.B) {
 	// Exercise concurrent batches of various sizes.
 	for _, bs := range []int{1, 2, 4, 8, 12, 16, 20, 50} {
 		batch := make([]jrpc2.Spec, bs)
-		for j := 0; j < len(batch); j++ {
+		for j := range len(batch) {
 			batch[j].Method = "void"
 		}
 
 		name := "Batch-" + strconv.Itoa(bs)
 		b.Run(name, func(b *testing.B) {
 			var wg sync.WaitGroup
-			for i := 0; i < b.N; i += bs {
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
+			for range b.N {
+				wg.Go(func() {
 					_, err := loc.Client.Batch(ctx, batch)
 					if err != nil {
 						b.Errorf("Batch failed: %v", err)
 					}
-				}()
+				})
 			}
 			wg.Wait()
 		})
@@ -144,7 +137,7 @@ func BenchmarkParseRequests(b *testing.B) {
 	for _, req := range reqs {
 		msg := []byte(req.input)
 		b.Run(req.desc, func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				_, err := jrpc2.ParseRequests(msg)
 				if err != nil {
 					b.Fatalf("ParseRequests %#q failed: %v", req.input, err)
