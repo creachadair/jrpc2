@@ -8,13 +8,14 @@ import (
 	"net"
 	"sync"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/creachadair/jrpc2"
 	"github.com/creachadair/jrpc2/channel"
 	"github.com/creachadair/jrpc2/handler"
 	"github.com/creachadair/jrpc2/server"
-	"github.com/fortytw2/leaktest"
+	"github.com/creachadair/mds/mnet"
 )
 
 var newChan = channel.Line
@@ -65,22 +66,19 @@ func (t *testSession) Finish(assigner jrpc2.Assigner, stat jrpc2.ServerStatus) {
 	}
 }
 
-func mustListen(t *testing.T) net.Listener {
+func mustListen(t *testing.T) mnet.Listener {
 	t.Helper()
-
-	lst, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatalf("Listen: %v", err)
-	}
-	return lst
+	n := mnet.New(t.Name() + " network")
+	t.Cleanup(func() { n.Close() })
+	return n.MustListen("tcp", t.Name())
 }
 
-func mustDial(t *testing.T, addr string) *jrpc2.Client {
+func mustDial(t *testing.T, lst mnet.Listener) *jrpc2.Client {
 	t.Helper()
 
-	conn, err := net.Dial("tcp", addr)
+	conn, err := lst.Dial()
 	if err != nil {
-		t.Fatalf("Dial %q: %v", addr, err)
+		t.Fatalf("Dial %q: %v", lst.Addr(), err)
 	}
 	return jrpc2.NewClient(newChan(conn, conn), nil)
 }
@@ -101,94 +99,75 @@ func mustServe(t *testing.T, ctx context.Context, lst net.Listener, newService f
 
 // Test that sequential clients against the same server work sanely.
 func TestSeq(t *testing.T) {
-	defer leaktest.Check(t)()
+	synctest.Test(t, func(t *testing.T) {
+		lst := mustListen(t)
+		errc := mustServe(t, t.Context(), lst, testStatic)
 
-	lst := mustListen(t)
-	addr := lst.Addr().String()
-	errc := mustServe(t, context.Background(), lst, testStatic)
-
-	for i := 0; i < 5; i++ {
-		cli := mustDial(t, addr)
-		var rsp string
-		if err := cli.CallResult(context.Background(), "Test", nil, &rsp); err != nil {
-			t.Errorf("[client %d] Test call: unexpected error: %v", i, err)
-		} else if rsp != "OK" {
-			t.Errorf("[client %d]: Test call: got %q, want OK", i, rsp)
+		for i := 0; i < 5; i++ {
+			cli := mustDial(t, lst)
+			var rsp string
+			if err := cli.CallResult(t.Context(), "Test", nil, &rsp); err != nil {
+				t.Errorf("[client %d] Test call: unexpected error: %v", i, err)
+			} else if rsp != "OK" {
+				t.Errorf("[client %d]: Test call: got %q, want OK", i, rsp)
+			}
+			cli.Close()
 		}
-		cli.Close()
-	}
-	lst.Close()
-	if err := <-errc; err != nil {
-		t.Errorf("Server exit failed: %v", err)
-	}
+		lst.Close()
+		if err := <-errc; err != nil {
+			t.Errorf("Server exit failed: %v", err)
+		}
+	})
 }
 
 // Test that context plumbing works properly.
 func TestLoop_cancelContext(t *testing.T) {
-	defer leaktest.Check(t)()
+	synctest.Test(t, func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(t.Context(), 1*time.Second)
+		defer cancel()
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+		lst := mustListen(t)
+		errc := mustServe(t, ctx, lst, testStatic)
 
-	lst := mustListen(t)
-	defer lst.Close()
-	errc := mustServe(t, ctx, lst, testStatic)
-
-	time.AfterFunc(50*time.Millisecond, cancel)
-	select {
-	case err := <-errc:
-		if err != nil {
+		if err := <-errc; err != nil {
 			t.Errorf("Loop exit reported error: %v", err)
 		}
-	case <-time.After(1 * time.Second):
-		t.Fatalf("Loop did not exit in a timely manner after cancellation")
-	}
+	})
 }
 
 // Test that cancelling a loop stops its servers.
 func TestLoop_cancelServers(t *testing.T) {
-	defer leaktest.Check(t)()
+	synctest.Test(t, func(t *testing.T) {
+		ctx, cancel := context.WithCancel(t.Context())
+		defer cancel()
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+		lst := mustListen(t)
+		errc := mustServe(t, ctx, lst, server.Static(handler.Map{
+			"Test": handler.New(func(ctx context.Context) error {
+				// Block until cancelled.
+				<-ctx.Done()
+				return ctx.Err()
+			}),
+		}))
+		cli := mustDial(t, lst)
+		defer cli.Close()
 
-	ready := make(chan struct{})
+		// Issue a call to the server that will block until the server cancels the
+		// handler at shutdown. If the server blocks after cancellation, it means it
+		// is not correctly stopping its active servers.
+		go cli.Call(t.Context(), "Test", nil)
 
-	lst := mustListen(t)
-	errc := mustServe(t, ctx, lst, server.Static(handler.Map{
-		"Test": handler.New(func(ctx context.Context) error {
-			// Signal readiness then block until cancelled.
-			// The server will cancel this method when stopped.
-			close(ready)
-			<-ctx.Done()
-			return ctx.Err()
-		}),
-	}))
-	cli := mustDial(t, lst.Addr().String())
-	defer cli.Close()
+		synctest.Wait()
+		cancel() // this should stop the loop and the server
 
-	// Issue a call to the server that will block until the server cancels the
-	// handler at shutdown. If the server blocks after cancellation, it means it
-	// is not correctly stopping its active servers.
-	go cli.Call(context.Background(), "Test", nil)
-
-	<-ready
-	cancel() // this should stop the loop and the server
-
-	select {
-	case err := <-errc:
-		if err != nil {
+		if err := <-errc; err != nil {
 			t.Errorf("Loop result: %v", err)
 		}
-	case <-time.After(1 * time.Second):
-		t.Error("Loop did not exit in a timely manner after cancellation")
-	}
+	})
 }
 
 // Test that concurrent clients against the same server work sanely.
 func TestLoop(t *testing.T) {
-	defer leaktest.Check(t)()
-
 	tests := []struct {
 		desc string
 		cons func() server.Service
@@ -201,40 +180,41 @@ func TestLoop(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			lst := mustListen(t)
-			addr := lst.Addr().String()
-			errc := mustServe(t, context.Background(), lst, test.cons)
+			synctest.Test(t, func(t *testing.T) {
+				lst := mustListen(t)
+				errc := mustServe(t, t.Context(), lst, test.cons)
 
-			// Start a bunch of clients, each of which will dial the server and make
-			// some calls at random intervals to tickle the race detector.
-			var wg sync.WaitGroup
-			for i := 0; i < numClients; i++ {
-				wg.Add(1)
-				i := i
-				go func() {
-					defer wg.Done()
-					cli := mustDial(t, addr)
-					defer cli.Close()
+				// Start a bunch of clients, each of which will dial the server and make
+				// some calls at random intervals to tickle the race detector.
+				var wg sync.WaitGroup
+				for i := 0; i < numClients; i++ {
+					wg.Add(1)
+					i := i
+					go func() {
+						defer wg.Done()
+						cli := mustDial(t, lst)
+						defer cli.Close()
 
-					for j := 0; j < numCalls; j++ {
-						time.Sleep(time.Duration(rand.Intn(10)) * time.Millisecond)
-						var rsp string
-						if err := cli.CallResult(context.Background(), "Test", nil, &rsp); err != nil {
-							t.Errorf("[client %d]: Test call %d: unexpected error: %v", i, j+1, err)
-						} else if rsp != "OK" {
-							t.Errorf("[client %d]: Test call %d: got %q, want OK", i, j+1, rsp)
+						for j := 0; j < numCalls; j++ {
+							time.Sleep(time.Duration(rand.Intn(10)) * time.Second)
+							var rsp string
+							if err := cli.CallResult(t.Context(), "Test", nil, &rsp); err != nil {
+								t.Errorf("[client %d]: Test call %d: unexpected error: %v", i, j+1, err)
+							} else if rsp != "OK" {
+								t.Errorf("[client %d]: Test call %d: got %q, want OK", i, j+1, rsp)
+							}
 						}
-					}
-				}()
-			}
+					}()
+				}
 
-			// Wait for the clients to be finished and then close the listener so that
-			// the service loop will stop.
-			wg.Wait()
-			lst.Close()
-			if err := <-errc; err != nil {
-				t.Errorf("Server exit failed: %v", err)
-			}
+				// Wait for the clients to be finished and then close the listener so that
+				// the service loop will stop.
+				wg.Wait()
+				lst.Close()
+				if err := <-errc; err != nil {
+					t.Errorf("Server exit failed: %v", err)
+				}
+			})
 		})
 	}
 }
