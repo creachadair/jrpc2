@@ -8,9 +8,9 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"testing/synctest"
 
 	"github.com/creachadair/jrpc2/channel"
-	"github.com/fortytw2/leaktest"
 )
 
 // newPipe creates a pair of connected in-memory channels using the specified
@@ -25,32 +25,32 @@ func newPipe(framing channel.Framing) (client, server channel.Channel) {
 }
 
 func testSendRecv(t *testing.T, s, r channel.Channel, msg string) {
-	defer leaktest.Check(t)()
+	synctest.Test(t, func(t *testing.T) {
+		var wg sync.WaitGroup
+		var sendErr, recvErr error
+		var data []byte
 
-	var wg sync.WaitGroup
-	var sendErr, recvErr error
-	var data []byte
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			data, recvErr = r.Recv()
+		}()
+		go func() {
+			defer wg.Done()
+			sendErr = s.Send([]byte(msg))
+		}()
+		wg.Wait()
 
-	wg.Add(2)
-	go func() {
-		defer wg.Done()
-		data, recvErr = r.Recv()
-	}()
-	go func() {
-		defer wg.Done()
-		sendErr = s.Send([]byte(msg))
-	}()
-	wg.Wait()
-
-	if sendErr != nil {
-		t.Errorf("Send(%q): unexpected error: %v", msg, sendErr)
-	}
-	if recvErr != nil {
-		t.Errorf("Recv(): unexpected error: %v", recvErr)
-	}
-	if got := string(data); got != msg {
-		t.Errorf("Recv():\ngot  %#q\nwant %#q", got, msg)
-	}
+		if sendErr != nil {
+			t.Errorf("Send(%q): unexpected error: %v", msg, sendErr)
+		}
+		if recvErr != nil {
+			t.Errorf("Recv(): unexpected error: %v", recvErr)
+		}
+		if got := string(data); got != msg {
+			t.Errorf("Recv():\ngot  %#q\nwant %#q", got, msg)
+		}
+	})
 }
 
 const message1 = `["Full plate and packing steel"]`
