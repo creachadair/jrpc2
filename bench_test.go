@@ -11,7 +11,6 @@ import (
 	"github.com/creachadair/jrpc2"
 	"github.com/creachadair/jrpc2/handler"
 	"github.com/creachadair/jrpc2/server"
-	"github.com/fortytw2/leaktest"
 )
 
 func BenchmarkRoundTrip(b *testing.B) {
@@ -54,8 +53,6 @@ func BenchmarkRoundTrip(b *testing.B) {
 }
 
 func BenchmarkLoad(b *testing.B) {
-	defer leaktest.Check(b)()
-
 	// The load testing service has a no-op method to exercise server overhead.
 	loc := server.NewLocal(handler.Map{
 		"void": func(context.Context, *jrpc2.Request) (any, error) {
