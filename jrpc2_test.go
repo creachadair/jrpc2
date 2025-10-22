@@ -952,7 +952,7 @@ func TestClient_concurrentCallbacks(t *testing.T) {
 		defer loc.Close()
 
 		var got []string
-		if err := loc.Client.CallResult(context.Background(), "Test", nil, &got); err != nil {
+		if err := loc.Client.CallResult(t.Context(), "Test", nil, &got); err != nil {
 			t.Errorf("Call Test failed: %v", err)
 		}
 		want := []string{"C1", "C2"}
@@ -1023,7 +1023,7 @@ func TestRPCServerInfo(t *testing.T) {
 		defer loc.Close()
 
 		var si jrpc2.ServerInfo
-		if err := loc.Client.CallResult(context.Background(), "rpc.serverInfo", nil, &si); err != nil {
+		if err := loc.Client.CallResult(t.Context(), "rpc.serverInfo", nil, &si); err != nil {
 			t.Errorf("rpc.serverInfo call failed: %v", err)
 		}
 

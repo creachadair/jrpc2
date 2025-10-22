@@ -186,7 +186,7 @@ func TestClient_contextCancellation(t *testing.T) {
 
 	// Start a call that will hang around until a timer expires or an explicit
 	// cancellation is received.
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	req, err := c.req(ctx, "Hang", nil)
 	if err != nil {
 		t.Fatalf("c.req(Hang) failed: %v", err)
@@ -225,13 +225,12 @@ func TestServer_specialMethods(t *testing.T) {
 			return true, nil
 		}),
 	}, nil)
-	ctx := context.Background()
 	for _, name := range []string{rpcServerInfo, "donkeybait"} {
-		if got := s.assignLocked(ctx, name); got == nil {
+		if got := s.assignLocked(t.Context(), name); got == nil {
 			t.Errorf("s.assignLocked(%s): no method assigned", name)
 		}
 	}
-	if got := s.assignLocked(ctx, "rpc.nonesuch"); got != nil {
+	if got := s.assignLocked(t.Context(), "rpc.nonesuch"); got != nil {
 		t.Errorf("s.assignLocked(rpc.nonesuch): got %p, want nil", got)
 	}
 }
@@ -246,17 +245,16 @@ func TestServer_disableBuiltinHook(t *testing.T) {
 			return "OK", nil
 		}),
 	}, &ServerOptions{DisableBuiltin: true})
-	ctx := context.Background()
 
 	// With builtins disabled, the default rpc.* methods should not get assigned.
 	for _, name := range []string{rpcServerInfo} {
-		if got := s.assignLocked(ctx, name); got != nil {
+		if got := s.assignLocked(t.Context(), name); got != nil {
 			t.Errorf("s.assignLocked(%s): got %p, wanted nil", name, got)
 		}
 	}
 
 	// However, user-assigned methods with this prefix should now work.
-	if got := s.assignLocked(ctx, "rpc.nonesuch"); got == nil {
+	if got := s.assignLocked(t.Context(), "rpc.nonesuch"); got == nil {
 		t.Error("s.assignLocked(rpc.nonesuch): missing assignment")
 	}
 }
