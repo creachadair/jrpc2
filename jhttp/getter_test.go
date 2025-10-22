@@ -7,63 +7,65 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/http/httptest"
 	"strconv"
 	"strings"
 	"testing"
+	"testing/synctest"
 
 	"github.com/creachadair/jrpc2/handler"
 	"github.com/creachadair/jrpc2/jhttp"
-	"github.com/fortytw2/leaktest"
 	"github.com/google/go-cmp/cmp"
 )
 
 func TestGetter(t *testing.T) {
-	defer leaktest.Check(t)()
-
-	mux := handler.Map{
-		"concat": handler.NewPos(func(ctx context.Context, a, b string) string {
-			return a + b
-		}, "first", "second"),
-	}
-
-	g := jhttp.NewGetter(mux, nil)
-	defer checkClose(t, g)
-
-	hsrv := httptest.NewServer(g)
-	defer hsrv.Close()
-	url := func(pathQuery string) string {
-		return hsrv.URL + "/" + pathQuery
-	}
-
-	t.Run("OK", func(t *testing.T) {
-		got := mustGet(t, url("concat?second=world&first=hello"), http.StatusOK)
-		const want = `"helloworld"`
-		if got != want {
-			t.Errorf("Response body: got %#q, want %#q", got, want)
+	synctest.Test(t, func(t *testing.T) {
+		mux := handler.Map{
+			"concat": handler.NewPos(func(ctx context.Context, a, b string) string {
+				return a + b
+			}, "first", "second"),
 		}
-	})
-	t.Run("NotFound", func(t *testing.T) {
-		got := mustGet(t, url("nonesuch"), http.StatusNotFound)
-		const want = `"code":-32601` // MethodNotFound
-		if !strings.Contains(got, want) {
-			t.Errorf("Response body: got %#q, want %#q", got, want)
+
+		g := jhttp.NewGetter(mux, nil)
+		defer checkClose(t, g)
+
+		hsrv, hcli := newHTTPServer(t, g)
+		url := func(pathQuery string) string {
+			return hsrv.URL + "/" + pathQuery
 		}
-	})
-	t.Run("BadRequest", func(t *testing.T) {
-		// N.B. invalid query string
-		got := mustGet(t, url("concat?x%2"), http.StatusBadRequest)
-		const want = `"code":-32700` // ParseError
-		if !strings.Contains(got, want) {
-			t.Errorf("Response body: got %#q, want %#q", got, want)
-		}
-	})
-	t.Run("InternalError", func(t *testing.T) {
-		got := mustGet(t, url("concat?third=c"), http.StatusInternalServerError)
-		const want = `"code":-32602` // InvalidParams
-		if !strings.Contains(got, want) {
-			t.Errorf("Response body: got %#q, want %#q", got, want)
-		}
+
+		func() {
+			t.Log("OK")
+			got := mustGet(t, hcli, url("concat?second=world&first=hello"), http.StatusOK)
+			const want = `"helloworld"`
+			if got != want {
+				t.Errorf("Response body: got %#q, want %#q", got, want)
+			}
+		}()
+		func() {
+			t.Log("NotFound")
+			got := mustGet(t, hcli, url("nonesuch"), http.StatusNotFound)
+			const want = `"code":-32601` // MethodNotFound
+			if !strings.Contains(got, want) {
+				t.Errorf("Response body: got %#q, want %#q", got, want)
+			}
+		}()
+		func() {
+			t.Log("BadRequest")
+			// N.B. invalid query string
+			got := mustGet(t, hcli, url("concat?x%2"), http.StatusBadRequest)
+			const want = `"code":-32700` // ParseError
+			if !strings.Contains(got, want) {
+				t.Errorf("Response body: got %#q, want %#q", got, want)
+			}
+		}()
+		func() {
+			t.Log("InternalError")
+			got := mustGet(t, hcli, url("concat?third=c"), http.StatusInternalServerError)
+			const want = `"code":-32602` // InvalidParams
+			if !strings.Contains(got, want) {
+				t.Errorf("Response body: got %#q, want %#q", got, want)
+			}
+		}()
 	})
 }
 
@@ -160,74 +162,78 @@ func TestParseQuery(t *testing.T) {
 }
 
 func TestGetter_parseRequest(t *testing.T) {
-	defer leaktest.Check(t)()
+	synctest.Test(t, func(t *testing.T) {
+		mux := handler.Map{
+			"format": handler.NewPos(func(ctx context.Context, a string, b int) string {
+				return fmt.Sprintf("%s-%d", a, b)
+			}, "tag", "value"),
+		}
 
-	mux := handler.Map{
-		"format": handler.NewPos(func(ctx context.Context, a string, b int) string {
-			return fmt.Sprintf("%s-%d", a, b)
-		}, "tag", "value"),
-	}
+		g := jhttp.NewGetter(mux, &jhttp.GetterOptions{
+			ParseRequest: func(req *http.Request) (string, any, error) {
+				if err := req.ParseForm(); err != nil {
+					return "", nil, err
+				}
+				tag := req.Form.Get("tag")
+				val, err := strconv.ParseInt(req.Form.Get("value"), 10, 64)
+				if err != nil && req.Form.Get("value") != "" {
+					return "", nil, fmt.Errorf("invalid number: %w", err)
+				}
+				return strings.TrimPrefix(req.URL.Path, "/x/"), map[string]any{
+					"tag":   tag,
+					"value": val,
+				}, nil
+			},
+		})
+		defer checkClose(t, g)
 
-	g := jhttp.NewGetter(mux, &jhttp.GetterOptions{
-		ParseRequest: func(req *http.Request) (string, any, error) {
-			if err := req.ParseForm(); err != nil {
-				return "", nil, err
+		hsrv, hcli := newHTTPServer(t, g)
+		url := func(pathQuery string) string {
+			return hsrv.URL + "/" + pathQuery
+		}
+
+		func() {
+			t.Log("OK")
+			got := mustGet(t, hcli, url("x/format?tag=foo&value=25"), http.StatusOK)
+			const want = `"foo-25"`
+			if got != want {
+				t.Errorf("Response body: got %#q, want %#q", got, want)
 			}
-			tag := req.Form.Get("tag")
-			val, err := strconv.ParseInt(req.Form.Get("value"), 10, 64)
-			if err != nil && req.Form.Get("value") != "" {
-				return "", nil, fmt.Errorf("invalid number: %w", err)
+		}()
+		func() {
+			t.Log("NotFound")
+			// N.B. Missing path prefix.
+			got := mustGet(t, hcli, url("format"), http.StatusNotFound)
+			const want = `"code":-32601` // MethodNotFound
+			if !strings.Contains(got, want) {
+				t.Errorf("Response body: got %#q, want %#q", got, want)
 			}
-			return strings.TrimPrefix(req.URL.Path, "/x/"), map[string]any{
-				"tag":   tag,
-				"value": val,
-			}, nil
-		},
-	})
-	defer checkClose(t, g)
-
-	hsrv := httptest.NewServer(g)
-	defer hsrv.Close()
-	url := func(pathQuery string) string {
-		return hsrv.URL + "/" + pathQuery
-	}
-
-	t.Run("OK", func(t *testing.T) {
-		got := mustGet(t, url("x/format?tag=foo&value=25"), http.StatusOK)
-		const want = `"foo-25"`
-		if got != want {
-			t.Errorf("Response body: got %#q, want %#q", got, want)
-		}
-	})
-	t.Run("NotFound", func(t *testing.T) {
-		// N.B. Missing path prefix.
-		got := mustGet(t, url("format"), http.StatusNotFound)
-		const want = `"code":-32601` // MethodNotFound
-		if !strings.Contains(got, want) {
-			t.Errorf("Response body: got %#q, want %#q", got, want)
-		}
-	})
-	t.Run("InternalError", func(t *testing.T) {
-		// N.B. Parameter type does not match on the server side.
-		got := mustGet(t, url("x/format?tag=foo&value=bar"), http.StatusBadRequest)
-		const want = `"code":-32700` // ParseError
-		if !strings.Contains(got, want) {
-			t.Errorf("Response body: got %#q, want %#q", got, want)
-		}
+		}()
+		func() {
+			t.Log("InternalError")
+			// N.B. Parameter type does not match on the server side.
+			got := mustGet(t, hcli, url("x/format?tag=foo&value=bar"), http.StatusBadRequest)
+			const want = `"code":-32700` // ParseError
+			if !strings.Contains(got, want) {
+				t.Errorf("Response body: got %#q, want %#q", got, want)
+			}
+		}()
 	})
 }
 
-func mustGet(t *testing.T, url string, code int) string {
+func mustGet(t *testing.T, cli *http.Client, url string, code int) string {
 	t.Helper()
-	rsp, err := http.Get(url)
+	rsp, err := cli.Get(url)
 	if err != nil {
 		t.Fatalf("GET request failed: %v", err)
-	} else if got := rsp.StatusCode; got != code {
-		t.Errorf("GET response code: got %v, want %v", got, code)
 	}
 	body, err := io.ReadAll(rsp.Body)
+	rsp.Body.Close()
 	if err != nil {
 		t.Errorf("Reading GET body: %v", err)
+	}
+	if got := rsp.StatusCode; got != code {
+		t.Errorf("GET response code: got %v, want %v", got, code)
 	}
 	return string(body)
 }
