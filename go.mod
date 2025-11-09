@@ -3,9 +3,9 @@ module github.com/creachadair/jrpc2
 go 1.25
 
 require (
-	github.com/creachadair/mds v0.25.8
+	github.com/creachadair/mds v0.25.12
 	github.com/google/go-cmp v0.7.0
-	golang.org/x/sync v0.17.0
+	golang.org/x/sync v0.18.0
 )
 
 require (

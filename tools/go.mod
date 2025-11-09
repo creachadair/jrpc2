@@ -9,6 +9,6 @@ require (
 
 require (
 	github.com/coder/websocket v1.8.14 // indirect
-	github.com/creachadair/mds v0.25.8 // indirect
-	golang.org/x/sync v0.17.0 // indirect
+	github.com/creachadair/mds v0.25.12 // indirect
+	golang.org/x/sync v0.18.0 // indirect
 )
