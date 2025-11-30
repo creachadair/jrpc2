@@ -187,11 +187,8 @@ func TestLoop(t *testing.T) {
 				// Start a bunch of clients, each of which will dial the server and make
 				// some calls at random intervals to tickle the race detector.
 				var wg sync.WaitGroup
-				for i := 0; i < numClients; i++ {
-					wg.Add(1)
-					i := i
-					go func() {
-						defer wg.Done()
+				for i := range numClients {
+					wg.Go(func() {
 						cli := mustDial(t, lst)
 						defer cli.Close()
 
@@ -204,7 +201,7 @@ func TestLoop(t *testing.T) {
 								t.Errorf("[client %d]: Test call %d: got %q, want OK", i, j+1, rsp)
 							}
 						}
-					}()
+					})
 				}
 
 				// Wait for the clients to be finished and then close the listener so that

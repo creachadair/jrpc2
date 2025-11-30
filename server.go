@@ -141,13 +141,12 @@ func (s *Server) Start(c channel.Channel) *Server {
 	// processing the request queue. In addition, each request in flight adds a
 	// goroutine to s.wg. At server shutdown, s.wg completes when the
 	// maintenance goroutines and all pending requests are finished.
-	s.wg.Add(2)
 
 	// Accept requests from the client and enqueue them for processing.
-	go func() { defer s.wg.Done(); s.read(c) }()
+	s.wg.Go(func() { s.read(c) })
 
 	// Remove requests from the queue and dispatch them to handlers.
-	go func() { defer s.wg.Done(); s.serve() }()
+	s.wg.Go(s.serve)
 
 	return s
 }
@@ -174,11 +173,7 @@ func (s *Server) serve() {
 			s.log("Error reading from client: %v", err)
 			return
 		}
-		s.wg.Add(1)
-		go func() {
-			defer s.wg.Done()
-			next()
-		}()
+		s.wg.Go(func() { next() })
 	}
 }
 
@@ -263,14 +258,12 @@ func (s *Server) dispatchLocked(next jmessages, ch sender) func() error {
 				break
 			}
 			t := t
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				t.val, t.err = s.invoke(t.ctx, t.m, t.hreq)
 				if t.hreq.IsNotification() {
 					s.nbar.Done()
 				}
-			}()
+			})
 		}
 
 		// Wait for all the handlers to return, then deliver any responses.

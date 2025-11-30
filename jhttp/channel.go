@@ -79,9 +79,7 @@ func (c *Channel) Send(msg []byte) error {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	c.wg.Add(1)
-	go func() {
-		defer c.wg.Done()
+	c.wg.Go(func() {
 		rsp, err := cli.Do(req)
 
 		// If the server replied with an empty acknowledgement for a
@@ -91,7 +89,7 @@ func (c *Channel) Send(msg []byte) error {
 			return
 		}
 		c.rsp <- response{rsp, err}
-	}()
+	})
 	return nil
 }
 

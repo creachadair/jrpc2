@@ -30,15 +30,12 @@ func testSendRecv(t *testing.T, s, r channel.Channel, msg string) {
 		var sendErr, recvErr error
 		var data []byte
 
-		wg.Add(2)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			data, recvErr = r.Recv()
-		}()
-		go func() {
-			defer wg.Done()
+		})
+		wg.Go(func() {
 			sendErr = s.Send([]byte(msg))
-		}()
+		})
 		wg.Wait()
 
 		if sendErr != nil {

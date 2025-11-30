@@ -68,13 +68,11 @@ func BenchmarkFramingCost(b *testing.B) {
 			pkt := bytes.Replace(msg, []byte("<XXX>"), []byte(strconv.Itoa(b.N)), 1)
 
 			var wg sync.WaitGroup
-			wg.Add(2)
 			b.ResetTimer()
 
 			// The "client" sends a message to the server and waits for it to be
 			// returned, then checks that the result matches.
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				for i := 0; i < b.N; i++ {
 					if err := cli.Send(pkt); err != nil {
 						b.Errorf("cli.Send(%d bytes) failed: %v", len(pkt), err)
@@ -90,11 +88,10 @@ func BenchmarkFramingCost(b *testing.B) {
 						continue
 					}
 				}
-			}()
+			})
 
 			// The "server" receives a messaage from the client and sends it back.
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				for i := 0; i < b.N; i++ {
 					pkt, err := srv.Recv()
 					if err != nil {
@@ -106,7 +103,8 @@ func BenchmarkFramingCost(b *testing.B) {
 						continue
 					}
 				}
-			}()
+			})
+
 			wg.Wait()
 		})
 	}

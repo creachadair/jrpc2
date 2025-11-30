@@ -105,10 +105,7 @@ func Loop(ctx context.Context, lst Accepter, newService func() Service, opts *Lo
 			wg.Wait()
 			return err
 		}
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-
+		wg.Go(func() {
 			svc := newService()
 			assigner, err := svc.Assigner()
 			if err != nil {
@@ -127,7 +124,7 @@ func Loop(ctx context.Context, lst Accepter, newService func() Service, opts *Lo
 			if stat.Err != nil {
 				log("Server exit: %v", stat.Err)
 			}
-		}()
+		})
 	}
 }
 

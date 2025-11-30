@@ -136,16 +136,14 @@ func main() {
 		x := rand.Intn(100)
 		for j := 1; j <= 5; j++ {
 			y := rand.Intn(100)
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				var result int
 				if err := cli.CallResult(ctx, "Math.Sub", handler.Obj{"X": x, "Y": y}, &result); err != nil {
 					log.Printf("Req (%d-%d) failed: %v", x, y, err)
 					return
 				}
 				log.Printf("Req (%d - %d): result=%d", x, y, result)
-			}()
+			})
 		}
 	}
 	wg.Wait()
