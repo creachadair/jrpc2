@@ -295,23 +295,23 @@ func TestServer_notificationOrder(t *testing.T) {
 // Verify that a method that returns only an error (no result payload) is set
 // up and handled correctly.
 func TestHandler_errorOnly(t *testing.T) {
-	synctest.Test(t, func(t *testing.T) {
-		const errMessage = "not enough strings"
-		loc := server.NewLocal(handler.Map{
-			"ErrorOnly": handler.New(func(_ context.Context, ss []string) error {
-				if len(ss) == 0 {
-					return jrpc2.Errorf(1, errMessage)
-				}
-				t.Logf("ErrorOnly succeeds on input %q", ss)
-				return nil
-			}),
-		}, nil)
-		defer loc.Close()
-		c := loc.Client
+	const errMessage = "not enough strings"
+	errorOnly := handler.Map{
+		"ErrorOnly": handler.New(func(_ context.Context, ss []string) error {
+			if len(ss) == 0 {
+				return jrpc2.Errorf(1, errMessage)
+			}
+			t.Logf("ErrorOnly succeeds on input %q", ss)
+			return nil
+		}),
+	}
 
-		func() {
-			t.Log("Call expecting an error")
-			rsp, err := c.Call(t.Context(), "ErrorOnly", []string{})
+	t.Run("Fail", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			loc := server.NewLocal(errorOnly, nil)
+			defer loc.Close()
+
+			rsp, err := loc.Client.Call(t.Context(), "ErrorOnly", []string{})
 			if err == nil {
 				t.Errorf("ErrorOnly: got %+v, want error", rsp)
 			} else if e, ok := err.(*jrpc2.Error); !ok {
@@ -319,11 +319,15 @@ func TestHandler_errorOnly(t *testing.T) {
 			} else if e.Code != 1 || e.Message != errMessage {
 				t.Errorf("ErrorOnly: got (%s, %s), want (1, %s)", e.Code, e.Message, errMessage)
 			}
-		}()
+		})
+	})
 
-		func() {
-			t.Log("Call expecting OK")
-			rsp, err := c.Call(t.Context(), "ErrorOnly", []string{"aiutami!"})
+	t.Run("Succeed", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			loc := server.NewLocal(errorOnly, nil)
+			defer loc.Close()
+
+			rsp, err := loc.Client.Call(t.Context(), "ErrorOnly", []string{"aiutami!"})
 			if err != nil {
 				t.Errorf("ErrorOnly: unexpected error: %v", err)
 			}
@@ -335,7 +339,7 @@ func TestHandler_errorOnly(t *testing.T) {
 			} else if r := string(got); r != "null" {
 				t.Errorf("ErrorOnly response: got %q, want null", r)
 			}
-		}()
+		})
 	})
 }
 
@@ -1146,53 +1150,54 @@ func (b buggyChannel) Recv() ([]byte, error) { return []byte(b.data), b.err }
 func (buggyChannel) Close() error            { return nil }
 
 func TestRequest_strictFields(t *testing.T) {
-	synctest.Test(t, func(t *testing.T) {
-		type other struct {
-			C bool `json:"charlie"`
-		}
-		type params struct {
-			A string `json:"alpha"`
-			B int    `json:"bravo"`
-			other
-		}
-		loc := server.NewLocal(handler.Map{
-			"Strict": handler.New(func(ctx context.Context, req *jrpc2.Request) (string, error) {
-				var ps params
-				if err := req.UnmarshalParams(jrpc2.StrictFields(&ps)); err != nil {
-					return "", err
-				}
-				return ps.A, nil
-			}),
-			"Normal": handler.New(func(ctx context.Context, req *jrpc2.Request) (string, error) {
-				var ps params
-				if err := req.UnmarshalParams(&ps); err != nil {
-					return "", err
-				}
-				return ps.A, nil
-			}),
-		}, nil)
-		defer loc.Close()
-
-		tests := []struct {
-			method string
-			params any
-			code   jrpc2.Code
-			want   string
-		}{
-			{"Strict", handler.Obj{"alpha": "aiuto"}, jrpc2.NoError, "aiuto"},
-			{"Strict", handler.Obj{"alpha": "selva me", "charlie": true}, jrpc2.NoError, "selva me"},
-			{"Strict", handler.Obj{"alpha": "OK", "nonesuch": true}, jrpc2.InvalidParams, ""},
-			{"Normal", handler.Obj{"alpha": "OK", "nonesuch": true}, jrpc2.NoError, "OK"},
-		}
-		for _, test := range tests {
-			name := test.method + "/"
-			if test.code == jrpc2.NoError {
-				name += "OK"
-			} else {
-				name += test.code.String()
+	type other struct {
+		C bool `json:"charlie"`
+	}
+	type params struct {
+		A string `json:"alpha"`
+		B int    `json:"bravo"`
+		other
+	}
+	testHandler := handler.Map{
+		"Strict": handler.New(func(ctx context.Context, req *jrpc2.Request) (string, error) {
+			var ps params
+			if err := req.UnmarshalParams(jrpc2.StrictFields(&ps)); err != nil {
+				return "", err
 			}
-			func() {
-				t.Log(name)
+			return ps.A, nil
+		}),
+		"Normal": handler.New(func(ctx context.Context, req *jrpc2.Request) (string, error) {
+			var ps params
+			if err := req.UnmarshalParams(&ps); err != nil {
+				return "", err
+			}
+			return ps.A, nil
+		}),
+	}
+
+	tests := []struct {
+		method string
+		params any
+		code   jrpc2.Code
+		want   string
+	}{
+		{"Strict", handler.Obj{"alpha": "aiuto"}, jrpc2.NoError, "aiuto"},
+		{"Strict", handler.Obj{"alpha": "selva me", "charlie": true}, jrpc2.NoError, "selva me"},
+		{"Strict", handler.Obj{"alpha": "OK", "nonesuch": true}, jrpc2.InvalidParams, ""},
+		{"Normal", handler.Obj{"alpha": "OK", "nonesuch": true}, jrpc2.NoError, "OK"},
+	}
+	for _, test := range tests {
+		name := test.method + "/"
+		if test.code == jrpc2.NoError {
+			name += "OK"
+		} else {
+			name += test.code.String()
+		}
+		t.Run(name, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				loc := server.NewLocal(testHandler, nil)
+				defer loc.Close()
+
 				var res string
 				err := loc.Client.CallResult(t.Context(), test.method, test.params, &res)
 				if err == nil && test.code != jrpc2.NoError {
@@ -1204,44 +1209,41 @@ func TestRequest_strictFields(t *testing.T) {
 				} else if res != test.want {
 					t.Errorf("CallResult: got %#q, want %#q", res, test.want)
 				}
-			}()
-		}
-	})
+			})
+		})
+	}
 }
 
 func TestResponse_strictFields(t *testing.T) {
-	synctest.Test(t, func(t *testing.T) {
-		type result struct {
-			A string `json:"alpha"`
-		}
-		loc := server.NewLocal(handler.Map{
-			"Test": handler.New(func(ctx context.Context, req *jrpc2.Request) handler.Obj {
-				return handler.Obj{"alpha": "OK", "bravo": "not OK"}
-			}),
-		}, nil)
-		defer loc.Close()
+	type result struct {
+		A string `json:"alpha"`
+	}
+	loc := server.NewLocal(handler.Map{
+		"Test": handler.New(func(ctx context.Context, req *jrpc2.Request) handler.Obj {
+			return handler.Obj{"alpha": "OK", "bravo": "not OK"}
+		}),
+	}, nil)
+	defer loc.Close()
 
-		res, err := loc.Client.Call(t.Context(), "Test", nil)
-		if err != nil {
-			t.Fatalf("Call failed: %v", err)
-		}
+	res, err := loc.Client.Call(t.Context(), "Test", nil)
+	if err != nil {
+		t.Fatalf("Call failed: %v", err)
+	}
 
-		func() {
-			t.Log("Normal")
-			var got result
-			if err := res.UnmarshalResult(&got); err != nil {
-				t.Errorf("UnmarshalResult failed: %v", err)
-			} else if got.A != "OK" {
-				t.Errorf("Result: got %#q, want OK", got.A)
-			}
-		}()
-		func() {
-			t.Log("Strict")
-			var got result
-			if err := res.UnmarshalResult(jrpc2.StrictFields(&got)); err == nil {
-				t.Errorf("UnmarshalResult: got %#v, wanted error", got)
-			}
-		}()
+	t.Run("Normal", func(t *testing.T) {
+		t.Log("Normal")
+		var got result
+		if err := res.UnmarshalResult(&got); err != nil {
+			t.Errorf("UnmarshalResult failed: %v", err)
+		} else if got.A != "OK" {
+			t.Errorf("Result: got %#q, want OK", got.A)
+		}
+	})
+	t.Run("Strict", func(t *testing.T) {
+		var got result
+		if err := res.UnmarshalResult(jrpc2.StrictFields(&got)); err == nil {
+			t.Errorf("UnmarshalResult: got %#v, wanted error", got)
+		}
 	})
 }
 
