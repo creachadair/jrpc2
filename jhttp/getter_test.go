@@ -18,54 +18,61 @@ import (
 )
 
 func TestGetter(t *testing.T) {
-	synctest.Test(t, func(t *testing.T) {
-		mux := handler.Map{
-			"concat": handler.NewPos(func(ctx context.Context, a, b string) string {
-				return a + b
-			}, "first", "second"),
-		}
-
+	mux := handler.Map{
+		"concat": handler.NewPos(func(ctx context.Context, a, b string) string {
+			return a + b
+		}, "first", "second"),
+	}
+	setup := func(t *testing.T) (*http.Client, func(string) string) {
 		g := jhttp.NewGetter(mux, nil)
-		defer checkClose(t, g)
+		t.Cleanup(func() { checkClose(t, g) })
 
 		hsrv, hcli := newHTTPServer(t, g)
-		url := func(pathQuery string) string {
+		t.Cleanup(hsrv.Close)
+		return hcli, func(pathQuery string) string {
 			return hsrv.URL + "/" + pathQuery
 		}
-
-		func() {
-			t.Log("OK")
+	}
+	t.Run("OK", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			hcli, url := setup(t)
 			got := mustGet(t, hcli, url("concat?second=world&first=hello"), http.StatusOK)
 			const want = `"helloworld"`
 			if got != want {
 				t.Errorf("Response body: got %#q, want %#q", got, want)
 			}
-		}()
-		func() {
-			t.Log("NotFound")
+		})
+	})
+	t.Run("NotFound", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			hcli, url := setup(t)
 			got := mustGet(t, hcli, url("nonesuch"), http.StatusNotFound)
 			const want = `"code":-32601` // MethodNotFound
 			if !strings.Contains(got, want) {
 				t.Errorf("Response body: got %#q, want %#q", got, want)
 			}
-		}()
-		func() {
-			t.Log("BadRequest")
+		})
+	})
+	t.Run("BadRequest", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			hcli, url := setup(t)
 			// N.B. invalid query string
 			got := mustGet(t, hcli, url("concat?x%2"), http.StatusBadRequest)
 			const want = `"code":-32700` // ParseError
 			if !strings.Contains(got, want) {
 				t.Errorf("Response body: got %#q, want %#q", got, want)
 			}
-		}()
-		func() {
-			t.Log("InternalError")
+		})
+	})
+	t.Run("InternalError", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			hcli, url := setup(t)
 			got := mustGet(t, hcli, url("concat?third=c"), http.StatusInternalServerError)
 			const want = `"code":-32602` // InvalidParams
 			if !strings.Contains(got, want) {
 				t.Errorf("Response body: got %#q, want %#q", got, want)
 			}
-		}()
+		})
 	})
 }
 
@@ -162,13 +169,13 @@ func TestParseQuery(t *testing.T) {
 }
 
 func TestGetter_parseRequest(t *testing.T) {
-	synctest.Test(t, func(t *testing.T) {
-		mux := handler.Map{
-			"format": handler.NewPos(func(ctx context.Context, a string, b int) string {
-				return fmt.Sprintf("%s-%d", a, b)
-			}, "tag", "value"),
-		}
+	mux := handler.Map{
+		"format": handler.NewPos(func(ctx context.Context, a string, b int) string {
+			return fmt.Sprintf("%s-%d", a, b)
+		}, "tag", "value"),
+	}
 
+	setup := func(t *testing.T) (*http.Client, func(string) string) {
 		g := jhttp.NewGetter(mux, &jhttp.GetterOptions{
 			ParseRequest: func(req *http.Request) (string, any, error) {
 				if err := req.ParseForm(); err != nil {
@@ -185,39 +192,47 @@ func TestGetter_parseRequest(t *testing.T) {
 				}, nil
 			},
 		})
-		defer checkClose(t, g)
+		t.Cleanup(func() { checkClose(t, g) })
 
 		hsrv, hcli := newHTTPServer(t, g)
-		url := func(pathQuery string) string {
+		t.Cleanup(hsrv.Close)
+		return hcli, func(pathQuery string) string {
 			return hsrv.URL + "/" + pathQuery
 		}
-
-		func() {
-			t.Log("OK")
+	}
+	t.Run("OK", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			hcli, url := setup(t)
 			got := mustGet(t, hcli, url("x/format?tag=foo&value=25"), http.StatusOK)
 			const want = `"foo-25"`
 			if got != want {
 				t.Errorf("Response body: got %#q, want %#q", got, want)
 			}
-		}()
-		func() {
-			t.Log("NotFound")
+		})
+	})
+	t.Run("NotFound", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			hcli, url := setup(t)
+
 			// N.B. Missing path prefix.
 			got := mustGet(t, hcli, url("format"), http.StatusNotFound)
 			const want = `"code":-32601` // MethodNotFound
 			if !strings.Contains(got, want) {
 				t.Errorf("Response body: got %#q, want %#q", got, want)
 			}
-		}()
-		func() {
-			t.Log("InternalError")
+		})
+	})
+	t.Run("InternalError", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			hcli, url := setup(t)
+
 			// N.B. Parameter type does not match on the server side.
 			got := mustGet(t, hcli, url("x/format?tag=foo&value=bar"), http.StatusBadRequest)
 			const want = `"code":-32700` // ParseError
 			if !strings.Contains(got, want) {
 				t.Errorf("Response body: got %#q, want %#q", got, want)
 			}
-		}()
+		})
 	})
 }
 

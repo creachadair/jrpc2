@@ -219,10 +219,10 @@ func TestBridge(t *testing.T) {
 
 // Verify that the request-parsing hook works.
 func TestBridge_parseRequest(t *testing.T) {
-	synctest.Test(t, func(t *testing.T) {
-		const reqMessage = `{"jsonrpc":"2.0", "method": "Test2", "id": 100, "params":null}`
-		const wantReply = `{"jsonrpc":"2.0","id":100,"result":0}`
+	const reqMessage = `{"jsonrpc":"2.0", "method": "Test2", "id": 100, "params":null}`
+	const wantReply = `{"jsonrpc":"2.0","id":100,"result":0}`
 
+	setup := func(t *testing.T) (*http.Client, string) {
 		b := jhttp.NewBridge(testService, &jhttp.BridgeOptions{
 			ParseRequest: func(req *http.Request) ([]*jrpc2.ParsedRequest, error) {
 				action := req.Header.Get("x-test-header")
@@ -232,13 +232,17 @@ func TestBridge_parseRequest(t *testing.T) {
 				return jrpc2.ParseRequests([]byte(reqMessage))
 			},
 		})
-		defer checkClose(t, b)
+		t.Cleanup(func() { checkClose(t, b) })
 		hsrv, hcli := newHTTPServer(t, b)
-		func() {
-			t.Log("Succeed")
+		t.Cleanup(hsrv.Close)
+		return hcli, hsrv.URL
+	}
+	t.Run("Succeed", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			hcli, url := setup(t)
 			// Since a parse hook is set, the method and content-type checks should not occur.
 			// We send an empty body to be sure the request comes from the hook.
-			req, err := http.NewRequest("GET", hsrv.URL, strings.NewReader(""))
+			req, err := http.NewRequest("GET", url, strings.NewReader(""))
 			if err != nil {
 				t.Fatalf("NewRequest: %v", err)
 			}
@@ -255,11 +259,12 @@ func TestBridge_parseRequest(t *testing.T) {
 			if got := string(body); got != wantReply {
 				t.Errorf("Response: got %#q, want %#q", got, wantReply)
 			}
-		}()
-
-		func() {
-			t.Log("Fail")
-			req, err := http.NewRequest("POST", hsrv.URL, strings.NewReader(""))
+		})
+	})
+	t.Run("Fail", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			hcli, url := setup(t)
+			req, err := http.NewRequest("POST", url, strings.NewReader(""))
 			if err != nil {
 				t.Fatalf("NewRequest: %v", err)
 			}
@@ -274,17 +279,18 @@ func TestBridge_parseRequest(t *testing.T) {
 			if got, want := rsp.StatusCode, http.StatusInternalServerError; got != want {
 				t.Errorf("POST response code: got %v, want %v", got, want)
 			}
-		}()
+		})
 	})
 }
 
 func TestBridge_parseGETRequest(t *testing.T) {
-	synctest.Test(t, func(t *testing.T) {
-		mux := handler.Map{
-			"str/eq": handler.NewPos(func(ctx context.Context, a, b string) bool {
-				return a == b
-			}, "lhs", "rhs"),
-		}
+	mux := handler.Map{
+		"str/eq": handler.NewPos(func(ctx context.Context, a, b string) bool {
+			return a == b
+		}, "lhs", "rhs"),
+	}
+
+	setup := func(t *testing.T) (*http.Client, func(string) string) {
 		b := jhttp.NewBridge(mux, &jhttp.BridgeOptions{
 			ParseGETRequest: func(req *http.Request) (string, any, error) {
 				if err := req.ParseForm(); err != nil {
@@ -298,31 +304,35 @@ func TestBridge_parseGETRequest(t *testing.T) {
 				return method, params, nil
 			},
 		})
-		defer checkClose(t, b)
+		t.Cleanup(func() { checkClose(t, b) })
 
 		hsrv, hcli := newHTTPServer(t, b)
-		url := func(pathQuery string) string {
+		t.Cleanup(hsrv.Close)
+		return hcli, func(pathQuery string) string {
 			return hsrv.URL + "/" + pathQuery
 		}
-
-		func() {
-			t.Log("GET")
+	}
+	t.Run("GET", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			hcli, url := setup(t)
 			got := mustGet(t, hcli, url("str/eq?rhs=fizz&lhs=buzz"), http.StatusOK)
 			const want = `false`
 			if got != want {
 				t.Errorf("Response body: got %#q, want %#q", got, want)
 			}
-		}()
-		func() {
-			t.Log("POST")
+		})
+	})
+	t.Run("POST", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			hcli, url := setup(t)
 			const req = `{"jsonrpc":"2.0", "id":1, "method":"str/eq", "params":["foo","foo"]}`
-			got := mustPost(t, hcli, hsrv.URL, "", req, http.StatusOK)
+			got := mustPost(t, hcli, url(""), "", req, http.StatusOK)
 
 			const want = `{"jsonrpc":"2.0","id":1,"result":true}`
 			if got != want {
 				t.Errorf("Response body: got %#q, want %#q", got, want)
 			}
-		}()
+		})
 	})
 }
 
