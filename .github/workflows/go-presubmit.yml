@@ -20,7 +20,7 @@ jobs:
         go-version: ['stable']
         os: ['ubuntu-24.04']
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
     - name: Install Go ${{ matrix.go-version }}
       uses: actions/setup-go@v6
       with:
