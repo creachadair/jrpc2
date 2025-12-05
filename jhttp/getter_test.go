@@ -14,6 +14,7 @@ import (
 
 	"github.com/creachadair/jrpc2/handler"
 	"github.com/creachadair/jrpc2/jhttp"
+	"github.com/creachadair/mds/mtest"
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -27,8 +28,7 @@ func TestGetter(t *testing.T) {
 		g := jhttp.NewGetter(mux, nil)
 		t.Cleanup(func() { checkClose(t, g) })
 
-		hsrv, hcli := newHTTPServer(t, g)
-		t.Cleanup(hsrv.Close)
+		hsrv, hcli := mtest.NewHTTPServer(t, g)
 		return hcli, func(pathQuery string) string {
 			return hsrv.URL + "/" + pathQuery
 		}
@@ -194,8 +194,7 @@ func TestGetter_parseRequest(t *testing.T) {
 		})
 		t.Cleanup(func() { checkClose(t, g) })
 
-		hsrv, hcli := newHTTPServer(t, g)
-		t.Cleanup(hsrv.Close)
+		hsrv, hcli := mtest.NewHTTPServer(t, g)
 		return hcli, func(pathQuery string) string {
 			return hsrv.URL + "/" + pathQuery
 		}

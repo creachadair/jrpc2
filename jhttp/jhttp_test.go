@@ -8,7 +8,6 @@ import (
 	"errors"
 	"io"
 	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 	"testing/synctest"
@@ -16,7 +15,7 @@ import (
 	"github.com/creachadair/jrpc2"
 	"github.com/creachadair/jrpc2/handler"
 	"github.com/creachadair/jrpc2/jhttp"
-	"github.com/creachadair/mds/mnet"
+	"github.com/creachadair/mds/mtest"
 )
 
 var testService = handler.Map{
@@ -28,29 +27,13 @@ var testService = handler.Map{
 	}),
 }
 
-func newHTTPServer(t *testing.T, h http.Handler) (*httptest.Server, *http.Client) {
-	n := mnet.New(t.Name() + " network")
-	lst := n.MustListen("tcp", "test:1234")
-
-	tsp := http.DefaultTransport.(*http.Transport).Clone()
-	tsp.DialContext = n.DialContext
-	cli := &http.Client{Transport: tsp}
-
-	hsrv := httptest.NewUnstartedServer(h)
-	hsrv.Listener = lst
-	hsrv.Start()
-	t.Cleanup(hsrv.Close)
-
-	return hsrv, cli
-}
-
 func TestBridge(t *testing.T) {
 	// Verify that a valid POST request succeeds.
 	t.Run("PostOK", func(t *testing.T) {
 		synctest.Test(t, func(t *testing.T) {
 			b := jhttp.NewBridge(testService, nil)
 			defer checkClose(t, b)
-			hsrv, hcli := newHTTPServer(t, b)
+			hsrv, hcli := mtest.NewHTTPServer(t, b)
 
 			for _, charset := range []string{"", "utf8", "utf-8"} {
 				got := mustPost(t, hcli, hsrv.URL, charset, `{
@@ -73,7 +56,7 @@ func TestBridge(t *testing.T) {
 		synctest.Test(t, func(t *testing.T) {
 			b := jhttp.NewBridge(testService, nil)
 			defer checkClose(t, b)
-			hsrv, hcli := newHTTPServer(t, b)
+			hsrv, hcli := mtest.NewHTTPServer(t, b)
 
 			got := mustPost(t, hcli, hsrv.URL, "", `[
 		  {"jsonrpc":"2.0", "id": 3, "method": "Test1", "params": ["first"]},
@@ -93,7 +76,7 @@ func TestBridge(t *testing.T) {
 		synctest.Test(t, func(t *testing.T) {
 			b := jhttp.NewBridge(testService, nil)
 			defer checkClose(t, b)
-			hsrv, hcli := newHTTPServer(t, b)
+			hsrv, hcli := mtest.NewHTTPServer(t, b)
 
 			got := mustPost(t, hcli, hsrv.URL, "", `[
         {"jsonrpc":"2.0", "id": 11, "method": "Test1", "params": ["a", "solo", "request"]}
@@ -111,7 +94,7 @@ func TestBridge(t *testing.T) {
 		synctest.Test(t, func(t *testing.T) {
 			b := jhttp.NewBridge(testService, nil)
 			defer checkClose(t, b)
-			hsrv, hcli := newHTTPServer(t, b)
+			hsrv, hcli := mtest.NewHTTPServer(t, b)
 
 			rsp, err := hcli.Get(hsrv.URL)
 			if err != nil {
@@ -130,7 +113,7 @@ func TestBridge(t *testing.T) {
 		synctest.Test(t, func(t *testing.T) {
 			b := jhttp.NewBridge(testService, nil)
 			defer checkClose(t, b)
-			hsrv, hcli := newHTTPServer(t, b)
+			hsrv, hcli := mtest.NewHTTPServer(t, b)
 
 			rsp, err := hcli.Post(hsrv.URL, "text/plain", strings.NewReader(`{}`))
 			if err != nil {
@@ -149,7 +132,7 @@ func TestBridge(t *testing.T) {
 		synctest.Test(t, func(t *testing.T) {
 			b := jhttp.NewBridge(testService, nil)
 			defer checkClose(t, b)
-			hsrv, hcli := newHTTPServer(t, b)
+			hsrv, hcli := mtest.NewHTTPServer(t, b)
 
 			got := mustPost(t, hcli, hsrv.URL, "iso-8859-1", "{}", http.StatusUnsupportedMediaType)
 			const want = "invalid content-type charset\n"
@@ -164,7 +147,7 @@ func TestBridge(t *testing.T) {
 		synctest.Test(t, func(t *testing.T) {
 			b := jhttp.NewBridge(testService, nil)
 			defer checkClose(t, b)
-			hsrv, hcli := newHTTPServer(t, b)
+			hsrv, hcli := mtest.NewHTTPServer(t, b)
 
 			got := mustPost(t, hcli, hsrv.URL, "utf-8", `{
 		  "id": 1,
@@ -183,7 +166,7 @@ func TestBridge(t *testing.T) {
 		synctest.Test(t, func(t *testing.T) {
 			b := jhttp.NewBridge(testService, nil)
 			defer checkClose(t, b)
-			hsrv, hcli := newHTTPServer(t, b)
+			hsrv, hcli := mtest.NewHTTPServer(t, b)
 
 			got := mustPost(t, hcli, hsrv.URL, "", `{
         "jsonrpc": "2.0",
@@ -203,7 +186,7 @@ func TestBridge(t *testing.T) {
 		synctest.Test(t, func(t *testing.T) {
 			b := jhttp.NewBridge(testService, nil)
 			defer checkClose(t, b)
-			hsrv, hcli := newHTTPServer(t, b)
+			hsrv, hcli := mtest.NewHTTPServer(t, b)
 
 			got := mustPost(t, hcli, hsrv.URL, "", `{
 		  "jsonrpc": "2.0",
@@ -233,8 +216,7 @@ func TestBridge_parseRequest(t *testing.T) {
 			},
 		})
 		t.Cleanup(func() { checkClose(t, b) })
-		hsrv, hcli := newHTTPServer(t, b)
-		t.Cleanup(hsrv.Close)
+		hsrv, hcli := mtest.NewHTTPServer(t, b)
 		return hcli, hsrv.URL
 	}
 	t.Run("Succeed", func(t *testing.T) {
@@ -306,8 +288,7 @@ func TestBridge_parseGETRequest(t *testing.T) {
 		})
 		t.Cleanup(func() { checkClose(t, b) })
 
-		hsrv, hcli := newHTTPServer(t, b)
-		t.Cleanup(hsrv.Close)
+		hsrv, hcli := mtest.NewHTTPServer(t, b)
 		return hcli, func(pathQuery string) string {
 			return hsrv.URL + "/" + pathQuery
 		}
@@ -340,7 +321,7 @@ func TestChannel(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		b := jhttp.NewBridge(testService, nil)
 		defer checkClose(t, b)
-		hsrv, hcli := newHTTPServer(t, b)
+		hsrv, hcli := mtest.NewHTTPServer(t, b)
 
 		tests := []struct {
 			params any
