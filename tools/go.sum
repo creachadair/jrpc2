@@ -2,11 +2,11 @@ github.com/coder/websocket v1.8.14 h1:9L0p0iKiNOibykf283eHkKUHHrpG7f65OE3BhhO7v9
 github.com/coder/websocket v1.8.14/go.mod h1:NX3SzP+inril6yawo5CQXx8+fk145lPDC6pumgx0mVg=
 github.com/creachadair/jrpc2 v1.3.4 h1:3bDFDlRORVAVuzBSpi4b81seIYZPSgdfZQQgGbGCbAA=
 github.com/creachadair/jrpc2 v1.3.4/go.mod h1:Rp2wYJ0fmAt66JlyLe+1zdM/a2DN5XmqffqDxANan+I=
-github.com/creachadair/mds v0.25.13 h1:PsSUHV6zsfPd29k4kvm1rMoee1YFia7JyNGeMPmDcPM=
-github.com/creachadair/mds v0.25.13/go.mod h1:4hatI3hRM+qhzuAmqPRFvaBM8mONkS7nsLxkcuTYUIs=
-github.com/creachadair/wschannel v0.0.0-20251002032053-a421862289a3 h1:ezP0ivsoStzHIr3yozwsjUs4vuEmvFP3ClmJKIMRk5g=
-github.com/creachadair/wschannel v0.0.0-20251002032053-a421862289a3/go.mod h1:jE/x5JLCU+3GBUvZbDulFDJsJg2KIWWV+EO4s1iG+kc=
+github.com/creachadair/mds v0.25.15 h1:i8CUqtfgbCqbvZ++L7lm8No3cOeic9YKF4vHEvEoj+Y=
+github.com/creachadair/mds v0.25.15/go.mod h1:XtMfRW15sjd1iOi1Z1k+dq0pRsR5xPbulpoTrpyhk8w=
+github.com/creachadair/wschannel v0.0.0-20251201060039-58ff5449d30c h1:Pl/nNeh90mpKtx/DW0t4MQknffMl1wDc9o2UDlKK5IA=
+github.com/creachadair/wschannel v0.0.0-20251201060039-58ff5449d30c/go.mod h1:PvqeQ/kbfSMQWsg4lwN64U/H5LaHB6MidJmPu9DoT5c=
 github.com/google/go-cmp v0.7.0 h1:wk8382ETsv4JYUZwIsn6YpYiWiBsYLSJiTsyBybVuN8=
 github.com/google/go-cmp v0.7.0/go.mod h1:pXiqmnSA92OHEEa9HXL2W4E7lf9JzCmGVUdgjX3N/iU=
-golang.org/x/sync v0.18.0 h1:kr88TuHDroi+UVf+0hZnirlk8o8T+4MrK6mr60WkH/I=
-golang.org/x/sync v0.18.0/go.mod h1:9KTHXmSnoGruLpwFjVSX0lNNA75CykiMECbovNTZqGI=
+golang.org/x/sync v0.19.0 h1:vV+1eWNmZ5geRlYjzm2adRgW2/mcpevXNg50YZtPCE4=
+golang.org/x/sync v0.19.0/go.mod h1:9KTHXmSnoGruLpwFjVSX0lNNA75CykiMECbovNTZqGI=
