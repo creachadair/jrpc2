@@ -103,7 +103,7 @@ func TestSeq(t *testing.T) {
 		lst := mustListen(t)
 		errc := mustServe(t, t.Context(), lst, testStatic)
 
-		for i := 0; i < 5; i++ {
+		for i := range 5 {
 			cli := mustDial(t, lst)
 			var rsp string
 			if err := cli.CallResult(t.Context(), "Test", nil, &rsp); err != nil {
@@ -192,7 +192,7 @@ func TestLoop(t *testing.T) {
 						cli := mustDial(t, lst)
 						defer cli.Close()
 
-						for j := 0; j < numCalls; j++ {
+						for j := range numCalls {
 							time.Sleep(time.Duration(rand.Intn(10)) * time.Second)
 							var rsp string
 							if err := cli.CallResult(t.Context(), "Test", nil, &rsp); err != nil {
