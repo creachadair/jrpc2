@@ -702,7 +702,7 @@ type ServerInfo struct {
 	Metrics map[string]any `json:"metrics,omitempty"`
 
 	// When the server started.
-	StartTime time.Time `json:"startTime,omitempty"`
+	StartTime time.Time `json:"startTime,omitzero"`
 }
 
 // assignLocked returns a Handler to handle the specified name, or nil.  The
