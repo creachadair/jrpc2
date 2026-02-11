@@ -181,7 +181,7 @@ func (fi *FuncInfo) Wrap() jrpc2.Handler {
 			return []reflect.Value{ctx, reflect.ValueOf(req)}, nil
 		}
 
-	} else if arg.Kind() == reflect.Ptr {
+	} else if arg.Kind() == reflect.Pointer {
 		// Case 3a: The function wants a pointer to its argument value.
 		newInput = func(ctx reflect.Value, req *jrpc2.Request) ([]reflect.Value, error) {
 			in := reflect.New(arg.Elem())

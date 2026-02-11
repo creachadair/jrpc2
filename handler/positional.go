@@ -34,7 +34,7 @@ func structFieldNames(atype reflect.Type) (bool, []string) {
 	if atype == nil {
 		return false, nil
 	}
-	if atype.Kind() == reflect.Ptr {
+	if atype.Kind() == reflect.Pointer {
 		atype = atype.Elem()
 	}
 	if atype.Kind() != reflect.Struct {
