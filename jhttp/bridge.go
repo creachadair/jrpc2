@@ -272,5 +272,5 @@ func marshalError(req *jrpc2.ParsedRequest) ([]byte, error) {
 	if id == "" {
 		id = "null"
 	}
-	return []byte(fmt.Sprintf(`{"jsonrpc":"2.0","id":%s,"error":%s}`, id, string(v))), nil
+	return fmt.Appendf(nil, `{"jsonrpc":"2.0","id":%s,"error":%s}`, id, string(v)), nil
 }
