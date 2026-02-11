@@ -61,12 +61,10 @@ func NewClient(ch channel.Channel, opts *ClientOptions) *Client {
 	// back to pending requests by their ID. Outbound requests do not queue;
 	// they are sent synchronously in the Send method.
 
-	c.done.Add(1)
-	go func() {
-		defer c.done.Done()
+	c.done.Go(func() {
 		for c.accept(ch) == nil {
 		}
-	}()
+	})
 	return c
 }
 
@@ -90,15 +88,13 @@ func (c *Client) accept(ch receiver) error {
 	}
 
 	c.log("Received %d responses", len(in))
-	c.done.Add(1)
-	go func() {
-		defer c.done.Done()
+	c.done.Go(func() {
 		c.mu.Lock()
 		defer c.mu.Unlock()
 		for _, rsp := range in {
 			c.deliverLocked(rsp)
 		}
-	}()
+	})
 	return nil
 }
 
@@ -120,9 +116,7 @@ func (c *Client) handleRequestLocked(msg *jmessage) {
 		// Run the callback handler in its own goroutine. The context will be
 		// cancelled automatically when the client is closed.
 		ctx := context.WithValue(c.cbctx, clientKey{}, c)
-		c.done.Add(1)
-		go func() {
-			defer c.done.Done()
+		c.done.Go(func() {
 			bits := c.scall(ctx, msg)
 
 			c.mu.Lock()
@@ -132,7 +126,7 @@ func (c *Client) handleRequestLocked(msg *jmessage) {
 			} else if err := c.ch.Send(bits); err != nil {
 				c.log("Sending reply for callback %v failed: %v", msg, err)
 			}
-		}()
+		})
 	}
 }
 
