@@ -30,7 +30,7 @@ type Namer interface {
 // A Handler function implements a method. The request contains the method
 // name, request ID, and parameters sent by the client. The result value must
 // be JSON-marshalable or nil. In case of error, the handler can return a value
-// of type *jrpc2.Error to control the response code sent back to the caller;
+// of type [*jrpc2.Error] to control the response code sent back to the caller;
 // otherwise the server will wrap the resulting value.
 //
 // The context passed to the handler by a [Server] includes two special values
