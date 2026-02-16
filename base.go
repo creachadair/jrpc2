@@ -31,7 +31,9 @@ type Namer interface {
 // name, request ID, and parameters sent by the client. The result value must
 // be JSON-marshalable or nil. In case of error, the handler can return a value
 // of type [*jrpc2.Error] to control the response code sent back to the caller;
-// otherwise the server will wrap the resulting value.
+// otherwise the server will wrap the resulting value. If the error implements
+// the [ErrCoder] interface, the resulting error response will use the code
+// reported by its ErrCode method.
 //
 // The context passed to the handler by a [Server] includes two special values
 // that the handler may extract.
