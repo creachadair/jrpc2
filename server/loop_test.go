@@ -66,19 +66,19 @@ func (t *testSession) Finish(assigner jrpc2.Assigner, stat jrpc2.ServerStatus) {
 	}
 }
 
-func mustListen(t *testing.T) mnet.Listener {
+func mustListen(t *testing.T) (*mnet.Network, mnet.Listener) {
 	t.Helper()
 	n := mnet.New(t.Name() + " network")
 	t.Cleanup(func() { n.Close() })
-	return n.MustListen("tcp", t.Name())
+	return n, n.MustListen("tcp", t.Name())
 }
 
-func mustDial(t *testing.T, lst mnet.Listener) *jrpc2.Client {
+func mustDial(t *testing.T, n *mnet.Network, addr net.Addr) *jrpc2.Client {
 	t.Helper()
 
-	conn, err := lst.Dial()
+	conn, err := n.Dial(addr.Network(), addr.String())
 	if err != nil {
-		t.Fatalf("Dial %q: %v", lst.Addr(), err)
+		t.Fatalf("Dial %q: %v", addr, err)
 	}
 	return jrpc2.NewClient(newChan(conn, conn), nil)
 }
@@ -100,11 +100,11 @@ func mustServe(t *testing.T, ctx context.Context, lst net.Listener, newService f
 // Test that sequential clients against the same server work sanely.
 func TestSeq(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
-		lst := mustListen(t)
+		n, lst := mustListen(t)
 		errc := mustServe(t, t.Context(), lst, testStatic)
 
 		for i := range 5 {
-			cli := mustDial(t, lst)
+			cli := mustDial(t, n, lst.Addr())
 			var rsp string
 			if err := cli.CallResult(t.Context(), "Test", nil, &rsp); err != nil {
 				t.Errorf("[client %d] Test call: unexpected error: %v", i, err)
@@ -126,7 +126,7 @@ func TestLoop_cancelContext(t *testing.T) {
 		ctx, cancel := context.WithTimeout(t.Context(), 1*time.Second)
 		defer cancel()
 
-		lst := mustListen(t)
+		_, lst := mustListen(t)
 		errc := mustServe(t, ctx, lst, testStatic)
 
 		if err := <-errc; err != nil {
@@ -141,7 +141,7 @@ func TestLoop_cancelServers(t *testing.T) {
 		ctx, cancel := context.WithCancel(t.Context())
 		defer cancel()
 
-		lst := mustListen(t)
+		n, lst := mustListen(t)
 		errc := mustServe(t, ctx, lst, server.Static(handler.Map{
 			"Test": handler.New(func(ctx context.Context) error {
 				// Block until cancelled.
@@ -149,7 +149,7 @@ func TestLoop_cancelServers(t *testing.T) {
 				return ctx.Err()
 			}),
 		}))
-		cli := mustDial(t, lst)
+		cli := mustDial(t, n, lst.Addr())
 		defer cli.Close()
 
 		// Issue a call to the server that will block until the server cancels the
@@ -181,7 +181,7 @@ func TestLoop(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
-				lst := mustListen(t)
+				n, lst := mustListen(t)
 				errc := mustServe(t, t.Context(), lst, test.cons)
 
 				// Start a bunch of clients, each of which will dial the server and make
@@ -189,7 +189,7 @@ func TestLoop(t *testing.T) {
 				var wg sync.WaitGroup
 				for i := range numClients {
 					wg.Go(func() {
-						cli := mustDial(t, lst)
+						cli := mustDial(t, n, lst.Addr())
 						defer cli.Close()
 
 						for j := range numCalls {
