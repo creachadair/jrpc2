@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/creachadair/jrpc2 v1.3.5
-	github.com/creachadair/wschannel v0.0.0-20260213055748-5e7765ca49d8
+	github.com/creachadair/wschannel v0.0.0-20260305153920-9c9bbe40620f
 )
 
 require (
