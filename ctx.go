@@ -4,6 +4,8 @@ package jrpc2
 
 import (
 	"context"
+
+	"github.com/creachadair/mds/mctx"
 )
 
 // InboundRequest returns the inbound request associated with the context
@@ -15,13 +17,10 @@ import (
 // request value returned by InboundRequest will be the same value as was
 // passed explicitly.
 func InboundRequest(ctx context.Context) *Request {
-	if v := ctx.Value(inboundRequestKey{}); v != nil {
-		return v.(*Request)
-	}
-	return nil
+	return inboundRequestKey.Lookup(ctx).Get()
 }
 
-type inboundRequestKey struct{}
+var inboundRequestKey mctx.Key[*Request]
 
 // ServerFromContext returns the server associated with the context passed to a
 // [Handler] by a [Server].  It will panic for a non-handler context.
@@ -30,9 +29,9 @@ type inboundRequestKey struct{}
 // of the context from which it was extracted; however, a handler must not
 // block on the [Server.Wait] or [Server.WaitStatus] methods, as the server
 // will deadlock waiting for the handler to return.
-func ServerFromContext(ctx context.Context) *Server { return ctx.Value(serverKey{}).(*Server) }
+func ServerFromContext(ctx context.Context) *Server { return serverKey.Lookup(ctx).Get() }
 
-type serverKey struct{}
+var serverKey mctx.Key[*Server]
 
 // ClientFromContext returns the client associated with the given context.
 // This will be populated on the context passed by a [Client] to a client-side
@@ -40,6 +39,6 @@ type serverKey struct{}
 //
 // A callback handler MUST NOT close the client, as the close will deadlock
 // waiting for the callback to return.
-func ClientFromContext(ctx context.Context) *Client { return ctx.Value(clientKey{}).(*Client) }
+func ClientFromContext(ctx context.Context) *Client { return clientKey.Lookup(ctx).Get() }
 
-type clientKey struct{}
+var clientKey mctx.Key[*Client]

@@ -356,7 +356,7 @@ func (s *Server) checkAndAssignLocked(next jmessages) tasks {
 // setContext constructs and attaches a request context to t, and reports
 // whether this succeeded.
 func (s *Server) setContext(t *task, id string) {
-	t.ctx = context.WithValue(s.newctx(), inboundRequestKey{}, t.hreq)
+	t.ctx = inboundRequestKey.Attach(s.newctx(), t.hreq)
 
 	// Store the cancellation for a request that needs a reply, so that we can
 	// respond to cancellation requests.
@@ -370,7 +370,7 @@ func (s *Server) setContext(t *task, id string) {
 // invoke invokes the handler m for the specified request type, and marshals
 // the return value into JSON if there is one.
 func (s *Server) invoke(base context.Context, h Handler, req *Request) (json.RawMessage, error) {
-	ctx := context.WithValue(base, serverKey{}, s)
+	ctx := serverKey.Attach(base, s)
 	if err := s.sem.Acquire(ctx, 1); err != nil {
 		return nil, err
 	}

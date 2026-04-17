@@ -19,6 +19,7 @@ import (
 	"github.com/creachadair/jrpc2/channel"
 	"github.com/creachadair/jrpc2/handler"
 	"github.com/creachadair/jrpc2/server"
+	"github.com/creachadair/mds/mctx"
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -1272,15 +1273,15 @@ func TestServer_newContext(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		// Prepare a context with a test value attached to it, that the handler can
 		// extract to verify that the base context was plumbed in correctly.
-		type ctxKey string
-		ctx := context.WithValue(t.Context(), ctxKey("test"), 42)
+		var ctxKey mctx.Key[int]
+		ctx := ctxKey.Attach(t.Context(), 42)
 
 		loc := server.NewLocal(handler.Map{
 			"Test": handler.New(func(ctx context.Context) error {
-				val := ctx.Value(ctxKey("test"))
-				if val == nil {
+				val := ctxKey.Lookup(ctx)
+				if !val.Present() {
 					t.Error("Test value is not present in context")
-				} else if v, ok := val.(int); !ok || v != 42 {
+				} else if v := val.Get(); v != 42 {
 					t.Errorf("Wrong test value: got %+v, want %v", val, 42)
 				}
 				return nil

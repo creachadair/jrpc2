@@ -115,7 +115,7 @@ func (c *Client) handleRequestLocked(msg *jmessage) {
 	} else {
 		// Run the callback handler in its own goroutine. The context will be
 		// cancelled automatically when the client is closed.
-		ctx := context.WithValue(c.cbctx, clientKey{}, c)
+		ctx := clientKey.Attach(c.cbctx, c)
 		c.done.Go(func() {
 			bits := c.scall(ctx, msg)
 
