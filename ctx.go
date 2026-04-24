@@ -20,7 +20,7 @@ func InboundRequest(ctx context.Context) *Request {
 	return inboundRequestKey.Lookup(ctx).Get()
 }
 
-var inboundRequestKey mctx.Key[*Request]
+var inboundRequestKey = mctx.New[*Request]("request")
 
 // ServerFromContext returns the server associated with the context passed to a
 // [Handler] by a [Server].  It will panic for a non-handler context.
@@ -31,7 +31,7 @@ var inboundRequestKey mctx.Key[*Request]
 // will deadlock waiting for the handler to return.
 func ServerFromContext(ctx context.Context) *Server { return serverKey.Lookup(ctx).Get() }
 
-var serverKey mctx.Key[*Server]
+var serverKey = mctx.New[*Server]("server")
 
 // ClientFromContext returns the client associated with the given context.
 // This will be populated on the context passed by a [Client] to a client-side
@@ -41,4 +41,4 @@ var serverKey mctx.Key[*Server]
 // waiting for the callback to return.
 func ClientFromContext(ctx context.Context) *Client { return clientKey.Lookup(ctx).Get() }
 
-var clientKey mctx.Key[*Client]
+var clientKey = mctx.New[*Client]("client")
