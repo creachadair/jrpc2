@@ -25,4 +25,4 @@ jobs:
       uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
       with:
         go-version: ${{ matrix.go-version }}
-    - uses: creachadair/go-presubmit-action@v2
+    - uses: creachadair/go-presubmit-action@4f7a734aa8275675a945fbf589734f8cf7dda58a # v2
