@@ -4,8 +4,8 @@ github.com/creachadair/jrpc2 v1.3.5 h1:onJko+1u6xoiRph3xwWmfNISR91teCRhbJwSyS9Sv
 github.com/creachadair/jrpc2 v1.3.5/go.mod h1:YXDmS53AavsiytbAwskrczJPcVHvKC9GoyWzwfSQXoE=
 github.com/creachadair/mds v0.27.1 h1:GlO1tPbrsaoafkF6mz7dFutkGXAtIfQLI450u0ypqwA=
 github.com/creachadair/mds v0.27.1/go.mod h1:dMBTCSy3iS3dwh4Rb1zxeZz2d7K8+N24GCTsayWtQRI=
-github.com/creachadair/wschannel v0.0.0-20260702150705-7ddcd737c508 h1:sAsgzVkBbe4hLCgZ1/fegJVL/d9mWpg7pu0dA2wxKn8=
-github.com/creachadair/wschannel v0.0.0-20260702150705-7ddcd737c508/go.mod h1:RCNU88GWdLOXUxZCVlH6+p+IpLeQGfOP2tY8ILhCFwY=
+github.com/creachadair/wschannel v0.0.0-20260803044834-58b8e655ce55 h1:NMdC8bCtLRkVUDkZBunbXzitGtUxFV4PFlMmfqlGI8U=
+github.com/creachadair/wschannel v0.0.0-20260803044834-58b8e655ce55/go.mod h1:RCNU88GWdLOXUxZCVlH6+p+IpLeQGfOP2tY8ILhCFwY=
 github.com/google/go-cmp v0.7.0 h1:wk8382ETsv4JYUZwIsn6YpYiWiBsYLSJiTsyBybVuN8=
 github.com/google/go-cmp v0.7.0/go.mod h1:pXiqmnSA92OHEEa9HXL2W4E7lf9JzCmGVUdgjX3N/iU=
 golang.org/x/sync v0.20.0 h1:e0PTpb7pjO8GAtTs2dQ6jYa5BWYlMuX047Dco/pItO4=
