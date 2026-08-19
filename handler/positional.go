@@ -51,7 +51,7 @@ func structFieldNames(atype reflect.Type) (bool, []string) {
 			if tag == "-" {
 				continue // explicitly omitted
 			}
-			name := strings.SplitN(tag, ",", 2)[0]
+			name, _, _ := strings.Cut(tag, ",")
 			if name != "" {
 				names = append(names, name)
 				continue

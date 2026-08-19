@@ -264,7 +264,7 @@ func TestClient_Batch(t *testing.T) {
 // Verify that notifications respect order of arrival.
 func TestServer_notificationOrder(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
-		var last int32
+		var last atomic.Int32
 
 		loc := server.NewLocal(handler.Map{
 			"Test": handler.New(func(_ context.Context, req *jrpc2.Request) error {
@@ -273,7 +273,7 @@ func TestServer_notificationOrder(t *testing.T) {
 					t.Errorf("Invalid test parameters: %v", err)
 					return err
 				}
-				if old := atomic.SwapInt32(&last, seq); old != seq-1 {
+				if old := last.Swap(seq); old != seq-1 {
 					t.Errorf("Request out of sequence at #%d: got %d, want %d", seq, old, seq-1)
 				}
 				return nil
