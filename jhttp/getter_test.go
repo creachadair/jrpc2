@@ -102,7 +102,7 @@ func TestParseQuery(t *testing.T) {
 		{`http://green.as/balls?bad='NOT%20VALID'`, "", "balls", nil, "decoding bytes"},
 
 		// Invalid double-quoted string.
-		{`http://black.as/sin?bad=%22a%5Cx25%22`, "", "sin", nil, "invalid character"},
+		{`http://black.as/sin?bad=%22a%5Cx25%22`, "", "sin", nil, "escape"},
 
 		// Valid: Single-quoted byte string (base64).
 		{`http://fast.as.hell/and?twice='YXMgcHJldHR5IGFzIHlvdQ=='`,
