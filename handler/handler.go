@@ -394,8 +394,7 @@ func (fi *FuncInfo) argWrapper() func(reflect.Value) any {
 }
 
 func jrpc2Error(code jrpc2.Code, tag string, err error) error {
-	var jerr *jrpc2.Error
-	if errors.As(err, &jerr) {
+	if jerr, ok := errors.AsType[*jrpc2.Error](err); ok {
 		return jerr
 	}
 	return jrpc2.Errorf(code, tag, err)

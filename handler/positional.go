@@ -42,8 +42,7 @@ func structFieldNames(atype reflect.Type) (bool, []string) {
 	}
 
 	var names []string
-	for i := 0; i < atype.NumField(); i++ {
-		fi := atype.Field(i)
+	for fi := range atype.Fields() {
 		if !fi.IsExported() {
 			continue
 		}
