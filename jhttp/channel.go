@@ -121,8 +121,10 @@ func (c *Channel) Close() error {
 
 	// Drain any pending requests.
 	go func() { c.wg.Wait(); close(c.rsp) }()
-	for range c.rsp {
-		// discard
+	for next := range c.rsp {
+		if next.err == nil {
+			next.rsp.Body.Close()
+		}
 	}
 	return nil
 }
