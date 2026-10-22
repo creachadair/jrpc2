@@ -362,6 +362,119 @@ func TestChannel(t *testing.T) {
 	})
 }
 
+func TestChannelClosePendingResponses(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		tests := map[string]struct {
+			status int
+			body   *channelBody
+			err    error
+		}{
+			"OK":             {status: http.StatusOK, body: new(channelBody)},
+			"HTTPError":      {status: http.StatusInternalServerError, body: new(channelBody)},
+			"Notification":   {status: http.StatusNoContent, body: new(channelBody)},
+			"CloseError":     {status: http.StatusOK, body: &channelBody{closeErr: errors.New("close failed")}},
+			"TransportError": {err: errors.New("transport failed")},
+			"RedirectError": {
+				status: http.StatusFound,
+				body:   new(channelBody),
+				err:    errors.New("redirect failed"),
+			},
+		}
+		ch := jhttp.NewChannel("http://example.test", &jhttp.ChannelOptions{
+			Client: channelClient(func(req *http.Request) (*http.Response, error) {
+				data, err := io.ReadAll(req.Body)
+				req.Body.Close()
+				if err != nil {
+					return nil, err
+				}
+				test := tests[string(data)]
+				if test.body == nil {
+					return nil, test.err
+				}
+				if test.err != nil {
+					// A failed redirect returns a body that Do already closed.
+					test.body.Close()
+				}
+				return &http.Response{StatusCode: test.status, Body: test.body}, test.err
+			}),
+		})
+		for name := range tests {
+			if err := ch.Send([]byte(name)); err != nil {
+				t.Fatalf("Send %s: %v", name, err)
+			}
+		}
+		synctest.Wait()
+		checkClose(t, ch)
+		for name, test := range tests {
+			if test.body == nil {
+				continue
+			}
+			if got := test.body.closes; got != 1 {
+				t.Errorf("%s: body closed %d times, want 1", name, got)
+			}
+			if got := test.body.reads; got != 0 {
+				t.Errorf("%s: body read %d times, want 0", name, got)
+			}
+		}
+	})
+}
+
+func TestChannelCloseInFlightResponse(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		ready := make(chan struct{})
+		body := new(channelBody)
+		ch := jhttp.NewChannel("http://example.test", &jhttp.ChannelOptions{
+			Client: channelClient(func(req *http.Request) (*http.Response, error) {
+				req.Body.Close()
+				<-ready
+				return &http.Response{StatusCode: http.StatusOK, Body: body}, nil
+			}),
+		})
+		if err := ch.Send([]byte("request")); err != nil {
+			t.Fatal(err)
+		}
+		synctest.Wait()
+		done := make(chan struct{})
+		go func() {
+			checkClose(t, ch)
+			close(done)
+		}()
+		synctest.Wait()
+		select {
+		case <-done:
+			t.Fatal("Close returned before the in-flight request completed")
+		default:
+		}
+		close(ready)
+		<-done
+		if got := body.closes; got != 1 {
+			t.Errorf("Body closed %d times, want 1", got)
+		}
+		if got := body.reads; got != 0 {
+			t.Errorf("Body read %d times, want 0", got)
+		}
+	})
+}
+
+type channelClient func(*http.Request) (*http.Response, error)
+
+func (c channelClient) Do(req *http.Request) (*http.Response, error) { return c(req) }
+
+type channelBody struct {
+	reads, closes int
+	closeErr      error
+}
+
+func (b *channelBody) Read([]byte) (int, error) {
+	b.reads++
+	return 0, errors.New("unexpected response body read")
+}
+
+func (b *channelBody) Close() error {
+	b.closes++
+	return b.closeErr
+}
+
 // counter implements the HTTPClient interface via a real HTTP client.  As a
 // side effect it counts the number of invocations of its signature method.
 type counter struct {
